@@ -1,0 +1,890 @@
+{
+  "asin": null,
+  "cover-art-archive": {
+    "darkened": false,
+    "artwork": false,
+    "front": false,
+    "back": false,
+    "count": 0
+  },
+  "title": "Mini-Moni. Songs 2",
+  "quality": "normal",
+  "barcode": null,
+  "packaging": null,
+  "artist-credit": [
+    {
+      "artist": {
+        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+        "sort-name": "mini-moni.",
+        "type": "Group",
+        "disambiguation": "",
+        "name": "ミニモニ。",
+        "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+        "country": "JP"
+      },
+      "name": "Mini-Moni",
+      "joinphrase": ""
+    }
+  ],
+  "label-info": [],
+  "media": [
+    {
+      "format-id": null,
+      "title": "",
+      "discs": [],
+      "tracks": [
+        {
+          "id": "5499cf91-72fa-3ed9-8899-7827f9794017",
+          "recording": {
+            "first-release-date": "2004-02-11",
+            "title": "–OPENING–",
+            "length": 74733,
+            "id": "98f63d20-4ca3-446e-a7a4-6ea79eb5a699",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "ミニモニ。",
+                "artist": {
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "disambiguation": "",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "country": "JP"
+                }
+              }
+            ],
+            "video": false,
+            "disambiguation": ""
+          },
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "Mini-Moni",
+              "artist": {
+                "sort-name": "mini-moni.",
+                "type": "Group",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "country": "JP",
+                "disambiguation": "",
+                "name": "ミニモニ。",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44"
+              }
+            }
+          ],
+          "position": 1,
+          "length": null,
+          "title": "-Opening-",
+          "number": "1"
+        },
+        {
+          "position": 2,
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "Mini-Moni",
+              "artist": {
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "sort-name": "mini-moni.",
+                "type": "Group",
+                "name": "ミニモニ。",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "disambiguation": "",
+                "country": "JP"
+              }
+            }
+          ],
+          "length": null,
+          "title": "Crazy About You",
+          "number": "2",
+          "id": "a17d1f2d-fc0f-30ca-94a0-848a0648a09c",
+          "recording": {
+            "length": 196493,
+            "id": "498362ba-63de-40ce-a0b2-d5f030c0f024",
+            "artist-credit": [
+              {
+                "name": "ミニモニ。",
+                "joinphrase": "",
+                "artist": {
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "country": "JP",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "disambiguation": ""
+                }
+              }
+            ],
+            "video": false,
+            "disambiguation": "",
+            "first-release-date": "2003-10-16",
+            "title": "CRAZY ABOUT YOU"
+          }
+        },
+        {
+          "position": 3,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "country": "JP",
+                "disambiguation": "",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。"
+              }
+            }
+          ],
+          "length": null,
+          "title": "Wassup? Modesty Theme",
+          "number": "3",
+          "id": "44abacb5-ee98-38d9-a87d-d0977eaaa413",
+          "recording": {
+            "first-release-date": "2004-02-11",
+            "title": "WASSUP? 遠慮がテーマ",
+            "length": 216373,
+            "id": "f285dd72-aa97-4b7a-b01c-5182a5cb366c",
+            "video": false,
+            "artist-credit": [
+              {
+                "artist": {
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "country": "JP",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "disambiguation": ""
+                },
+                "joinphrase": "",
+                "name": "ミニモニ。"
+              }
+            ],
+            "disambiguation": ""
+          }
+        },
+        {
+          "length": null,
+          "position": 4,
+          "artist-credit": [
+            {
+              "artist": {
+                "disambiguation": "",
+                "name": "ミニモニ。",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "country": "JP",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "sort-name": "mini-moni.",
+                "type": "Group"
+              },
+              "joinphrase": "",
+              "name": "Minihams"
+            }
+          ],
+          "number": "4",
+          "title": "Miracle Run Grand Purin!",
+          "id": "5289cbfe-4c59-3e46-9133-37f3f16ffb44",
+          "recording": {
+            "title": "ミラクルルン グランプリン!",
+            "first-release-date": "2003-11-19",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "ミニハムず",
+                "artist": {
+                  "disambiguation": "",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "country": "JP",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "type": "Group",
+                  "sort-name": "mini-moni."
+                }
+              }
+            ],
+            "disambiguation": "",
+            "video": false,
+            "length": 179626,
+            "id": "b9d95140-313c-497c-bf16-5961ca88e69f"
+          }
+        },
+        {
+          "id": "002ded2a-dcd9-3817-be48-3f81b955a632",
+          "recording": {
+            "first-release-date": "2004-02-11",
+            "title": "壊れない愛がほしいの (ミニモニ。version)",
+            "length": 224733,
+            "id": "628168d6-81ef-4543-ab6c-69747abb7b4e",
+            "artist-credit": [
+              {
+                "name": "ミニモニ。",
+                "joinphrase": "",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "type": "Group",
+                  "sort-name": "mini-moni.",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+                }
+              }
+            ],
+            "video": false,
+            "disambiguation": ""
+          },
+          "position": 5,
+          "artist-credit": [
+            {
+              "artist": {
+                "disambiguation": "",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "country": "JP",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "type": "Group",
+                "sort-name": "mini-moni."
+              },
+              "name": "Mini-Moni",
+              "joinphrase": ""
+            }
+          ],
+          "length": null,
+          "title": "We Want the Unbroken Love (Mini-Moni. version)",
+          "number": "5"
+        },
+        {
+          "recording": {
+            "artist-credit": [
+              {
+                "artist": {
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "disambiguation": "",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "country": "JP"
+                },
+                "name": "ミニモニ。",
+                "joinphrase": ""
+              }
+            ],
+            "video": false,
+            "disambiguation": "",
+            "length": 223000,
+            "id": "ba715d8c-a0d8-456c-b7fc-6caef1fa8717",
+            "title": "ズキュンLOVE",
+            "first-release-date": "2004-02-11"
+          },
+          "id": "02071623-7dab-352d-b5af-cba489dada13",
+          "title": "Zooming Love",
+          "number": "6",
+          "position": 6,
+          "artist-credit": [
+            {
+              "artist": {
+                "country": "JP",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": "",
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+              },
+              "name": "Mini-Moni",
+              "joinphrase": ""
+            }
+          ],
+          "length": null
+        },
+        {
+          "length": null,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "disambiguation": "",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "country": "JP",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "type": "Group",
+                "sort-name": "mini-moni."
+              }
+            }
+          ],
+          "position": 7,
+          "number": "7",
+          "title": "Lost Love",
+          "id": "45957488-e842-303e-b6b2-085e9fe771a2",
+          "recording": {
+            "first-release-date": "2004-02-11",
+            "title": "LOST LOVE",
+            "length": 215973,
+            "id": "cff8cd97-0069-4a21-9da1-fc7a9ca3b4ea",
+            "video": false,
+            "artist-credit": [
+              {
+                "artist": {
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "type": "Group",
+                  "sort-name": "mini-moni.",
+                  "disambiguation": "",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "country": "JP"
+                },
+                "name": "ミニモニ。",
+                "joinphrase": ""
+              }
+            ],
+            "disambiguation": ""
+          }
+        },
+        {
+          "recording": {
+            "id": "69bea3e2-7b84-4df0-a0d6-c96291e46b57",
+            "length": 229200,
+            "video": false,
+            "artist-credit": [
+              {
+                "artist": {
+                  "country": "JP",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "disambiguation": "",
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+                },
+                "joinphrase": "",
+                "name": "ミニモニ。"
+              }
+            ],
+            "disambiguation": "",
+            "first-release-date": "2004-02-11",
+            "title": "BE ALL RIGHT! (ミニモニ。version)"
+          },
+          "id": "c29210d0-008f-360d-8f54-080afe1a148e",
+          "title": "Be All Right! (Mini-Moni. version)",
+          "number": "8",
+          "position": 8,
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "Mini-Moni",
+              "artist": {
+                "country": "JP",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": "",
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+              }
+            }
+          ],
+          "length": null
+        },
+        {
+          "length": null,
+          "position": 9,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "disambiguation": "",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "country": "JP"
+              }
+            }
+          ],
+          "number": "9",
+          "title": "Hold Me Tight (Forever)",
+          "id": "12e8390e-8b6d-3462-88e5-fdc3b97e4430",
+          "recording": {
+            "id": "6f9b3d94-d3ca-4a90-8e0e-c58e7e0e58c2",
+            "length": 274266,
+            "artist-credit": [
+              {
+                "name": "ミニモニ。",
+                "joinphrase": "",
+                "artist": {
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "disambiguation": "",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "country": "JP"
+                }
+              }
+            ],
+            "disambiguation": "",
+            "video": false,
+            "first-release-date": "2004-02-11",
+            "title": "ぎゅっと抱きしめて <FOREVER>"
+          }
+        },
+        {
+          "id": "ef86e8a0-cda6-37ec-ae8a-70a6b8d3a162",
+          "recording": {
+            "length": 68666,
+            "id": "ed33b451-fdf9-410d-84ed-c62ab05f23b4",
+            "video": false,
+            "artist-credit": [
+              {
+                "artist": {
+                  "country": "JP",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "disambiguation": "",
+                  "type": "Group",
+                  "sort-name": "mini-moni.",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+                },
+                "joinphrase": "",
+                "name": "ミニモニ。"
+              }
+            ],
+            "disambiguation": "",
+            "first-release-date": "2004-02-11",
+            "title": "–INTERLUDE– (黒ミニモニ。ジャンケンぴょん!)"
+          },
+          "position": 10,
+          "artist-credit": [
+            {
+              "artist": {
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "country": "JP",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": ""
+              },
+              "name": "Mini-Moni",
+              "joinphrase": ""
+            }
+          ],
+          "length": null,
+          "title": "-Interlude- (Black Mini-Moni. Rock-Paper-Scissors Game)",
+          "number": "10"
+        },
+        {
+          "number": "11",
+          "title": "Mini-Moni. Counting Song (Date version)",
+          "length": null,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "country": "JP",
+                "disambiguation": "",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。"
+              }
+            }
+          ],
+          "position": 11,
+          "recording": {
+            "first-release-date": "2003-05-14",
+            "title": "ミニモニ。数え歌～デートば～じょん～",
+            "length": 263066,
+            "id": "1c3d1440-9b30-4b0d-b2d4-25706d5d08d4",
+            "disambiguation": "",
+            "artist-credit": [
+              {
+                "artist": {
+                  "disambiguation": "",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "country": "JP",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "type": "Group",
+                  "sort-name": "mini-moni."
+                },
+                "joinphrase": "",
+                "name": "ミニモニ。"
+              }
+            ],
+            "video": false
+          },
+          "id": "b66ace49-0e7d-3c16-87d0-a91e9e6f7295"
+        },
+        {
+          "number": "12",
+          "title": "Rock 'n' Roll Prefectural Capital (Memory Series)",
+          "length": null,
+          "position": 12,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "country": "JP",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": "",
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+              }
+            }
+          ],
+          "recording": {
+            "length": 155893,
+            "id": "39b88381-c720-4cbb-ab9f-f6c221f8eb30",
+            "artist-credit": [
+              {
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+                },
+                "joinphrase": "",
+                "name": "ミニモニ。"
+              }
+            ],
+            "video": false,
+            "disambiguation": "",
+            "first-release-date": "2003-04-09",
+            "title": "ロックンロール県庁所在地〜おぼえちゃいなシリーズ〜"
+          },
+          "id": "669714c3-3015-35a5-850b-7b863cdb51a1"
+        },
+        {
+          "id": "9a65bb97-f135-395f-aeec-06a779b93dba",
+          "recording": {
+            "id": "79ff059b-26cd-4ac7-9c9a-289b252149b8",
+            "length": 239173,
+            "video": false,
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "ミニモニ。",
+                "artist": {
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "disambiguation": "",
+                  "country": "JP",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "sort-name": "mini-moni.",
+                  "type": "Group"
+                }
+              }
+            ],
+            "disambiguation": "Okashi Movie version",
+            "first-release-date": "2002-11-27",
+            "title": "お菓子つくっておっかすぃ～!"
+          },
+          "length": null,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": "",
+                "country": "JP",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "type": "Group",
+                "sort-name": "mini-moni."
+              }
+            }
+          ],
+          "position": 13,
+          "number": "13",
+          "title": "Candy-Maker Kandi~!"
+        },
+        {
+          "id": "499a7eba-580c-3563-a098-faa31628f725",
+          "recording": {
+            "disambiguation": "",
+            "artist-credit": [
+              {
+                "artist": {
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "country": "JP",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "disambiguation": ""
+                },
+                "name": "ミニハムず",
+                "joinphrase": ""
+              }
+            ],
+            "video": false,
+            "id": "528e181a-8488-4e84-95a3-677a491baf63",
+            "length": 228000,
+            "title": "ミニハムずの結婚ソング",
+            "first-release-date": "2002-12-04"
+          },
+          "length": null,
+          "position": 14,
+          "artist-credit": [
+            {
+              "name": "Minihams",
+              "joinphrase": "",
+              "artist": {
+                "country": "JP",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "name": "ミニモニ。",
+                "disambiguation": "",
+                "type": "Group",
+                "sort-name": "mini-moni.",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+              }
+            }
+          ],
+          "number": "14",
+          "title": "Minihamuzu's Wedding song"
+        },
+        {
+          "title": "A Large Serving of Energetic Symbols Song",
+          "number": "15",
+          "position": 15,
+          "artist-credit": [
+            {
+              "joinphrase": " and ",
+              "name": "Mini-Moni",
+              "artist": {
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "sort-name": "mini-moni.",
+                "type": "Group",
+                "name": "ミニモニ。",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "disambiguation": "",
+                "country": "JP"
+              }
+            },
+            {
+              "artist": {
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "type": "Person",
+                "sort-name": "Takahashi, Ai",
+                "disambiguation": "",
+                "id": "ae2a8af0-4a76-4b40-86c7-b9fe18969612",
+                "name": "高橋愛",
+                "country": "JP"
+              },
+              "name": "Ai Takahashi",
+              "joinphrase": " + "
+            },
+            {
+              "name": "4KIDS",
+              "joinphrase": "",
+              "artist": {
+                "disambiguation": "Japanese/Hello! Project",
+                "name": "4KIDS",
+                "id": "e2872837-f5f1-4e85-aa50-9a2333248d1d",
+                "country": "JP",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                "sort-name": "4KIDS",
+                "type": "Group"
+              }
+            }
+          ],
+          "length": null,
+          "recording": {
+            "length": 249626,
+            "id": "2ad08ca6-b9c0-4e45-bb77-c3719b155126",
+            "artist-credit": [
+              {
+                "artist": {
+                  "disambiguation": "",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                  "name": "ミニモニ。",
+                  "country": "JP",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "type": "Group",
+                  "sort-name": "mini-moni."
+                },
+                "joinphrase": "と",
+                "name": "ミニモニ。"
+              },
+              {
+                "name": "高橋愛",
+                "joinphrase": "＋",
+                "artist": {
+                  "name": "高橋愛",
+                  "id": "ae2a8af0-4a76-4b40-86c7-b9fe18969612",
+                  "disambiguation": "",
+                  "country": "JP",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Takahashi, Ai",
+                  "type": "Person"
+                }
+              },
+              {
+                "joinphrase": "",
+                "name": "4KIDS",
+                "artist": {
+                  "type": "Group",
+                  "sort-name": "4KIDS",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "country": "JP",
+                  "disambiguation": "Japanese/Hello! Project",
+                  "id": "e2872837-f5f1-4e85-aa50-9a2333248d1d",
+                  "name": "4KIDS"
+                }
+              }
+            ],
+            "video": false,
+            "disambiguation": "Okashi Movie version",
+            "first-release-date": "2002-11-27",
+            "title": "げんき印の大盛りソング"
+          },
+          "id": "504772e3-13f4-3517-b46b-2892d5c2fc27"
+        },
+        {
+          "recording": {
+            "first-release-date": "2004-02-11",
+            "title": "–ENDING– (白ミニモニ。ジャンケンぴょん)",
+            "length": 66026,
+            "id": "b3c31ea5-138c-4f01-bde6-015631f5b147",
+            "video": false,
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "ミニモニ。",
+                "artist": {
+                  "sort-name": "mini-moni.",
+                  "type": "Group",
+                  "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                  "country": "JP",
+                  "disambiguation": "",
+                  "name": "ミニモニ。",
+                  "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44"
+                }
+              }
+            ],
+            "disambiguation": ""
+          },
+          "id": "ec0970ef-8892-3641-84b9-47cf35f9f874",
+          "number": "16",
+          "title": "-Ending- (White Mini-Moni. Rock-Paper-Scissors Game)",
+          "length": null,
+          "artist-credit": [
+            {
+              "name": "Mini-Moni",
+              "joinphrase": "",
+              "artist": {
+                "country": "JP",
+                "disambiguation": "",
+                "name": "ミニモニ。",
+                "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+                "sort-name": "mini-moni.",
+                "type": "Group",
+                "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+              }
+            }
+          ],
+          "position": 16
+        }
+      ],
+      "format": null,
+      "position": 1,
+      "track-offset": 0,
+      "track-count": 16,
+      "id": "bd968145-3e36-3174-99ea-7f6b3e14b3be"
+    }
+  ],
+  "relations": [
+    {
+      "end": null,
+      "target-credit": "",
+      "begin": null,
+      "type-id": "fc399d47-23a7-4c28-bfcf-0607a562b644",
+      "release": {
+        "status": null,
+        "text-representation": {
+          "script": "Jpan",
+          "language": "jpn"
+        },
+        "status-id": null,
+        "packaging-id": null,
+        "disambiguation": "",
+        "country": "JP",
+        "artist-credit": [
+          {
+            "name": "ミニモニ。",
+            "joinphrase": "",
+            "artist": {
+              "disambiguation": "",
+              "id": "0ce302fe-c064-4bf1-8247-a827a4c68a44",
+              "name": "ミニモニ。",
+              "country": "JP",
+              "type-id": null,
+              "type": null,
+              "sort-name": "mini-moni."
+            }
+          }
+        ],
+        "barcode": "4942463526528",
+        "packaging": null,
+        "quality": "normal",
+        "title": "ミニモニ。ソングス2",
+        "release-events": [
+          {
+            "area": {
+              "name": "Japan",
+              "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+              "disambiguation": "",
+              "sort-name": "Japan",
+              "iso-3166-1-codes": [
+                "JP"
+              ],
+              "type": null,
+              "type-id": null
+            },
+            "date": "2004-02-11"
+          }
+        ],
+        "date": "2004-02-11",
+        "id": "1268ebdb-2fa4-423f-95da-ed7accfbb845",
+        "media": []
+      },
+      "attribute-values": {},
+      "attribute-ids": {},
+      "ended": false,
+      "target-type": "release",
+      "direction": "backward",
+      "type": "transl-tracklisting",
+      "attributes": [],
+      "source-credit": ""
+    }
+  ],
+  "id": "ea59c77e-1c73-4958-88fb-d86e89fb3018",
+  "packaging-id": null,
+  "status-id": "41121bb9-3413-3818-8a9a-9742318349aa",
+  "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+  },
+  "status": "Pseudo-Release",
+  "disambiguation": ""
+}

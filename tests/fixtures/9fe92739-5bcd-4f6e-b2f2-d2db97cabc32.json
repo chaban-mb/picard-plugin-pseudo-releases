@@ -1,0 +1,1063 @@
+{
+  "relations": [
+    {
+      "type-id": "fc399d47-23a7-4c28-bfcf-0607a562b644",
+      "attribute-values": {},
+      "target-type": "release",
+      "attributes": [],
+      "end": null,
+      "direction": "backward",
+      "release": {
+        "quality": "normal",
+        "status-id": null,
+        "country": "JP",
+        "id": "7a16f215-079e-4c55-abda-06f9a4228b6a",
+        "packaging": null,
+        "status": null,
+        "packaging-id": null,
+        "date": "2001-07-18",
+        "disambiguation": "",
+        "title": "千と千尋の神隠し サウンドトラック",
+        "barcode": "4988008604535",
+        "release-events": [
+          {
+            "date": "2001-07-18",
+            "area": {
+              "disambiguation": "",
+              "type": null,
+              "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+              "iso-3166-1-codes": [
+                "JP"
+              ],
+              "name": "Japan",
+              "type-id": null,
+              "sort-name": "Japan"
+            }
+          }
+        ],
+        "media": [],
+        "artist-credit": [
+          {
+            "joinphrase": "",
+            "artist": {
+              "country": "JP",
+              "disambiguation": "composer & musical director",
+              "type": null,
+              "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+              "name": "久石譲",
+              "type-id": null,
+              "sort-name": "Hisaishi, Joe"
+            },
+            "name": "久石譲"
+          }
+        ],
+        "text-representation": {
+          "script": "Jpan",
+          "language": "jpn"
+        }
+      },
+      "begin": null,
+      "target-credit": "",
+      "ended": false,
+      "attribute-ids": {},
+      "source-credit": "",
+      "type": "transl-tracklisting"
+    }
+  ],
+  "text-representation": {
+    "language": "jpn",
+    "script": "Latn"
+  },
+  "media": [
+    {
+      "title": "",
+      "position": 1,
+      "format": null,
+      "discs": [],
+      "tracks": [
+        {
+          "title": "Ano Natsu he",
+          "id": "bb336246-7357-3fbf-8a28-974bb6824d18",
+          "length": null,
+          "position": 1,
+          "recording": {
+            "length": 189800,
+            "id": "6fedfa30-87d1-4f22-a79d-5d76ac32e4a7",
+            "video": false,
+            "disambiguation": "",
+            "title": "あの夏へ",
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "sort-name": "Hisaishi, Joe"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18"
+          },
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "artist": {
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲",
+                "sort-name": "Hisaishi, Joe",
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type": "Person"
+              },
+              "name": "久石譲"
+            }
+          ],
+          "number": "1"
+        },
+        {
+          "number": "2",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "sort-name": "Hisaishi, Joe",
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type": "Person"
+              }
+            }
+          ],
+          "recording": {
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person"
+                }
+              }
+            ],
+            "disambiguation": "",
+            "title": "とおり道",
+            "id": "e3de9f67-197f-4aab-8d39-4b4e28dc1a8b",
+            "video": false,
+            "length": 127533
+          },
+          "position": 2,
+          "length": null,
+          "id": "31e8d7b6-5bf0-3a07-a94f-a99a0712b78e",
+          "title": "Toorimichi"
+        },
+        {
+          "number": "3",
+          "artist-credit": [
+            {
+              "name": "久石譲",
+              "artist": {
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲",
+                "sort-name": "Hisaishi, Joe"
+              },
+              "joinphrase": ""
+            }
+          ],
+          "recording": {
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "sort-name": "Hisaishi, Joe",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "disambiguation": "",
+            "title": "誰もいない料理店",
+            "id": "2c1eea55-0ca5-43de-aefa-97d39815d89e",
+            "video": false,
+            "length": 195693
+          },
+          "position": 3,
+          "length": null,
+          "id": "35deeb0d-d56a-3cf5-aa20-a23e6ce84f52",
+          "title": "Dare mo Inai Ryouriten"
+        },
+        {
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+              }
+            }
+          ],
+          "number": "4",
+          "recording": {
+            "id": "368a2207-ea9d-4103-8563-addf47ab02c5",
+            "video": false,
+            "length": 120400,
+            "disambiguation": "",
+            "title": "夜来る",
+            "artist-credit": [
+              {
+                "artist": {
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director"
+                },
+                "name": "久石譲",
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18"
+          },
+          "length": null,
+          "position": 4,
+          "title": "Yoru Kitaru",
+          "id": "7013d862-2ce6-3861-85a4-8e011c9fc9c8"
+        },
+        {
+          "recording": {
+            "video": false,
+            "id": "03882430-c377-4215-b67a-5946caf5140a",
+            "length": 132466,
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "title": "竜の少年",
+            "disambiguation": ""
+          },
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "artist": {
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "sort-name": "Hisaishi, Joe"
+              },
+              "name": "久石譲"
+            }
+          ],
+          "number": "5",
+          "title": "Ryuu no Shounen",
+          "id": "941e25e8-3e9d-34c7-bc06-072133a711ad",
+          "length": null,
+          "position": 5
+        },
+        {
+          "recording": {
+            "disambiguation": "",
+            "title": "ボイラー虫",
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "artist": {
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "sort-name": "Hisaishi, Joe",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP",
+                  "type": "Person"
+                },
+                "name": "久石譲"
+              }
+            ],
+            "id": "42483ea3-11ef-4f04-8d04-8fe6a81fca0b",
+            "video": false,
+            "length": 153533
+          },
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+              }
+            }
+          ],
+          "number": "6",
+          "title": "Boiraa Mushi",
+          "id": "739b6716-b42f-3285-bfe3-606a5dc39d08",
+          "length": null,
+          "position": 6
+        },
+        {
+          "recording": {
+            "video": false,
+            "id": "13a130cf-d6ff-4696-bf63-59dec15af083",
+            "length": 180373,
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "type": "Person",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP",
+                  "sort-name": "Hisaishi, Joe",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+                }
+              }
+            ],
+            "title": "神さま達",
+            "disambiguation": ""
+          },
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP"
+              }
+            }
+          ],
+          "number": "7",
+          "title": "Kamisama-tachi",
+          "id": "90b1a4f0-4ba4-31b2-b989-9e5016724c2a",
+          "length": null,
+          "position": 7
+        },
+        {
+          "position": 8,
+          "length": null,
+          "id": "2bfc7cb9-4746-3921-955e-a9fa4f117eb4",
+          "title": "YUBABA",
+          "number": "8",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "type": "Person"
+              }
+            }
+          ],
+          "recording": {
+            "length": 210066,
+            "id": "5e46a6ff-46cb-4567-9a58-aa93f77d53bc",
+            "video": false,
+            "disambiguation": "",
+            "title": "湯婆婆",
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "sort-name": "Hisaishi, Joe",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18"
+          }
+        },
+        {
+          "length": null,
+          "position": 9,
+          "title": "Yuya no Asa",
+          "id": "0a327c18-3f63-36d2-921d-79c39f39879a",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "type": "Person"
+              }
+            }
+          ],
+          "number": "9",
+          "recording": {
+            "title": "湯屋の朝",
+            "disambiguation": "",
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "sort-name": "Hisaishi, Joe"
+                }
+              }
+            ],
+            "video": false,
+            "id": "c9031a07-46c9-4dfa-b7f5-637e5f474385",
+            "length": 122426
+          }
+        },
+        {
+          "length": null,
+          "position": 10,
+          "title": "Ano Hi no Kawa",
+          "id": "3b8e550a-90b0-3e84-aa91-4fcf51cd3c55",
+          "artist-credit": [
+            {
+              "artist": {
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+              },
+              "name": "久石譲",
+              "joinphrase": ""
+            }
+          ],
+          "number": "10",
+          "recording": {
+            "id": "923a08a8-1793-4b0d-9fc4-b1ff66573647",
+            "video": false,
+            "length": 193000,
+            "disambiguation": "",
+            "title": "あの日の川",
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "type": "Person",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP",
+                  "sort-name": "Hisaishi, Joe",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+                },
+                "joinphrase": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "267b65be-3fd0-3832-b763-ee1cf0b4f310",
+          "title": "Shigoto wa Tsuraize",
+          "position": 11,
+          "length": null,
+          "recording": {
+            "video": false,
+            "id": "28ddb873-6bb7-429c-9615-38876a9e4277",
+            "length": 146933,
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe"
+                }
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "title": "仕事はつらいぜ",
+            "disambiguation": ""
+          },
+          "number": "11",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "artist": {
+                "type": "Person",
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲",
+                "sort-name": "Hisaishi, Joe",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+              },
+              "name": "久石譲"
+            }
+          ]
+        },
+        {
+          "position": 12,
+          "length": null,
+          "id": "c0392462-8e00-3df2-a3db-7851c0cf1ddf",
+          "title": "Okusaregami",
+          "number": "12",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "artist": {
+                "sort-name": "Hisaishi, Joe",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP"
+              },
+              "name": "久石譲"
+            }
+          ],
+          "recording": {
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "artist": {
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director"
+                },
+                "name": "久石譲",
+                "joinphrase": ""
+              }
+            ],
+            "title": "おクサレ神",
+            "disambiguation": "",
+            "video": false,
+            "id": "5f93e521-39c2-4d07-9bd1-353cb269b6b8",
+            "length": 241533
+          }
+        },
+        {
+          "length": null,
+          "position": 13,
+          "title": "Sen no Yuuki",
+          "id": "1d3718e8-81b5-3260-a919-12b1e8b6e518",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "artist": {
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+              },
+              "name": "久石譲"
+            }
+          ],
+          "number": "13",
+          "recording": {
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "disambiguation": "composer & musical director",
+                  "country": "JP",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "sort-name": "Hisaishi, Joe",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲"
+                }
+              }
+            ],
+            "disambiguation": "",
+            "title": "千の勇気",
+            "length": 165240,
+            "id": "8c560024-b76d-4f8a-9b0a-2834d1ae4cbf",
+            "video": false
+          }
+        },
+        {
+          "position": 14,
+          "length": null,
+          "id": "4a4ad04d-8c70-3753-a752-d48a6602ae0e",
+          "title": "Sokonashi Ana",
+          "number": "14",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP"
+              }
+            }
+          ],
+          "recording": {
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "artist": {
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "sort-name": "Hisaishi, Joe",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director"
+                },
+                "name": "久石譲",
+                "joinphrase": ""
+              }
+            ],
+            "title": "底なし穴",
+            "disambiguation": "",
+            "length": 78800,
+            "video": false,
+            "id": "f3886f2f-0842-48be-9425-299afbd4e28f"
+          }
+        },
+        {
+          "id": "7133438f-acb4-3a5f-b132-847da570ceaa",
+          "title": "Kaonashi",
+          "position": 15,
+          "length": null,
+          "recording": {
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "sort-name": "Hisaishi, Joe",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director"
+                }
+              }
+            ],
+            "disambiguation": "",
+            "title": "カオナシ",
+            "id": "444946c2-9dec-4610-a41f-60d67eb222cc",
+            "video": false,
+            "length": 227400
+          },
+          "number": "15",
+          "artist-credit": [
+            {
+              "name": "久石譲",
+              "artist": {
+                "country": "JP",
+                "disambiguation": "composer & musical director",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲",
+                "sort-name": "Hisaishi, Joe"
+              },
+              "joinphrase": ""
+            }
+          ]
+        },
+        {
+          "length": null,
+          "position": 16,
+          "title": "6 Banme no Eki",
+          "id": "6d290f90-1add-31e7-b778-7d9835628bdb",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP"
+              }
+            }
+          ],
+          "number": "16",
+          "recording": {
+            "id": "ea2175ef-ed07-4a6b-ac5c-a77a394d86b1",
+            "video": false,
+            "length": 218226,
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person"
+                }
+              }
+            ],
+            "disambiguation": "",
+            "title": "6番目の駅"
+          }
+        },
+        {
+          "length": null,
+          "position": 17,
+          "title": "Yu-Baaba Kyouran",
+          "id": "2b78d494-dbe7-3f11-9eb1-d1436a3538c2",
+          "artist-credit": [
+            {
+              "artist": {
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP"
+              },
+              "name": "久石譲",
+              "joinphrase": ""
+            }
+          ],
+          "number": "17",
+          "recording": {
+            "title": "湯婆婆狂乱",
+            "disambiguation": "",
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "type": "Person",
+                  "disambiguation": "composer & musical director",
+                  "country": "JP",
+                  "sort-name": "Hisaishi, Joe",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "video": false,
+            "id": "7bcfc7db-7e73-4e1a-8e7a-a4f711bd48a1",
+            "length": 98026
+          }
+        },
+        {
+          "position": 18,
+          "length": null,
+          "id": "92c046a6-8cc4-367c-b230-e4b17fb6c89a",
+          "title": "Numa no Soko no Ie",
+          "number": "18",
+          "artist-credit": [
+            {
+              "artist": {
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+              },
+              "name": "久石譲",
+              "joinphrase": ""
+            }
+          ],
+          "recording": {
+            "length": 89773,
+            "id": "2595dd68-63b8-44df-812a-3d6383490704",
+            "video": false,
+            "artist-credit": [
+              {
+                "name": "久石譲",
+                "artist": {
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe"
+                },
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "disambiguation": "",
+            "title": "沼の底の家"
+          }
+        },
+        {
+          "length": null,
+          "position": 19,
+          "title": "Futatabi",
+          "id": "77a8bdcb-f23a-3d4d-99b7-b49592c3cf37",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "久石譲",
+              "artist": {
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "type": "Person",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                "sort-name": "Hisaishi, Joe",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "name": "久石譲"
+              }
+            }
+          ],
+          "number": "19",
+          "recording": {
+            "video": false,
+            "id": "5983672c-e00c-40ed-a52a-97b4e5bb259d",
+            "length": 293600,
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "name": "久石譲",
+                "artist": {
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "name": "久石譲",
+                  "sort-name": "Hisaishi, Joe",
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "type": "Person",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director"
+                }
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "title": "ふたたび",
+            "disambiguation": ""
+          }
+        },
+        {
+          "position": 20,
+          "length": null,
+          "id": "c8cc7cab-d538-301a-acbd-2c57db1fe1c3",
+          "title": "Kaeru Hi",
+          "number": "20",
+          "artist-credit": [
+            {
+              "artist": {
+                "type": "Person",
+                "disambiguation": "composer & musical director",
+                "country": "JP",
+                "sort-name": "Hisaishi, Joe",
+                "name": "久石譲",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "id": "44c64a30-1d58-49c5-b314-6e02fba49526"
+              },
+              "name": "久石譲",
+              "joinphrase": ""
+            }
+          ],
+          "recording": {
+            "artist-credit": [
+              {
+                "artist": {
+                  "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+                  "name": "久石譲",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Hisaishi, Joe",
+                  "country": "JP",
+                  "disambiguation": "composer & musical director",
+                  "type": "Person"
+                },
+                "name": "久石譲",
+                "joinphrase": ""
+              }
+            ],
+            "first-release-date": "2001-07-18",
+            "disambiguation": "",
+            "title": "帰る日",
+            "length": 200666,
+            "id": "c5e1b4d6-3267-4c1c-b9a5-392abdaaeec3",
+            "video": false
+          }
+        },
+        {
+          "id": "c98e36a6-89ac-392b-9051-93088796fd78",
+          "title": "Itsumo Nando demo",
+          "position": 21,
+          "length": null,
+          "recording": {
+            "disambiguation": "",
+            "title": "いつも何度でも",
+            "first-release-date": "2001-07-18",
+            "artist-credit": [
+              {
+                "joinphrase": "",
+                "artist": {
+                  "id": "c6517557-a6e5-4e67-989d-87e0cf38c871",
+                  "name": "木村弓",
+                  "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                  "sort-name": "Kimura, Youmi",
+                  "country": "JP",
+                  "disambiguation": "",
+                  "type": "Person"
+                },
+                "name": "木村弓"
+              }
+            ],
+            "length": 215440,
+            "id": "3d05cabb-31d7-4b7a-9ee7-8a899d4af21e",
+            "video": false
+          },
+          "number": "21",
+          "artist-credit": [
+            {
+              "joinphrase": "",
+              "name": "木村弓",
+              "artist": {
+                "id": "c6517557-a6e5-4e67-989d-87e0cf38c871",
+                "sort-name": "Kimura, Youmi",
+                "name": "木村弓",
+                "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                "disambiguation": "",
+                "country": "JP",
+                "type": "Person"
+              }
+            }
+          ]
+        }
+      ],
+      "track-offset": 0,
+      "id": "7c7bddfe-bfcc-3aa9-9411-83fe2a06e852",
+      "track-count": 21,
+      "format-id": null
+    }
+  ],
+  "artist-credit": [
+    {
+      "joinphrase": "",
+      "artist": {
+        "id": "44c64a30-1d58-49c5-b314-6e02fba49526",
+        "sort-name": "Hisaishi, Joe",
+        "name": "久石譲",
+        "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+        "disambiguation": "composer & musical director",
+        "country": "JP",
+        "type": "Person"
+      },
+      "name": "久石譲"
+    }
+  ],
+  "asin": null,
+  "barcode": null,
+  "disambiguation": "English transliteration",
+  "title": "Sen to Chihiro no Kamikakushi",
+  "packaging-id": null,
+  "status": "Pseudo-Release",
+  "id": "9fe92739-5bcd-4f6e-b2f2-d2db97cabc32",
+  "packaging": null,
+  "label-info": [],
+  "cover-art-archive": {
+    "artwork": false,
+    "back": false,
+    "front": false,
+    "count": 0,
+    "darkened": false
+  },
+  "status-id": "41121bb9-3413-3818-8a9a-9742318349aa",
+  "quality": "normal"
+}
