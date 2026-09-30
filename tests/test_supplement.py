@@ -1,4 +1,4 @@
-# Tests for pseudo-release metadata supplementation (Goal 1)
+# Tests for pseudo-release metadata supplementation
 import unittest
 from metadata_engine import (
     extract_release_catalog_metadata,

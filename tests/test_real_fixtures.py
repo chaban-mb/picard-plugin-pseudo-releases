@@ -92,7 +92,7 @@ class MockAlbum:
 
 class TestRealWorldFixtures(unittest.TestCase):
     def test_spirited_away_pseudo_supplementation(self):
-        """Case 1 (Goal 1): Supplement Spirited Away Romaji pseudo-release
+        """Case 1: Supplement Spirited Away Romaji pseudo-release
         with catalog metadata from original Japanese release.
         """
         pseudo_node = load_fixture("9fe92739-5bcd-4f6e-b2f2-d2db97cabc32")
@@ -129,7 +129,7 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(pseudo_meta["album"], "Sen to Chihiro no Kamikakushi")
 
     def test_minimoni_disambiguation_and_overlay(self):
-        """Case 2 (Bonus Goal): Minimoni 2 has 2 forward pseudo-releases (Romaji & English).
+        """Case 2: Minimoni 2 has 2 forward pseudo-releases (Romaji & English).
         Test script scoring disambiguation and full track overlay.
         """
         orig_node = load_fixture("1268ebdb-2fa4-423f-95da-ed7accfbb845")

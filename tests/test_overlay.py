@@ -1,4 +1,4 @@
-# Tests for pseudo-release overlay on original release (Bonus Goal)
+# Tests for pseudo-release overlay on original release
 import unittest
 from metadata_engine import overlay_pseudo_metadata_on_album
 from constants import (

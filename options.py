@@ -135,7 +135,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.cb_auto_supplement = QtWidgets.QCheckBox(
             self._tr(
                 "ui.auto_supplement",
-                "Supplement pseudo-releases with original catalog metadata & cover art (Goal 1)",
+                "Supplement pseudo-releases with original catalog metadata & cover art",
             ),
             group_features,
         )
@@ -144,7 +144,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.cb_auto_overlay = QtWidgets.QCheckBox(
             self._tr(
                 "ui.auto_overlay",
-                "Automatically translate original releases using pseudo-releases (Bonus Goal)",
+                "Automatically translate original releases using pseudo-releases",
             ),
             group_features,
         )

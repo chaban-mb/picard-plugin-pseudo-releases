@@ -139,7 +139,7 @@ def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, 
 def supplement_pseudo_metadata(album_metadata: Any, orig_release_node: dict[str, Any]) -> None:
     """Supplement a pseudo-release's metadata with catalog data from an original release.
 
-    Direction 1 (Goal 1): Fills in missing barcode, date, country, label, catalog numbers,
+    Direction 1: Fills in missing barcode, date, country, label, catalog numbers,
     media formats, and sets the original MBID reference.
 
     Args:
@@ -198,7 +198,7 @@ def build_track_mapping(release_node: dict[str, Any]) -> dict[str, dict[str, Any
 def overlay_pseudo_metadata_on_album(album: Any, pseudo_node: dict[str, Any]) -> None:
     """Overlay pseudo-release titles and translated artist credits onto an original release.
 
-    Direction 2 (Bonus Goal): Replaces release title, album artist, track titles, and track
+    Direction 2: Replaces release title, album artist, track titles, and track
     artist credits while retaining original physical catalog metadata.
 
     Args:

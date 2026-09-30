@@ -4,11 +4,11 @@ Seamlessly integrates MusicBrainz pseudo-releases into MusicBrainz Picard 3.0+.
 
 ## Key Features
 
-1. **Supplement Pseudo-Releases (Goal 1)**:
+1. **Supplement Pseudo-Releases**:
    * When loading a pseudo-release directly (e.g. Romaji or English translated tracklist), automatically retrieves missing physical and catalog metadata (`date`, `originaldate`, `releasecountry`, `barcode`, `label`, `catalognumber`, `media`) from the linked original release.
    * Supplements cover artwork via the Cover Art Archive (CAA) using the original release ID.
 
-2. **Overlay Pseudo-Releases onto Originals (Bonus Goal)**:
+2. **Overlay Pseudo-Releases onto Originals**:
    * When loading an official release (e.g. Japanese Kanji) via CD lookup, AcoustID, or search, automatically overlays translated or transliterated release and track titles.
    * **Full Artist Credit & Join Phrase Translation**: Preserves and translates join phrases (e.g. ` と ` / ` ＆ ` transformed to ` and ` / ` feat. `), solving Picard's alias-based join phrase limitation.
    * Retains physical manufacturing data (original barcodes, dates, catalog numbers, and CAA artwork).
