@@ -62,7 +62,6 @@ try:
     )
     from .constants import (
         OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLED,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -79,7 +78,6 @@ except (ImportError, ValueError):
     )
     from constants import (
         OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLED,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -132,9 +130,6 @@ class PseudoReleasePlugin:
         release_node: dict[str, Any],
     ) -> None:
         """Supplement loaded pseudo-releases with data from linked original releases."""
-        if not get_config_value(api.plugin_config, OPT_ENABLED, True):
-            return
-
         album_id = getattr(album, 'id', '')
         if album_id in cls.in_flight_albums:
             return
@@ -239,7 +234,6 @@ class PseudoReleasePlugin:
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
     # Register default plugin configurations
-    api.plugin_config.register_option(OPT_ENABLED, True)
     api.plugin_config.register_option(OPT_AUTO_SUPPLEMENT, True)
 
     plugin = PseudoReleasePlugin

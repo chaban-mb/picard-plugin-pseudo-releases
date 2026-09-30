@@ -3,7 +3,6 @@ import unittest
 from options import PseudoReleaseOptionsPage
 from constants import (
     OPT_AUTO_SUPPLEMENT,
-    OPT_ENABLED,
 )
 
 
@@ -53,7 +52,6 @@ class TestOptionsPage(unittest.TestCase):
         page = PseudoReleaseOptionsPage()
         api = MockPluginApi(
             {
-                OPT_ENABLED: True,
                 OPT_AUTO_SUPPLEMENT: True,
             }
         )
@@ -61,7 +59,6 @@ class TestOptionsPage(unittest.TestCase):
 
         # Load into UI
         page.load()
-        self.assertTrue(page.cb_enabled.isChecked())
         self.assertTrue(page.cb_auto_supplement.isChecked())
 
         # Modify UI
@@ -71,7 +68,7 @@ class TestOptionsPage(unittest.TestCase):
         page.save()
         self.assertFalse(api.plugin_config[OPT_AUTO_SUPPLEMENT])
 
-    def test_inline_descriptions_explain_supplement_and_overlay(self):
+    def test_inline_description_explains_supplement(self):
         page = PseudoReleaseOptionsPage()
 
         supplement_description = page.lbl_auto_supplement_description.text()
@@ -88,28 +85,10 @@ class TestOptionsPage(unittest.TestCase):
         self.assertIn("missing tags only", supplement_description)
         self.assertIn("Cover art", supplement_description)
 
-    def test_dependent_controls_follow_feature_toggles(self):
-        page = PseudoReleaseOptionsPage()
-        api = MockPluginApi(
-            {
-                OPT_ENABLED: False,
-                OPT_AUTO_SUPPLEMENT: True,
-            }
-        )
-        page.api = api
-        page.load()
-
-        self.assertFalse(page.cb_auto_supplement.isEnabled())
-        self.assertTrue(page.cb_auto_supplement.isChecked())
-
-        page.cb_enabled.setChecked(True)
-        self.assertTrue(page.cb_auto_supplement.isEnabled())
-
     def test_profile_config_section_without_get(self):
         """Verify load() and save() work on ProfileConfigSection which has NO .get() method."""
         page = PseudoReleaseOptionsPage()
         section = ProfileConfigSectionMock({
-            OPT_ENABLED: True,
             OPT_AUTO_SUPPLEMENT: False,
         })
         self.assertFalse(hasattr(section, 'get'))
@@ -120,7 +99,6 @@ class TestOptionsPage(unittest.TestCase):
         page.api = ApiWithSection()
         # Should not raise AttributeError: 'ProfileConfigSection' object has no attribute 'get'
         page.load()
-        self.assertTrue(page.cb_enabled.isChecked())
         self.assertFalse(page.cb_auto_supplement.isChecked())
 
 

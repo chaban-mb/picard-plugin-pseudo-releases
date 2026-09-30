@@ -11,7 +11,6 @@ spec.loader.exec_module(plugin_module)
 
 from constants import (
     OPT_AUTO_SUPPLEMENT,
-    OPT_ENABLED,
     PSEUDO_RELEASE_STATUS,
     TAG_ORIGINAL_RELEASE_ID,
 )
@@ -72,7 +71,6 @@ class MockPluginConfig(dict):
 class MockPluginApi:
     def __init__(self):
         self.plugin_config = MockPluginConfig({
-            OPT_ENABLED: True,
             OPT_AUTO_SUPPLEMENT: True,
         })
         self.processors = []

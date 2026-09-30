@@ -97,12 +97,9 @@ except ImportError:
 
     class QtWidgets:  # type: ignore[no-redef]
         QWidget = _DummyWidget
-        QGroupBox = _DummyWidget
         QVBoxLayout = _DummyWidget
         QLabel = _DummyWidget
         QCheckBox = _DummyWidget
-        QRadioButton = _DummyWidget
-        QButtonGroup = _DummyWidget
 
     class OptionsPage(QtWidgets.QWidget):  # type: ignore[no-redef]
         NAME = ""
@@ -115,13 +112,11 @@ except ImportError:
 try:
     from .constants import (
         OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLED,
         get_config_value,
     )
 except (ImportError, ValueError):
     from constants import (
         OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLED,
         get_config_value,
     )
 
@@ -151,46 +146,24 @@ class PseudoReleaseOptionsPage(OptionsPage):
     def _build_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
 
-        # 1. Main Features
-        group_features = QtWidgets.QGroupBox(
-            self._tr("ui.group_features", "Pseudo-Release Features"),
-            self,
-        )
-        features_layout = QtWidgets.QVBoxLayout(group_features)
-
-        self.cb_enabled = QtWidgets.QCheckBox(
-            self._tr("ui.enable_plugin", "Enable Pseudo-Release support"),
-            group_features,
-        )
-        features_layout.addWidget(self.cb_enabled)
-
         self.cb_auto_supplement = QtWidgets.QCheckBox(
             self._tr(
                 "ui.auto_supplement",
-                "Supplement pseudo-releases with original catalog metadata & cover art",
+                "Supplement pseudo-releases with original catalog metadata and cover art",
             ),
-            group_features,
+            self,
         )
-        features_layout.addWidget(self.cb_auto_supplement)
+        layout.addWidget(self.cb_auto_supplement)
         self.lbl_auto_supplement_description = QtWidgets.QLabel(
             self._tr(
                 "ui.auto_supplement_description",
                 "Fills missing tags only: date, originaldate, releasecountry, barcode, media, label, catalognumber. Cover art comes from the linked original release.",
             ),
-            group_features,
+            self,
         )
         self.lbl_auto_supplement_description.setWordWrap(True)
-        features_layout.addWidget(self.lbl_auto_supplement_description)
-
-        self.cb_enabled.toggled.connect(self._update_control_states)
-        layout.addWidget(group_features)
+        layout.addWidget(self.lbl_auto_supplement_description)
         layout.addStretch()
-        self._update_control_states()
-
-    def _update_control_states(self, *_):
-        """Disable settings that cannot apply while their parent feature is off."""
-        enabled = self.cb_enabled.isChecked()
-        self.cb_auto_supplement.setEnabled(enabled)
 
     def load(self):
         """Load settings from plugin configuration into UI widgets."""
@@ -198,9 +171,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
             return
 
         cfg = self.api.plugin_config
-        self.cb_enabled.setChecked(get_config_value(cfg, OPT_ENABLED, True))
         self.cb_auto_supplement.setChecked(get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True))
-        self._update_control_states()
 
     def save(self):
         """Save settings from UI widgets into plugin configuration."""
@@ -208,5 +179,4 @@ class PseudoReleaseOptionsPage(OptionsPage):
             return
 
         cfg = self.api.plugin_config
-        cfg[OPT_ENABLED] = self.cb_enabled.isChecked()
         cfg[OPT_AUTO_SUPPLEMENT] = self.cb_auto_supplement.isChecked()

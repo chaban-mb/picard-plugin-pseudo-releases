@@ -31,7 +31,6 @@ RELATIONSHIP_TYPE_TRANSL_TRACKLISTING = 'fc399d47-23a7-4c28-bfcf-0607a562b644'
 PSEUDO_RELEASE_STATUS = 'Pseudo-Release'
 
 # Plugin configuration keys
-OPT_ENABLED = 'enabled'
 OPT_AUTO_SUPPLEMENT = 'auto_supplement_pseudo'
 
 # Metadata keys supplemented on pseudo-releases from original releases
