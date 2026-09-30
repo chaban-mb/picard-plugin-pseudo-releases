@@ -47,7 +47,7 @@ except ImportError:
         def __init__(self, *args, **kwargs):
             self._checked = False
             self._enabled = True
-            self._tool_tip = ""
+            self._text = args[0] if args and isinstance(args[0], str) else ""
             self.toggled = _DummySignal()
 
         def setStyleSheet(self, *args):
@@ -77,11 +77,11 @@ except ImportError:
         def isEnabled(self):
             return self._enabled
 
-        def setToolTip(self, text):
-            self._tool_tip = text
+        def setWordWrap(self, enabled):
+            pass
 
-        def toolTip(self):
-            return self._tool_tip
+        def text(self):
+            return self._text
 
         def addButton(self, *args):
             pass
@@ -90,6 +90,7 @@ except ImportError:
         QWidget = _DummyWidget
         QGroupBox = _DummyWidget
         QVBoxLayout = _DummyWidget
+        QLabel = _DummyWidget
         QCheckBox = _DummyWidget
         QRadioButton = _DummyWidget
         QButtonGroup = _DummyWidget
@@ -164,10 +165,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.enable_plugin", "Enable Pseudo-Release support"),
             group_features,
         )
-        self.cb_enabled.setToolTip(self._tr(
-            "ui.enable_plugin_tooltip",
-            "Master switch for all pseudo-release features, including supplementation and translation overlays.",
-        ))
         features_layout.addWidget(self.cb_enabled)
 
         self.cb_auto_supplement = QtWidgets.QCheckBox(
@@ -177,11 +174,16 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_features,
         )
-        self.cb_auto_supplement.setToolTip(self._tr(
-            "ui.auto_supplement_tooltip",
-            "When loading a pseudo-release, fill in missing catalog metadata and cover art from its linked original release.",
-        ))
         features_layout.addWidget(self.cb_auto_supplement)
+        self.lbl_auto_supplement_description = QtWidgets.QLabel(
+            self._tr(
+                "ui.auto_supplement_description",
+                "Fills missing tags only: date, originaldate, releasecountry, barcode, media, label, catalognumber. Cover art comes from the linked original release.",
+            ),
+            group_features,
+        )
+        self.lbl_auto_supplement_description.setWordWrap(True)
+        features_layout.addWidget(self.lbl_auto_supplement_description)
 
         self.cb_auto_overlay = QtWidgets.QCheckBox(
             self._tr(
@@ -190,11 +192,16 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_features,
         )
-        self.cb_auto_overlay.setToolTip(self._tr(
-            "ui.auto_overlay_tooltip",
-            "When loading an original release, apply track titles and artist credits from a related pseudo-release.",
-        ))
         features_layout.addWidget(self.cb_auto_overlay)
+        self.lbl_auto_overlay_description = QtWidgets.QLabel(
+            self._tr(
+                "ui.auto_overlay_description",
+                "Replaces release and track titles and artist credits with those from the related pseudo-release; original catalog metadata and cover art are retained.",
+            ),
+            group_features,
+        )
+        self.lbl_auto_overlay_description.setWordWrap(True)
+        features_layout.addWidget(self.lbl_auto_overlay_description)
 
         self.cb_enabled.toggled.connect(self._update_control_states)
         self.cb_auto_overlay.toggled.connect(self._update_control_states)
@@ -214,10 +221,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
             group_script,
         )
-        self.rb_latn.setToolTip(self._tr(
-            "ui.script_latn_tooltip",
-            "Prefer Latin-script transliterations, such as Romaji, when choosing a pseudo-release.",
-        ))
         self.btn_group_script.addButton(self.rb_latn)
         script_layout.addWidget(self.rb_latn)
 
@@ -225,10 +228,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_eng", "English translations"),
             group_script,
         )
-        self.rb_eng.setToolTip(self._tr(
-            "ui.script_eng_tooltip",
-            "Prefer English translations when choosing a pseudo-release.",
-        ))
         self.btn_group_script.addButton(self.rb_eng)
         script_layout.addWidget(self.rb_eng)
 
@@ -236,10 +235,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_locales", "Match Picard user interface language"),
             group_script,
         )
-        self.rb_locales.setToolTip(self._tr(
-            "ui.script_locales_tooltip",
-            "Prefer pseudo-releases in languages matching Picard's user interface language.",
-        ))
         self.btn_group_script.addButton(self.rb_locales)
         script_layout.addWidget(self.rb_locales)
 
@@ -259,10 +254,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_behavior,
         )
-        self.cb_skip_latin.setToolTip(self._tr(
-            "ui.skip_latin_tooltip",
-            "Do not overlay translations when the original release is already identified as Latin script.",
-        ))
         behavior_layout.addWidget(self.cb_skip_latin)
 
         layout.addWidget(group_behavior)

@@ -89,22 +89,27 @@ class TestOptionsPage(unittest.TestCase):
         self.assertEqual(api.plugin_config[OPT_TARGET_SCRIPT_MODE], SCRIPT_MODE_LOCALES)
         self.assertTrue(api.plugin_config[OPT_SKIP_LATIN_ORIGINALS])
 
-    def test_tooltips_explain_options(self):
+    def test_inline_descriptions_explain_supplement_and_overlay(self):
         page = PseudoReleaseOptionsPage()
 
-        for widget in (
-            page.cb_enabled,
-            page.cb_auto_supplement,
-            page.cb_auto_overlay,
-            page.rb_latn,
-            page.rb_eng,
-            page.rb_locales,
-            page.cb_skip_latin,
+        supplement_description = page.lbl_auto_supplement_description.text()
+        for tag in (
+            "date",
+            "originaldate",
+            "releasecountry",
+            "barcode",
+            "media",
+            "label",
+            "catalognumber",
         ):
-            self.assertTrue(widget.toolTip())
+            self.assertIn(tag, supplement_description)
+        self.assertIn("missing tags only", supplement_description)
+        self.assertIn("Cover art", supplement_description)
 
-        self.assertIn("Master switch", page.cb_enabled.toolTip())
-        self.assertIn("original release", page.cb_auto_supplement.toolTip())
+        overlay_description = page.lbl_auto_overlay_description.text()
+        self.assertIn("release and track titles", overlay_description)
+        self.assertIn("artist credits", overlay_description)
+        self.assertIn("catalog metadata and cover art are retained", overlay_description)
 
     def test_dependent_controls_follow_feature_toggles(self):
         page = PseudoReleaseOptionsPage()
