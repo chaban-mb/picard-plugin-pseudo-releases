@@ -32,9 +32,23 @@ try:
     )
 except ImportError:
     # Stubs for headless testing environments without PyQt6
+    class _DummySignal:
+        def __init__(self):
+            self._callbacks = []
+
+        def connect(self, callback):
+            self._callbacks.append(callback)
+
+        def emit(self, *args):
+            for callback in self._callbacks:
+                callback(*args)
+
     class _DummyWidget:
         def __init__(self, *args, **kwargs):
             self._checked = False
+            self._enabled = True
+            self._tool_tip = ""
+            self.toggled = _DummySignal()
 
         def setStyleSheet(self, *args):
             pass
@@ -52,7 +66,22 @@ except ImportError:
             return self._checked
 
         def setChecked(self, val):
-            self._checked = bool(val)
+            checked = bool(val)
+            if checked != self._checked:
+                self._checked = checked
+                self.toggled.emit(checked)
+
+        def setEnabled(self, enabled):
+            self._enabled = bool(enabled)
+
+        def isEnabled(self):
+            return self._enabled
+
+        def setToolTip(self, text):
+            self._tool_tip = text
+
+        def toolTip(self):
+            return self._tool_tip
 
         def addButton(self, *args):
             pass
@@ -135,6 +164,10 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.enable_plugin", "Enable Pseudo-Release support"),
             group_features,
         )
+        self.cb_enabled.setToolTip(self._tr(
+            "ui.enable_plugin_tooltip",
+            "Master switch for all pseudo-release features, including supplementation and translation overlays.",
+        ))
         features_layout.addWidget(self.cb_enabled)
 
         self.cb_auto_supplement = QtWidgets.QCheckBox(
@@ -144,6 +177,10 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_features,
         )
+        self.cb_auto_supplement.setToolTip(self._tr(
+            "ui.auto_supplement_tooltip",
+            "When loading a pseudo-release, fill in missing catalog metadata and cover art from its linked original release.",
+        ))
         features_layout.addWidget(self.cb_auto_supplement)
 
         self.cb_auto_overlay = QtWidgets.QCheckBox(
@@ -153,7 +190,14 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_features,
         )
+        self.cb_auto_overlay.setToolTip(self._tr(
+            "ui.auto_overlay_tooltip",
+            "When loading an original release, apply track titles and artist credits from a related pseudo-release.",
+        ))
         features_layout.addWidget(self.cb_auto_overlay)
+
+        self.cb_enabled.toggled.connect(self._update_control_states)
+        self.cb_auto_overlay.toggled.connect(self._update_control_states)
 
         layout.addWidget(group_features)
 
@@ -170,6 +214,10 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
             group_script,
         )
+        self.rb_latn.setToolTip(self._tr(
+            "ui.script_latn_tooltip",
+            "Prefer Latin-script transliterations, such as Romaji, when choosing a pseudo-release.",
+        ))
         self.btn_group_script.addButton(self.rb_latn)
         script_layout.addWidget(self.rb_latn)
 
@@ -177,6 +225,10 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_eng", "English translations"),
             group_script,
         )
+        self.rb_eng.setToolTip(self._tr(
+            "ui.script_eng_tooltip",
+            "Prefer English translations when choosing a pseudo-release.",
+        ))
         self.btn_group_script.addButton(self.rb_eng)
         script_layout.addWidget(self.rb_eng)
 
@@ -184,6 +236,10 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self._tr("ui.script_locales", "Match Picard user interface language"),
             group_script,
         )
+        self.rb_locales.setToolTip(self._tr(
+            "ui.script_locales_tooltip",
+            "Prefer pseudo-releases in languages matching Picard's user interface language.",
+        ))
         self.btn_group_script.addButton(self.rb_locales)
         script_layout.addWidget(self.rb_locales)
 
@@ -203,10 +259,25 @@ class PseudoReleaseOptionsPage(OptionsPage):
             ),
             group_behavior,
         )
+        self.cb_skip_latin.setToolTip(self._tr(
+            "ui.skip_latin_tooltip",
+            "Do not overlay translations when the original release is already identified as Latin script.",
+        ))
         behavior_layout.addWidget(self.cb_skip_latin)
 
         layout.addWidget(group_behavior)
         layout.addStretch()
+        self._update_control_states()
+
+    def _update_control_states(self, *_):
+        """Disable settings that cannot apply while their parent feature is off."""
+        enabled = self.cb_enabled.isChecked()
+        overlay_enabled = enabled and self.cb_auto_overlay.isChecked()
+
+        self.cb_auto_supplement.setEnabled(enabled)
+        self.cb_auto_overlay.setEnabled(enabled)
+        for widget in (self.rb_latn, self.rb_eng, self.rb_locales, self.cb_skip_latin):
+            widget.setEnabled(overlay_enabled)
 
     def load(self):
         """Load settings from plugin configuration into UI widgets."""
@@ -227,6 +298,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
             self.rb_latn.setChecked(True)
 
         self.cb_skip_latin.setChecked(get_config_value(cfg, OPT_SKIP_LATIN_ORIGINALS, True))
+        self._update_control_states()
 
     def save(self):
         """Save settings from UI widgets into plugin configuration."""

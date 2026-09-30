@@ -89,6 +89,62 @@ class TestOptionsPage(unittest.TestCase):
         self.assertEqual(api.plugin_config[OPT_TARGET_SCRIPT_MODE], SCRIPT_MODE_LOCALES)
         self.assertTrue(api.plugin_config[OPT_SKIP_LATIN_ORIGINALS])
 
+    def test_tooltips_explain_options(self):
+        page = PseudoReleaseOptionsPage()
+
+        for widget in (
+            page.cb_enabled,
+            page.cb_auto_supplement,
+            page.cb_auto_overlay,
+            page.rb_latn,
+            page.rb_eng,
+            page.rb_locales,
+            page.cb_skip_latin,
+        ):
+            self.assertTrue(widget.toolTip())
+
+        self.assertIn("Master switch", page.cb_enabled.toolTip())
+        self.assertIn("original release", page.cb_auto_supplement.toolTip())
+
+    def test_dependent_controls_follow_feature_toggles(self):
+        page = PseudoReleaseOptionsPage()
+        api = MockPluginApi(
+            {
+                OPT_ENABLED: False,
+                OPT_AUTO_SUPPLEMENT: True,
+                OPT_AUTO_OVERLAY: True,
+                OPT_TARGET_SCRIPT_MODE: SCRIPT_MODE_ENG,
+                OPT_SKIP_LATIN_ORIGINALS: True,
+            }
+        )
+        page.api = api
+        page.load()
+
+        self.assertFalse(page.cb_auto_supplement.isEnabled())
+        self.assertFalse(page.cb_auto_overlay.isEnabled())
+        self.assertFalse(page.rb_eng.isEnabled())
+        self.assertFalse(page.cb_skip_latin.isEnabled())
+        self.assertTrue(page.cb_auto_supplement.isChecked())
+        self.assertTrue(page.cb_auto_overlay.isChecked())
+        self.assertTrue(page.rb_eng.isChecked())
+        self.assertTrue(page.cb_skip_latin.isChecked())
+
+        page.cb_enabled.setChecked(True)
+        self.assertTrue(page.cb_auto_supplement.isEnabled())
+        self.assertTrue(page.cb_auto_overlay.isEnabled())
+        self.assertTrue(page.rb_eng.isEnabled())
+        self.assertTrue(page.cb_skip_latin.isEnabled())
+
+        page.cb_auto_overlay.setChecked(False)
+        self.assertFalse(page.rb_eng.isEnabled())
+        self.assertFalse(page.cb_skip_latin.isEnabled())
+        self.assertTrue(page.rb_eng.isChecked())
+        self.assertTrue(page.cb_skip_latin.isChecked())
+
+        page.cb_auto_overlay.setChecked(True)
+        self.assertTrue(page.rb_eng.isEnabled())
+        self.assertTrue(page.cb_skip_latin.isEnabled())
+
     def test_profile_config_section_without_get(self):
         """Verify load() and save() work on ProfileConfigSection which has NO .get() method."""
         page = PseudoReleaseOptionsPage()
