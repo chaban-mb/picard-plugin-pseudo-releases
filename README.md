@@ -34,4 +34,4 @@ picard-cli plugins install /path/to/picard-plugin-pseudo-releases
 * Python 3.10 or higher
 
 ## License
-GNU General Public License v2.0 or later (GPL-2.0-or-later).
+MIT License.

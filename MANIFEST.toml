@@ -5,5 +5,5 @@ description = "Supplements pseudo-releases with original catalog data and overla
 version = "1.0.0"
 api = ["3.0"]
 categories = ["metadata", "coverart"]
-license = "GPL-2.0-or-later"
-license_url = "https://www.gnu.org/licenses/gpl-2.0.html"
+license = "MIT"
+license_url = "https://opensource.org/licenses/MIT"
