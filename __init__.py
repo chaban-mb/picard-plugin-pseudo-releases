@@ -138,6 +138,10 @@ class PseudoReleasePlugin:
         if album_id and album_id in cls.in_flight_albums:
             cls.in_flight_albums.discard(album_id)
             cls._log_debug(api, "Cleaned up in-flight state for album %s", album_id)
+        if hasattr(album, '_pseudo_tracks'):
+            album._pseudo_tracks = None
+        if hasattr(album, '_pseudo_mbid'):
+            album._pseudo_mbid = None
 
     @classmethod
     def process_album_metadata(
@@ -148,6 +152,10 @@ class PseudoReleasePlugin:
         release_node: dict[str, Any],
     ) -> None:
         """Process loaded release to apply supplementation or translation overlays."""
+        # Always reset cached pseudo-release state on the album object when loading or switching versions
+        album._pseudo_tracks = None
+        album._pseudo_mbid = None
+
         if not get_config_value(api.plugin_config, OPT_ENABLED, True):
             return
 
@@ -265,6 +273,9 @@ class PseudoReleasePlugin:
                     cls._log_debug(api, "Overlaid pseudo-release %s onto %s", target_mbid, album_id)
                 else:
                     supplement_pseudo_metadata(album.metadata, document)
+                    new_meta = getattr(album, '_new_metadata', None)
+                    if new_meta is not None:
+                        supplement_pseudo_metadata(new_meta, document)
                     cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 
             except Exception as exc:
@@ -302,7 +313,30 @@ class PseudoReleasePlugin:
         if not get_config_value(api.plugin_config, OPT_AUTO_OVERLAY, True):
             return
 
+        # Direction 2 (overlay) is strictly for original releases overlaid with pseudo data.
+        # It must NEVER modify native pseudo-releases.
+        if release_node and release_node.get('status') == PSEUDO_RELEASE_STATUS:
+            return
+
         album = getattr(track, 'album', None)
+        if not album:
+            return
+
+        album_meta = getattr(album, 'metadata', None)
+        if album_meta:
+            if (
+                album_meta.get('releasestatus') == PSEUDO_RELEASE_STATUS
+                or album_meta.get('status') == PSEUDO_RELEASE_STATUS
+            ):
+                return
+            pseudo_id = album_meta.get(TAG_PSEUDO_RELEASE_ID)
+            if not pseudo_id:
+                return
+            if getattr(album, '_pseudo_mbid', None) != pseudo_id:
+                return
+        else:
+            return
+
         pseudo_tracks = getattr(album, '_pseudo_tracks', None)
         if not pseudo_tracks:
             return

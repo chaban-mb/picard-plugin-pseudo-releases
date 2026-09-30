@@ -247,6 +247,7 @@ def overlay_pseudo_metadata_on_album(album: Any, pseudo_node: dict[str, Any]) ->
     # Build track lookup from pseudo-release
     pseudo_tracks = build_track_mapping(pseudo_node)
     album._pseudo_tracks = pseudo_tracks
+    album._pseudo_mbid = pseudo_id
 
     # 3. Update album._release_node in-place if present
     # This is CRITICAL: in Picard's async loading pipeline, _load_tracks() creates Track objects

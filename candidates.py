@@ -256,8 +256,12 @@ def score_pseudo_candidate(
             score += 60.0
         if script == 'Latn':
             score += 30.0
-        if 'english' in disambig or 'translation' in disambig:
+        if 'translation' in disambig:
             score += 20.0
+        elif 'english' in disambig:
+            score += 15.0
+        elif 'localization' in disambig:
+            score += 10.0
 
     elif target_mode == SCRIPT_MODE_LOCALES:
         # Prioritize matching Picard user's locale

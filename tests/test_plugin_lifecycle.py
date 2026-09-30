@@ -15,6 +15,7 @@ from constants import (
     OPT_ENABLED,
     OPT_SKIP_LATIN_ORIGINALS,
     OPT_TARGET_SCRIPT_MODE,
+    PSEUDO_RELEASE_STATUS,
     SCRIPT_MODE_LATN,
     TAG_ORIGINAL_RELEASE_ID,
     TAG_PSEUDO_RELEASE_ID,
@@ -252,6 +253,8 @@ class TestPluginLifecycle(unittest.TestCase):
 
     def test_process_track_metadata(self):
         orig_album = MockAlbum("orig-123", "Orig Album")
+        orig_album.metadata[TAG_PSEUDO_RELEASE_ID] = "pseudo-123"
+        orig_album._pseudo_mbid = "pseudo-123"
         orig_album._pseudo_tracks = {
             "rec-1": {"title": "Translated Track 1", "artist-credit": [{"name": "English Artist"}]},
             "1:2": {"title": "Translated Track 2", "artist-credit": [{"name": "English Artist 2"}]},
@@ -277,6 +280,70 @@ class TestPluginLifecycle(unittest.TestCase):
         )
         self.assertEqual(meta2["title"], "Translated Track 2")
         self.assertEqual(meta2["artist"], "English Artist 2")
+
+    def test_process_track_metadata_guards_against_pseudo_releases(self):
+        """Ensure track processor never overwrites native titles on pseudo-releases."""
+        pseudo_album = MockAlbum("pseudo-6a3c", "PERSONA3 Original Soundtrack")
+        # Simulate stale _pseudo_tracks lingering on the Album object
+        pseudo_album._pseudo_tracks = {
+            "rec-2": {"title": "The Poem for Everyone's Souls"},
+        }
+        pseudo_album._pseudo_mbid = "pseudo-2ade"
+
+        class MockTrackItem:
+            album = pseudo_album
+
+        track = MockTrackItem()
+
+        # Guard 1: release_node has status == 'Pseudo-Release'
+        meta1 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track, meta1, {"recording": {"id": "rec-2"}}, {"status": PSEUDO_RELEASE_STATUS}
+        )
+        self.assertEqual(meta1["title"], "Aria of the Soul")
+
+        # Guard 2: album.metadata has releasestatus == 'Pseudo-Release'
+        pseudo_album.metadata["releasestatus"] = PSEUDO_RELEASE_STATUS
+        meta2 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track, meta2, {"recording": {"id": "rec-2"}}, None
+        )
+        self.assertEqual(meta2["title"], "Aria of the Soul")
+
+        # Guard 3: album.metadata lacks TAG_PSEUDO_RELEASE_ID
+        pseudo_album.metadata = MockMetadata()
+        meta3 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track, meta3, {"recording": {"id": "rec-2"}}, None
+        )
+        self.assertEqual(meta3["title"], "Aria of the Soul")
+
+        # Guard 4: album.metadata TAG_PSEUDO_RELEASE_ID does not match _pseudo_mbid
+        pseudo_album.metadata[TAG_PSEUDO_RELEASE_ID] = "different-pseudo-id"
+        meta4 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track, meta4, {"recording": {"id": "rec-2"}}, None
+        )
+        self.assertEqual(meta4["title"], "Aria of the Soul")
+
+    def test_process_album_metadata_resets_pseudo_attributes(self):
+        """process_album_metadata must reset lingering _pseudo_tracks and _pseudo_mbid on load/switch."""
+        album = MockAlbum("album-switched", "Original or Pseudo")
+        album._pseudo_tracks = {"rec-old": {"title": "Old Stale Title"}}
+        album._pseudo_mbid = "old-stale-mbid"
+
+        release_node = {
+            "id": "album-switched",
+            "status": "Official",
+            "relations": [],
+        }
+        meta = MockMetadata()
+
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            self.api, album, meta, release_node
+        )
+        self.assertIsNone(album._pseudo_tracks)
+        self.assertIsNone(album._pseudo_mbid)
 
 
 if __name__ == '__main__':
