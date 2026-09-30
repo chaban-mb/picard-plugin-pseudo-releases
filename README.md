@@ -9,7 +9,8 @@ Seamlessly integrates MusicBrainz pseudo-releases into MusicBrainz Picard 3.0+.
    * Supplements cover artwork via the Cover Art Archive (CAA) using the original release ID.
 
 2. **Intelligent Disambiguation**:
-   * Evaluates Disc ID / TOC matches, track counts, medium layouts, and file tag fingerprints to pick the best candidate among multi-format editions (e.g. CD vs. Vinyl vs. Digital).
+   * Ranks linked original editions using available Disc ID / TOC, track-count, barcode, format, catalog-number, status, and cover-art data.
+   * Right-click a pseudo-release and choose **Choose linked original...** to inspect linked editions and switch the source used for catalog metadata and cover art. Choose **Automatic best match** to return to automatic selection.
 
 ## Installation
 

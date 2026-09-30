@@ -1,6 +1,7 @@
 # Integration tests for plugin lifecycle, task queues, and processor integration
 import unittest
 from unittest.mock import MagicMock
+from unittest.mock import patch
 import importlib.util
 from pathlib import Path
 
@@ -57,9 +58,13 @@ class MockAlbum:
         )
         self.tracks = []
         self._finalized = False
+        self.load_calls = []
 
     def _finalize_loading(self, error):
         self._finalized = True
+
+    def load(self, **kwargs):
+        self.load_calls.append(kwargs)
 
 
 class MockPluginConfig(dict):
@@ -76,6 +81,7 @@ class MockPluginApi:
         self.processors = []
 
         self.providers = []
+        self.album_actions = []
         self.options_pages = []
         self.removal_processors = []
         self.added_tasks = []
@@ -88,6 +94,9 @@ class MockPluginApi:
 
     def register_album_post_removal_processor(self, func):
         self.removal_processors.append(func)
+
+    def register_album_action(self, action_cls):
+        self.album_actions.append(action_cls)
 
     def register_cover_art_provider(self, provider_cls):
         self.providers.append(provider_cls)
@@ -111,6 +120,7 @@ class TestPluginLifecycle(unittest.TestCase):
 
     def test_enable_registers_extension_points(self):
         self.assertEqual(len(self.api.processors), 1)
+        self.assertEqual(len(self.api.album_actions), 1)
         self.assertTrue(len(self.api.removal_processors) > 0)
         self.assertTrue(len(self.api.providers) > 0)
         self.assertTrue(len(self.api.options_pages) > 0)
@@ -196,6 +206,97 @@ class TestPluginLifecycle(unittest.TestCase):
 
         self.assertEqual(album.metadata["album"], "Original release")
         self.assertEqual(self.api.added_tasks, [])
+
+    def test_choose_linked_original_fetches_details_and_reloads_selected_source(self):
+        album = MockAlbum("pseudo-1", "Translated soundtrack", status="Pseudo-Release")
+        album.metadata["musicbrainz_albumid"] = "pseudo-1"
+        album._pseudo_original_candidates = [
+            {"id": "original-1", "title": "Original edition A"},
+            {"id": "original-2", "title": "Original edition B"},
+        ]
+        details = {
+            "original-1": {
+                "id": "original-1",
+                "title": "Original edition A",
+                "date": "2008-12-24",
+                "country": "JP",
+                "barcode": "111",
+                "media": [{"format": "CD", "track-count": 55}],
+                "label-info": [{"label": {"name": "Square Enix"}, "catalog-number": "SQEX-10130"}],
+            },
+            "original-2": {
+                "id": "original-2",
+                "title": "Original edition B",
+                "date": "2008-12-24",
+                "country": "JP",
+                "barcode": "222",
+                "media": [{"format": "CD", "track-count": 55}],
+                "label-info": [{"label": {"name": "Square Enix"}, "catalog-number": "SQEX-10132"}],
+            },
+        }
+
+        def mock_get_release(release_id, callback, inc=None):
+            callback(details[release_id], None, None)
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
+        selected_label = plugin_module.PseudoReleasePlugin._format_original_candidate(
+            details["original-2"], None
+        )
+        action_cls = self.api.album_actions[0]
+        action = action_cls()
+        action.api = self.api
+
+        with patch.object(
+            plugin_module.QtWidgets.QInputDialog,
+            "getItem",
+            return_value=(selected_label, True),
+        ) as get_item:
+            action.callback([album])
+
+        self.assertEqual(len(get_item.call_args.args[3]), 3)
+        self.assertIn("SQEX-10130", get_item.call_args.args[3][1])
+        self.assertIn("SQEX-10132", get_item.call_args.args[3][2])
+        self.assertEqual(album._pseudo_original_release_choice, "original-2")
+        self.assertEqual(album._pseudo_original_selection_mode, "manual")
+        self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
+
+    def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
+        self.api.plugin_config[OPT_AUTO_SUPPLEMENT] = False
+        album = MockAlbum("pseudo-2", "Translated soundtrack", status="Pseudo-Release")
+        album._pseudo_original_source_id = "pseudo-2"
+        album._pseudo_original_selection_mode = "manual"
+        album._pseudo_original_release_choice = "original-2"
+        release_node = {
+            "id": "pseudo-2",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "original-1", "title": "Edition A"},
+                },
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "original-2", "title": "Edition B"},
+                },
+            ],
+        }
+
+        def mock_get_release(release_id, callback, inc=None):
+            callback(
+                {"id": release_id, "barcode": f"barcode-{release_id}", "media": []},
+                None,
+                None,
+            )
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            self.api, album, album.metadata, release_node
+        )
+
+        self.assertTrue(any(task[1] == "pseudo_enrich_original-2" for task in self.api.added_tasks))
+        self.assertEqual(album.metadata["barcode"], "barcode-original-2")
 
 
 if __name__ == '__main__':
