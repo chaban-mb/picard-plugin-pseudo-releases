@@ -1,7 +1,7 @@
 uuid = "a08a246e-6b76-46aa-bc36-b575c0ce9edb"
 name = "Pseudo-Releases"
 authors = ["chaban"]
-description = "Supplements pseudo-releases with original catalog data and overlays translated tracklists."
+description = "Supplements pseudo-releases with original catalog metadata and cover art."
 version = "1.0.0"
 api = ["3.0"]
 categories = ["metadata", "coverart"]

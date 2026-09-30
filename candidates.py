@@ -27,19 +27,11 @@ from typing import Any
 
 try:
     from .constants import (
-        PSEUDO_RELEASE_STATUS,
         RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
-        SCRIPT_MODE_ENG,
-        SCRIPT_MODE_LATN,
-        SCRIPT_MODE_LOCALES,
     )
 except (ImportError, ValueError):
     from constants import (
-        PSEUDO_RELEASE_STATUS,
         RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
-        SCRIPT_MODE_ENG,
-        SCRIPT_MODE_LATN,
-        SCRIPT_MODE_LOCALES,
     )
 
 
@@ -61,21 +53,16 @@ def find_related_releases(
     """
     candidates: list[dict[str, Any]] = []
     relations = release_node.get('relations', [])
-
     for rel in relations:
         if not isinstance(rel, dict):
             continue
 
         r_type = rel.get('type')
         r_type_id = rel.get('type-id')
-
-        # Check relation type match
         if r_type != 'transl-tracklisting' and r_type_id != rel_type:
             continue
 
-        # Check direction filter
-        r_direction = rel.get('direction')
-        if direction and r_direction != direction:
+        if direction and rel.get('direction') != direction:
             continue
 
         target_release = rel.get('release')
@@ -90,32 +77,32 @@ def _get_tag_from_files_or_metadata(
     album_metadata: Any = None,
     files: Sequence[Any] | None = None,
 ) -> set[str]:
-    """Helper to collect a set of non-empty string values for a tag from files or album metadata."""
+    """Collect non-empty string values for a tag from files or album metadata."""
     values: set[str] = set()
 
     if files:
         for file in files:
             meta = getattr(file, 'metadata', file)
             if hasattr(meta, 'getall'):
-                for v in meta.getall(tag_name):
-                    v_str = str(v).strip()
-                    if v_str:
-                        values.add(v_str.lower())
+                for value in meta.getall(tag_name):
+                    value = str(value).strip()
+                    if value:
+                        values.add(value.lower())
             elif hasattr(meta, 'get'):
-                v = meta.get(tag_name)
-                if v:
-                    values.add(str(v).strip().lower())
+                value = meta.get(tag_name)
+                if value:
+                    values.add(str(value).strip().lower())
 
     if not values and album_metadata is not None:
         if hasattr(album_metadata, 'getall'):
-            for v in album_metadata.getall(tag_name):
-                v_str = str(v).strip()
-                if v_str:
-                    values.add(v_str.lower())
+            for value in album_metadata.getall(tag_name):
+                value = str(value).strip()
+                if value:
+                    values.add(value.lower())
         elif hasattr(album_metadata, 'get'):
-            v = album_metadata.get(tag_name)
-            if v:
-                values.add(str(v).strip().lower())
+            value = album_metadata.get(tag_name)
+            if value:
+                values.add(str(value).strip().lower())
 
     return values
 
@@ -127,7 +114,9 @@ def score_original_candidate(
     disc_ids: Sequence[str] | None = None,
     preferred_countries: Sequence[str] | None = None,
 ) -> float:
-    """Calculate match score for an original release candidate linked to a pseudo-release.
+    """Score an original release candidate against local files and metadata.
+
+
 
     Discriminates between multi-format editions ($N \\to 1$) where track durations
     cannot distinguish identical audio recordings.
@@ -216,72 +205,6 @@ def score_original_candidate(
     return score
 
 
-def score_pseudo_candidate(
-    candidate: dict[str, Any],
-    target_mode: str = SCRIPT_MODE_LATN,
-    preferred_locales: Sequence[str] | None = None,
-) -> float:
-    """Calculate match score for a pseudo-release candidate linked to an original release.
-
-    Evaluates script and language representations to select the best translation ($1 \\to N$).
-
-    Args:
-        candidate: Candidate pseudo-release dictionary from MusicBrainz API.
-        target_mode: Preference mode (SCRIPT_MODE_LATN, SCRIPT_MODE_ENG, SCRIPT_MODE_LOCALES).
-        preferred_locales: Optional user UI locale preferences.
-
-    Returns:
-        float: Match score (higher is better).
-    """
-    score = 0.0
-
-    # Bonus for being an explicit pseudo-release
-    status = candidate.get('status')
-    if status == PSEUDO_RELEASE_STATUS:
-        score += 25.0
-
-    text_rep = candidate.get('text-representation') or {}
-    script = (text_rep.get('script') or '').capitalize()
-    lang = (text_rep.get('language') or '').lower()
-    disambig = (candidate.get('disambiguation') or '').lower()
-
-    if target_mode == SCRIPT_MODE_LATN:
-        # Prioritize Latin script / Romaji transliterations
-        if script == 'Latn':
-            score += 50.0
-        if any(w in disambig for w in ('transliteration', 'romaji', 'romanized', 'hepburn')):
-            score += 30.0
-        # Secondary: if Latin and language is Japanese, it's a Romaji transliteration
-        if script == 'Latn' and lang in ('jpn', 'ja'):
-            score += 20.0
-
-    elif target_mode == SCRIPT_MODE_ENG:
-        # Prioritize English translated titles
-        if lang in ('eng', 'en'):
-            score += 60.0
-        if script == 'Latn':
-            score += 30.0
-        if 'translation' in disambig:
-            score += 20.0
-        elif 'english' in disambig:
-            score += 15.0
-        elif 'localization' in disambig:
-            score += 10.0
-
-    elif target_mode == SCRIPT_MODE_LOCALES:
-        # Prioritize matching Picard user's locale
-        if preferred_locales:
-            for idx, loc in enumerate(preferred_locales):
-                loc_clean = loc.lower().split('_')[0]
-                if lang == loc_clean or (len(loc_clean) == 2 and lang.startswith(loc_clean)):
-                    score += max(10.0, 60.0 - (idx * 10.0))
-                    break
-        if script == 'Latn':
-            score += 20.0
-
-    return score
-
-
 def select_best_original_candidate(
     candidates: Sequence[dict[str, Any]],
     album_metadata: Any = None,
@@ -289,39 +212,18 @@ def select_best_original_candidate(
     disc_ids: Sequence[str] | None = None,
     preferred_countries: Sequence[str] | None = None,
 ) -> dict[str, Any] | None:
-    """Rank and select the most promising original release from candidate list."""
+    """Rank and select the most promising original release from candidates."""
     if not candidates:
         return None
 
     ranked = sorted(
         candidates,
-        key=lambda c: score_original_candidate(
-            candidate=c,
+        key=lambda candidate: score_original_candidate(
+            candidate=candidate,
             album_metadata=album_metadata,
             files=files,
             disc_ids=disc_ids,
             preferred_countries=preferred_countries,
-        ),
-        reverse=True,
-    )
-    return ranked[0]
-
-
-def select_best_pseudo_candidate(
-    candidates: Sequence[dict[str, Any]],
-    target_mode: str = SCRIPT_MODE_LATN,
-    preferred_locales: Sequence[str] | None = None,
-) -> dict[str, Any] | None:
-    """Rank and select the most promising pseudo-release translation from candidate list."""
-    if not candidates:
-        return None
-
-    ranked = sorted(
-        candidates,
-        key=lambda c: score_pseudo_candidate(
-            candidate=c,
-            target_mode=target_mode,
-            preferred_locales=preferred_locales,
         ),
         reverse=True,
     )

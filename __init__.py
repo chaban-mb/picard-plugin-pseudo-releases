@@ -20,12 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Pseudo-Releases Picard Plugin.
-
-Supplements pseudo-releases with missing physical/catalog metadata and Cover Art Archive
-artwork from original releases, and automatically translates loaded original releases
-using pseudo-release tracklists and native translated join phrases.
-"""
+"""Pseudo-Releases Picard plugin for catalog and cover-art supplementation."""
 
 from collections.abc import Callable
 from typing import Any
@@ -64,23 +59,15 @@ try:
     from .candidates import (
         find_related_releases,
         select_best_original_candidate,
-        select_best_pseudo_candidate,
     )
     from .constants import (
-        OPT_AUTO_OVERLAY,
         OPT_AUTO_SUPPLEMENT,
         OPT_ENABLED,
-        OPT_SKIP_LATIN_ORIGINALS,
-        OPT_TARGET_SCRIPT_MODE,
         PSEUDO_RELEASE_STATUS,
-        SCRIPT_MODE_LATN,
         TAG_ORIGINAL_RELEASE_ID,
-        TAG_PSEUDO_RELEASE_ID,
         get_config_value,
     )
     from .metadata_engine import (
-        overlay_pseudo_metadata_on_album,
-        parse_artist_credit_node,
         supplement_pseudo_metadata,
     )
     from .options import PseudoReleaseOptionsPage
@@ -89,23 +76,15 @@ except (ImportError, ValueError):
     from candidates import (
         find_related_releases,
         select_best_original_candidate,
-        select_best_pseudo_candidate,
     )
     from constants import (
-        OPT_AUTO_OVERLAY,
         OPT_AUTO_SUPPLEMENT,
         OPT_ENABLED,
-        OPT_SKIP_LATIN_ORIGINALS,
-        OPT_TARGET_SCRIPT_MODE,
         PSEUDO_RELEASE_STATUS,
-        SCRIPT_MODE_LATN,
         TAG_ORIGINAL_RELEASE_ID,
-        TAG_PSEUDO_RELEASE_ID,
         get_config_value,
     )
     from metadata_engine import (
-        overlay_pseudo_metadata_on_album,
-        parse_artist_credit_node,
         supplement_pseudo_metadata,
     )
     from options import PseudoReleaseOptionsPage
@@ -116,7 +95,7 @@ class ManifestTranslations:
 
     NAME = "Pseudo-Releases"
     DESC = (
-        "Supplements pseudo-releases with original catalog metadata & cover art, and overlays translated tracklists."
+        "Supplements pseudo-releases with original catalog metadata and cover art."
     )
 
 
@@ -143,10 +122,6 @@ class PseudoReleasePlugin:
         if album_id and album_id in cls.in_flight_albums:
             cls.in_flight_albums.discard(album_id)
             cls._log_debug(api, "Cleaned up in-flight state for album %s", album_id)
-        if hasattr(album, '_pseudo_tracks'):
-            album._pseudo_tracks = None
-        if hasattr(album, '_pseudo_mbid'):
-            album._pseudo_mbid = None
 
     @classmethod
     def process_album_metadata(
@@ -156,11 +131,7 @@ class PseudoReleasePlugin:
         album_metadata: Metadata,
         release_node: dict[str, Any],
     ) -> None:
-        """Process loaded release to apply supplementation or translation overlays."""
-        # Always reset cached pseudo-release state on the album object when loading or switching versions
-        album._pseudo_tracks = None
-        album._pseudo_mbid = None
-
+        """Supplement loaded pseudo-releases with data from linked original releases."""
         if not get_config_value(api.plugin_config, OPT_ENABLED, True):
             return
 
@@ -169,18 +140,16 @@ class PseudoReleasePlugin:
             return
 
         # Avoid re-processing already enriched albums
-        if album_metadata.get(TAG_ORIGINAL_RELEASE_ID) or album_metadata.get(TAG_PSEUDO_RELEASE_ID):
+        if album_metadata.get(TAG_ORIGINAL_RELEASE_ID):
             return
 
-        is_pseudo = release_node.get('status') == PSEUDO_RELEASE_STATUS
+        if (
+            release_node.get('status') != PSEUDO_RELEASE_STATUS
+            or not get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True)
+        ):
+            return
 
-        # DIRECTION 1: Supplement pseudo-release with original catalog metadata & cover art
-        if is_pseudo and get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
-            cls._handle_supplement_pseudo(api, album, album_metadata, release_node)
-
-        # DIRECTION 2: Overlay pseudo-release tracklist & artist credits onto original release
-        elif not is_pseudo and get_config_value(api.plugin_config, OPT_AUTO_OVERLAY, True):
-            cls._handle_overlay_original(api, album, album_metadata, release_node)
+        cls._handle_supplement_pseudo(api, album, album_metadata, release_node)
 
     @classmethod
     def _handle_supplement_pseudo(
@@ -211,38 +180,7 @@ class PseudoReleasePlugin:
 
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
-        cls._queue_enrichment(api, album, orig_id, is_overlay=False)
-
-    @classmethod
-    def _handle_overlay_original(
-        cls,
-        api: PluginApi,
-        album: Album,
-        album_metadata: Metadata,
-        release_node: dict[str, Any],
-    ) -> None:
-        """Direction 2: Find best matching pseudo-release and queue translation overlay."""
-        # Check if user opted to skip if original is already Latin script
-        if get_config_value(api.plugin_config, OPT_SKIP_LATIN_ORIGINALS, True):
-            text_rep = release_node.get('text-representation') or {}
-            if (text_rep.get('script') or '').capitalize() == 'Latn':
-                cls._log_debug(api, "Skipping translation overlay; original %s is already Latin script", album.id)
-                return
-
-        candidates = find_related_releases(release_node, direction='forward')
-        if not candidates:
-            cls._log_debug(api, "No forward transl-tracklisting relations found for %s", album.id)
-            return
-
-        target_mode = get_config_value(api.plugin_config, OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
-        best_pseudo = select_best_pseudo_candidate(candidates, target_mode=target_mode)
-
-        if not best_pseudo or not best_pseudo.get('id'):
-            return
-
-        pseudo_id = best_pseudo['id']
-        cls._log_debug(api, "Selected pseudo-release candidate %s for original %s", pseudo_id, album.id)
-        cls._queue_enrichment(api, album, pseudo_id, is_overlay=True)
+        cls._queue_enrichment(api, album, orig_id)
 
     @classmethod
     def _queue_enrichment(
@@ -250,9 +188,8 @@ class PseudoReleasePlugin:
         api: PluginApi,
         album: Album,
         target_mbid: str,
-        is_overlay: bool,
     ) -> None:
-        """Fetch target release asynchronously using api.add_album_task with blocking=True."""
+        """Fetch the original release asynchronously to supplement pseudo-release metadata."""
         album_id = getattr(album, 'id', '')
         cls.in_flight_albums.add(album_id)
 
@@ -273,15 +210,11 @@ class PseudoReleasePlugin:
                     api.logger.error("Failed to load release %s: %s", target_mbid, error)
                     return
 
-                if is_overlay:
-                    overlay_pseudo_metadata_on_album(album, document)
-                    cls._log_debug(api, "Overlaid pseudo-release %s onto %s", target_mbid, album_id)
-                else:
-                    supplement_pseudo_metadata(album.metadata, document)
-                    new_meta = getattr(album, '_new_metadata', None)
-                    if new_meta is not None:
-                        supplement_pseudo_metadata(new_meta, document)
-                    cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
+                supplement_pseudo_metadata(album.metadata, document)
+                new_meta = getattr(album, '_new_metadata', None)
+                if new_meta is not None:
+                    supplement_pseudo_metadata(new_meta, document)
+                cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 
             except Exception as exc:
                 api.logger.error("Error processing pseudo-release enrichment: %s", exc)
@@ -303,89 +236,16 @@ class PseudoReleasePlugin:
                 blocking=True,
             )
 
-    @classmethod
-    def process_track_metadata(
-        cls,
-        api: PluginApi,
-        track: Track,
-        metadata: Metadata,
-        track_node: dict[str, Any],
-        release_node: dict[str, Any] | None = None,
-    ) -> None:
-        """Track metadata processor ensuring tracks of overlaid albums get pseudo translations."""
-        if not get_config_value(api.plugin_config, OPT_ENABLED, True):
-            return
-        if not get_config_value(api.plugin_config, OPT_AUTO_OVERLAY, True):
-            return
-
-        # Direction 2 (overlay) is strictly for original releases overlaid with pseudo data.
-        # It must NEVER modify native pseudo-releases.
-        if release_node and release_node.get('status') == PSEUDO_RELEASE_STATUS:
-            return
-
-        album = getattr(track, 'album', None)
-        if not album:
-            return
-
-        album_meta = getattr(album, 'metadata', None)
-        if album_meta:
-            if (
-                album_meta.get('releasestatus') == PSEUDO_RELEASE_STATUS
-                or album_meta.get('status') == PSEUDO_RELEASE_STATUS
-            ):
-                return
-            pseudo_id = album_meta.get(TAG_PSEUDO_RELEASE_ID)
-            if not pseudo_id:
-                return
-            if getattr(album, '_pseudo_mbid', None) != pseudo_id:
-                return
-        else:
-            return
-
-        pseudo_tracks = getattr(album, '_pseudo_tracks', None)
-        if not pseudo_tracks:
-            return
-
-        rec_id = metadata.get('musicbrainz_recordingid') or (track_node.get('recording', {}).get('id') if isinstance(track_node, dict) else None)
-        med_num = metadata.get('discnumber', '1')
-        trk_num = metadata.get('tracknumber', '1')
-        pos_key = f"{med_num}:{trk_num}"
-
-        matched = pseudo_tracks.get(rec_id) or pseudo_tracks.get(pos_key)
-        if not matched:
-            return
-
-        new_title = matched.get('title')
-        if new_title:
-            metadata['title'] = new_title
-
-        if 'artist-credit' in matched:
-            t_disp, t_sort, t_names = parse_artist_credit_node(matched['artist-credit'])
-            if t_disp:
-                metadata['artist'] = t_disp
-            if t_sort:
-                metadata['artistsort'] = t_sort
-            if t_names:
-                metadata['artists'] = t_names
-
-
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
     # Register default plugin configurations
     api.plugin_config.register_option(OPT_ENABLED, True)
     api.plugin_config.register_option(OPT_AUTO_SUPPLEMENT, True)
-    api.plugin_config.register_option(OPT_AUTO_OVERLAY, True)
-    api.plugin_config.register_option(OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
-    api.plugin_config.register_option(OPT_SKIP_LATIN_ORIGINALS, True)
 
     plugin = PseudoReleasePlugin
 
     # Register album metadata processor
     api.register_album_metadata_processor(plugin.process_album_metadata, priority=50)
-
-    # Register track metadata processor
-    if hasattr(api, 'register_track_metadata_processor'):
-        api.register_track_metadata_processor(plugin.process_track_metadata, priority=50)
 
     # Register post-removal processor for cleanup
     if hasattr(api, 'register_album_post_removal_processor'):

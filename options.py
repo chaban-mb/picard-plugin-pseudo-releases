@@ -114,26 +114,14 @@ except ImportError:
 
 try:
     from .constants import (
-        OPT_AUTO_OVERLAY,
         OPT_AUTO_SUPPLEMENT,
         OPT_ENABLED,
-        OPT_SKIP_LATIN_ORIGINALS,
-        OPT_TARGET_SCRIPT_MODE,
-        SCRIPT_MODE_ENG,
-        SCRIPT_MODE_LATN,
-        SCRIPT_MODE_LOCALES,
         get_config_value,
     )
 except (ImportError, ValueError):
     from constants import (
-        OPT_AUTO_OVERLAY,
         OPT_AUTO_SUPPLEMENT,
         OPT_ENABLED,
-        OPT_SKIP_LATIN_ORIGINALS,
-        OPT_TARGET_SCRIPT_MODE,
-        SCRIPT_MODE_ENG,
-        SCRIPT_MODE_LATN,
-        SCRIPT_MODE_LOCALES,
         get_config_value,
     )
 
@@ -194,77 +182,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.lbl_auto_supplement_description.setWordWrap(True)
         features_layout.addWidget(self.lbl_auto_supplement_description)
 
-        self.cb_auto_overlay = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.auto_overlay",
-                "Automatically translate original releases using pseudo-releases",
-            ),
-            group_features,
-        )
-        features_layout.addWidget(self.cb_auto_overlay)
-        self.lbl_auto_overlay_description = QtWidgets.QLabel(
-            self._tr(
-                "ui.auto_overlay_description",
-                "Replaces release and track titles and artist credits with those from the related pseudo-release; original catalog metadata and cover art are retained.",
-            ),
-            group_features,
-        )
-        self.lbl_auto_overlay_description.setWordWrap(True)
-        features_layout.addWidget(self.lbl_auto_overlay_description)
-
         self.cb_enabled.toggled.connect(self._update_control_states)
-        self.cb_auto_overlay.toggled.connect(self._update_control_states)
-
-        self.overlay_options = QtWidgets.QWidget(group_features)
-        overlay_options_layout = QtWidgets.QVBoxLayout(self.overlay_options)
-        overlay_options_layout.setContentsMargins(24, 0, 0, 0)
-        overlay_options_layout.setSpacing(4)
-
-        self.lbl_overlay_options = QtWidgets.QLabel(
-            self._tr("ui.group_script", "Translation preferences for the overlay above"),
-            self.overlay_options,
-        )
-        overlay_options_layout.addWidget(self.lbl_overlay_options)
-
-        self.btn_group_script = QtWidgets.QButtonGroup(self.overlay_options)
-
-        self.rb_latn = QtWidgets.QRadioButton(
-            self._tr("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
-            self.overlay_options,
-        )
-        self.btn_group_script.addButton(self.rb_latn)
-        overlay_options_layout.addWidget(self.rb_latn)
-
-        self.rb_eng = QtWidgets.QRadioButton(
-            self._tr("ui.script_eng", "English translations"),
-            self.overlay_options,
-        )
-        self.btn_group_script.addButton(self.rb_eng)
-        overlay_options_layout.addWidget(self.rb_eng)
-
-        self.rb_locales = QtWidgets.QRadioButton(
-            self._tr("ui.script_locales", "Match Picard user interface language"),
-            self.overlay_options,
-        )
-        self.btn_group_script.addButton(self.rb_locales)
-        overlay_options_layout.addWidget(self.rb_locales)
-
-        self.lbl_overlay_rules = QtWidgets.QLabel(
-            self._tr("ui.group_behavior", "Translation rule"),
-            self.overlay_options,
-        )
-        overlay_options_layout.addWidget(self.lbl_overlay_rules)
-
-        self.cb_skip_latin = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.skip_latin",
-                "Skip translation if original release is already in Latin script",
-            ),
-            self.overlay_options,
-        )
-        overlay_options_layout.addWidget(self.cb_skip_latin)
-
-        features_layout.addWidget(self.overlay_options)
         layout.addWidget(group_features)
         layout.addStretch()
         self._update_control_states()
@@ -272,13 +190,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
     def _update_control_states(self, *_):
         """Disable settings that cannot apply while their parent feature is off."""
         enabled = self.cb_enabled.isChecked()
-        overlay_enabled = enabled and self.cb_auto_overlay.isChecked()
-
         self.cb_auto_supplement.setEnabled(enabled)
-        self.cb_auto_overlay.setEnabled(enabled)
-        self.overlay_options.setEnabled(overlay_enabled)
-        for widget in (self.rb_latn, self.rb_eng, self.rb_locales, self.cb_skip_latin):
-            widget.setEnabled(overlay_enabled)
 
     def load(self):
         """Load settings from plugin configuration into UI widgets."""
@@ -288,17 +200,6 @@ class PseudoReleaseOptionsPage(OptionsPage):
         cfg = self.api.plugin_config
         self.cb_enabled.setChecked(get_config_value(cfg, OPT_ENABLED, True))
         self.cb_auto_supplement.setChecked(get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True))
-        self.cb_auto_overlay.setChecked(get_config_value(cfg, OPT_AUTO_OVERLAY, True))
-
-        mode = get_config_value(cfg, OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
-        if mode == SCRIPT_MODE_ENG:
-            self.rb_eng.setChecked(True)
-        elif mode == SCRIPT_MODE_LOCALES:
-            self.rb_locales.setChecked(True)
-        else:
-            self.rb_latn.setChecked(True)
-
-        self.cb_skip_latin.setChecked(get_config_value(cfg, OPT_SKIP_LATIN_ORIGINALS, True))
         self._update_control_states()
 
     def save(self):
@@ -309,13 +210,3 @@ class PseudoReleaseOptionsPage(OptionsPage):
         cfg = self.api.plugin_config
         cfg[OPT_ENABLED] = self.cb_enabled.isChecked()
         cfg[OPT_AUTO_SUPPLEMENT] = self.cb_auto_supplement.isChecked()
-        cfg[OPT_AUTO_OVERLAY] = self.cb_auto_overlay.isChecked()
-
-        if self.rb_eng.isChecked():
-            cfg[OPT_TARGET_SCRIPT_MODE] = SCRIPT_MODE_ENG
-        elif self.rb_locales.isChecked():
-            cfg[OPT_TARGET_SCRIPT_MODE] = SCRIPT_MODE_LOCALES
-        else:
-            cfg[OPT_TARGET_SCRIPT_MODE] = SCRIPT_MODE_LATN
-
-        cfg[OPT_SKIP_LATIN_ORIGINALS] = self.cb_skip_latin.isChecked()

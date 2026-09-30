@@ -3,14 +3,7 @@ import unittest
 from candidates import (
     find_related_releases,
     score_original_candidate,
-    score_pseudo_candidate,
     select_best_original_candidate,
-    select_best_pseudo_candidate,
-)
-from constants import (
-    SCRIPT_MODE_ENG,
-    SCRIPT_MODE_LATN,
-    SCRIPT_MODE_LOCALES,
 )
 
 
@@ -166,57 +159,6 @@ class TestOriginalCandidateScoring(unittest.TestCase):
         score_10 = score_original_candidate(candidate_lp_10, files=files)
 
         self.assertGreater(score_16, score_10)
-
-
-class TestPseudoCandidateScoring(unittest.TestCase):
-    def setUp(self):
-        self.cand_romaji = {
-            "id": "romaji",
-            "title": "Sen to Chihiro no Kamikakushi",
-            "status": "Pseudo-Release",
-            "text-representation": {"script": "Latn", "language": "jpn"},
-            "disambiguation": "English transliteration (Hepburn romaji)",
-        }
-        self.cand_english = {
-            "id": "english",
-            "title": "Spirited Away",
-            "status": "Pseudo-Release",
-            "text-representation": {"script": "Latn", "language": "eng"},
-            "disambiguation": "English translation",
-        }
-        self.cand_french = {
-            "id": "french",
-            "title": "Le Voyage de Chihiro",
-            "status": "Pseudo-Release",
-            "text-representation": {"script": "Latn", "language": "fra"},
-            "disambiguation": "French translation",
-        }
-        self.candidates = [self.cand_english, self.cand_romaji, self.cand_french]
-
-    def test_select_latn_romaji_mode(self):
-        best = select_best_pseudo_candidate(
-            self.candidates,
-            target_mode=SCRIPT_MODE_LATN,
-        )
-        self.assertIsNotNone(best)
-        self.assertEqual(best["id"], "romaji")
-
-    def test_select_english_mode(self):
-        best = select_best_pseudo_candidate(
-            self.candidates,
-            target_mode=SCRIPT_MODE_ENG,
-        )
-        self.assertIsNotNone(best)
-        self.assertEqual(best["id"], "english")
-
-    def test_select_locale_mode(self):
-        best = select_best_pseudo_candidate(
-            self.candidates,
-            target_mode=SCRIPT_MODE_LOCALES,
-            preferred_locales=["fr_FR", "en_US"],
-        )
-        self.assertIsNotNone(best)
-        self.assertEqual(best["id"], "french")
 
 
 if __name__ == '__main__':

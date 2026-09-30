@@ -2,14 +2,8 @@
 import unittest
 from options import PseudoReleaseOptionsPage
 from constants import (
-    OPT_AUTO_OVERLAY,
     OPT_AUTO_SUPPLEMENT,
     OPT_ENABLED,
-    OPT_SKIP_LATIN_ORIGINALS,
-    OPT_TARGET_SCRIPT_MODE,
-    SCRIPT_MODE_ENG,
-    SCRIPT_MODE_LATN,
-    SCRIPT_MODE_LOCALES,
 )
 
 
@@ -61,9 +55,6 @@ class TestOptionsPage(unittest.TestCase):
             {
                 OPT_ENABLED: True,
                 OPT_AUTO_SUPPLEMENT: True,
-                OPT_AUTO_OVERLAY: False,
-                OPT_TARGET_SCRIPT_MODE: SCRIPT_MODE_ENG,
-                OPT_SKIP_LATIN_ORIGINALS: False,
             }
         )
         page.api = api
@@ -72,22 +63,13 @@ class TestOptionsPage(unittest.TestCase):
         page.load()
         self.assertTrue(page.cb_enabled.isChecked())
         self.assertTrue(page.cb_auto_supplement.isChecked())
-        self.assertFalse(page.cb_auto_overlay.isChecked())
-        self.assertTrue(page.rb_eng.isChecked())
-        self.assertFalse(page.rb_latn.isChecked())
-        self.assertFalse(page.cb_skip_latin.isChecked())
 
         # Modify UI
-        page.cb_auto_overlay.setChecked(True)
-        page.rb_eng.setChecked(False)
-        page.rb_locales.setChecked(True)
-        page.cb_skip_latin.setChecked(True)
+        page.cb_auto_supplement.setChecked(False)
 
         # Save from UI
         page.save()
-        self.assertTrue(api.plugin_config[OPT_AUTO_OVERLAY])
-        self.assertEqual(api.plugin_config[OPT_TARGET_SCRIPT_MODE], SCRIPT_MODE_LOCALES)
-        self.assertTrue(api.plugin_config[OPT_SKIP_LATIN_ORIGINALS])
+        self.assertFalse(api.plugin_config[OPT_AUTO_SUPPLEMENT])
 
     def test_inline_descriptions_explain_supplement_and_overlay(self):
         page = PseudoReleaseOptionsPage()
@@ -106,54 +88,22 @@ class TestOptionsPage(unittest.TestCase):
         self.assertIn("missing tags only", supplement_description)
         self.assertIn("Cover art", supplement_description)
 
-        overlay_description = page.lbl_auto_overlay_description.text()
-        self.assertIn("release and track titles", overlay_description)
-        self.assertIn("artist credits", overlay_description)
-        self.assertIn("catalog metadata and cover art are retained", overlay_description)
-
     def test_dependent_controls_follow_feature_toggles(self):
         page = PseudoReleaseOptionsPage()
         api = MockPluginApi(
             {
                 OPT_ENABLED: False,
                 OPT_AUTO_SUPPLEMENT: True,
-                OPT_AUTO_OVERLAY: True,
-                OPT_TARGET_SCRIPT_MODE: SCRIPT_MODE_ENG,
-                OPT_SKIP_LATIN_ORIGINALS: True,
             }
         )
         page.api = api
         page.load()
 
-        self.assertIn("overlay above", page.lbl_overlay_options.text())
-        self.assertFalse(page.overlay_options.isEnabled())
         self.assertFalse(page.cb_auto_supplement.isEnabled())
-        self.assertFalse(page.cb_auto_overlay.isEnabled())
-        self.assertFalse(page.rb_eng.isEnabled())
-        self.assertFalse(page.cb_skip_latin.isEnabled())
         self.assertTrue(page.cb_auto_supplement.isChecked())
-        self.assertTrue(page.cb_auto_overlay.isChecked())
-        self.assertTrue(page.rb_eng.isChecked())
-        self.assertTrue(page.cb_skip_latin.isChecked())
 
         page.cb_enabled.setChecked(True)
-        self.assertTrue(page.overlay_options.isEnabled())
         self.assertTrue(page.cb_auto_supplement.isEnabled())
-        self.assertTrue(page.cb_auto_overlay.isEnabled())
-        self.assertTrue(page.rb_eng.isEnabled())
-        self.assertTrue(page.cb_skip_latin.isEnabled())
-
-        page.cb_auto_overlay.setChecked(False)
-        self.assertFalse(page.overlay_options.isEnabled())
-        self.assertFalse(page.rb_eng.isEnabled())
-        self.assertFalse(page.cb_skip_latin.isEnabled())
-        self.assertTrue(page.rb_eng.isChecked())
-        self.assertTrue(page.cb_skip_latin.isChecked())
-
-        page.cb_auto_overlay.setChecked(True)
-        self.assertTrue(page.overlay_options.isEnabled())
-        self.assertTrue(page.rb_eng.isEnabled())
-        self.assertTrue(page.cb_skip_latin.isEnabled())
 
     def test_profile_config_section_without_get(self):
         """Verify load() and save() work on ProfileConfigSection which has NO .get() method."""
@@ -161,9 +111,6 @@ class TestOptionsPage(unittest.TestCase):
         section = ProfileConfigSectionMock({
             OPT_ENABLED: True,
             OPT_AUTO_SUPPLEMENT: False,
-            OPT_AUTO_OVERLAY: True,
-            OPT_TARGET_SCRIPT_MODE: SCRIPT_MODE_LOCALES,
-            OPT_SKIP_LATIN_ORIGINALS: True,
         })
         self.assertFalse(hasattr(section, 'get'))
 
@@ -175,19 +122,6 @@ class TestOptionsPage(unittest.TestCase):
         page.load()
         self.assertTrue(page.cb_enabled.isChecked())
         self.assertFalse(page.cb_auto_supplement.isChecked())
-        self.assertTrue(page.cb_auto_overlay.isChecked())
-        self.assertTrue(page.rb_locales.isChecked())
-        self.assertTrue(page.cb_skip_latin.isChecked())
-
-    def test_save_latn_mode(self):
-        page = PseudoReleaseOptionsPage()
-        api = MockPluginApi({})
-        page.api = api
-        page.rb_latn.setChecked(True)
-        page.rb_eng.setChecked(False)
-        page.rb_locales.setChecked(False)
-        page.save()
-        self.assertEqual(api.plugin_config[OPT_TARGET_SCRIPT_MODE], SCRIPT_MODE_LATN)
 
 
 if __name__ == '__main__':

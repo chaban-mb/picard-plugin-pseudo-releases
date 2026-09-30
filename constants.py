@@ -33,14 +33,6 @@ PSEUDO_RELEASE_STATUS = 'Pseudo-Release'
 # Plugin configuration keys
 OPT_ENABLED = 'enabled'
 OPT_AUTO_SUPPLEMENT = 'auto_supplement_pseudo'
-OPT_AUTO_OVERLAY = 'auto_apply_translations'
-OPT_TARGET_SCRIPT_MODE = 'target_script_mode'
-OPT_SKIP_LATIN_ORIGINALS = 'skip_latin_originals'
-
-# Target script preferences
-SCRIPT_MODE_LATN = 'latn'       # Prioritize Latin script / Romaji transliterations
-SCRIPT_MODE_ENG = 'eng'         # Prioritize English translations
-SCRIPT_MODE_LOCALES = 'locales' # Match Picard user interface language preferences
 
 # Metadata keys supplemented on pseudo-releases from original releases
 SUPPLEMENTARY_ALBUM_TAGS = (
@@ -58,9 +50,6 @@ SUPPLEMENTARY_MULTI_TAGS = (
 
 # Custom internal / hidden metadata tags
 TAG_ORIGINAL_RELEASE_ID = '~original_musicbrainz_albumid'
-TAG_PSEUDO_RELEASE_ID = '~pseudo_musicbrainz_albumid'
-TAG_ORIGINAL_ALBUM_TITLE = '~original_album'
-TAG_ORIGINAL_ALBUM_ARTIST = '~original_albumartist'
 
 
 def get_config_value(cfg, key, default=None):

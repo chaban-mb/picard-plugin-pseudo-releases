@@ -10,15 +10,10 @@ plugin_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(plugin_module)
 
 from constants import (
-    OPT_AUTO_OVERLAY,
     OPT_AUTO_SUPPLEMENT,
     OPT_ENABLED,
-    OPT_SKIP_LATIN_ORIGINALS,
-    OPT_TARGET_SCRIPT_MODE,
     PSEUDO_RELEASE_STATUS,
-    SCRIPT_MODE_LATN,
     TAG_ORIGINAL_RELEASE_ID,
-    TAG_PSEUDO_RELEASE_ID,
 )
 
 
@@ -79,9 +74,6 @@ class MockPluginApi:
         self.plugin_config = MockPluginConfig({
             OPT_ENABLED: True,
             OPT_AUTO_SUPPLEMENT: True,
-            OPT_AUTO_OVERLAY: True,
-            OPT_TARGET_SCRIPT_MODE: SCRIPT_MODE_LATN,
-            OPT_SKIP_LATIN_ORIGINALS: True,
         })
         self.processors = []
 
@@ -94,9 +86,6 @@ class MockPluginApi:
         self.mb_api = MagicMock()
 
     def register_album_metadata_processor(self, func, priority=50):
-        self.processors.append((func, priority))
-
-    def register_track_metadata_processor(self, func, priority=50):
         self.processors.append((func, priority))
 
     def register_album_post_removal_processor(self, func):
@@ -123,7 +112,7 @@ class TestPluginLifecycle(unittest.TestCase):
         plugin_module.enable(self.api)
 
     def test_enable_registers_extension_points(self):
-        self.assertTrue(len(self.api.processors) > 0)
+        self.assertEqual(len(self.api.processors), 1)
         self.assertTrue(len(self.api.removal_processors) > 0)
         self.assertTrue(len(self.api.providers) > 0)
         self.assertTrue(len(self.api.options_pages) > 0)
@@ -188,62 +177,6 @@ class TestPluginLifecycle(unittest.TestCase):
         # Assert finalization kick was triggered
         self.assertTrue(pseudo_album._finalized)
 
-    def test_direction_2_overlay_original_release(self):
-        # A loaded Japanese Kanji release with forward link to Romaji pseudo-release
-        orig_album = MockAlbum("orig-1", title="千と千尋の神隠し", artist="久石譲", status="Official")
-
-        orig_node = {
-            "id": "orig-1",
-            "status": "Official",
-            "text-representation": {"script": "Jpan", "language": "jpn"},
-            "relations": [
-                {
-                    "type": "transl-tracklisting",
-                    "direction": "forward",
-                    "release": {
-                        "id": "pseudo-romaji",
-                        "title": "Sen to Chihiro no Kamikakushi",
-                        "status": "Pseudo-Release",
-                        "text-representation": {"script": "Latn", "language": "jpn"},
-                    },
-                }
-            ],
-        }
-
-        def mock_get_release(rel_id, callback, inc=None):
-            pseudo_doc = {
-                "id": "pseudo-romaji",
-                "title": "Sen to Chihiro no Kamikakushi",
-                "artist-credit": [
-                    {
-                        "name": "Joe Hisaishi",
-                        "joinphrase": "",
-                        "artist": {"name": "Joe Hisaishi", "sort-name": "Hisaishi, Joe"},
-                    }
-                ],
-                "media": [],
-            }
-            callback(pseudo_doc, None, None)
-
-        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
-
-        # Trigger metadata processor
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=self.api,
-            album=orig_album,
-            album_metadata=orig_album.metadata,
-            release_node=orig_node,
-        )
-
-        # Assert overlay succeeded
-        self.assertEqual(orig_album.metadata["album"], "Sen to Chihiro no Kamikakushi")
-        self.assertEqual(orig_album.metadata["albumartist"], "Joe Hisaishi")
-        self.assertEqual(orig_album.metadata[TAG_PSEUDO_RELEASE_ID], "pseudo-romaji")
-        self.assertEqual(orig_album.metadata["~original_album"], "千と千尋の神隠し")
-
-        # Assert finalization kick was triggered
-        self.assertTrue(orig_album._finalized)
-
     def test_remove_album_cleans_up_in_flight(self):
         plugin_module.PseudoReleasePlugin.in_flight_albums.add("album-to-remove")
         dummy_album = MockAlbum("album-to-remove")
@@ -251,99 +184,20 @@ class TestPluginLifecycle(unittest.TestCase):
         plugin_module.PseudoReleasePlugin.remove_album(self.api, dummy_album)
         self.assertNotIn("album-to-remove", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
-    def test_process_track_metadata(self):
-        orig_album = MockAlbum("orig-123", "Orig Album")
-        orig_album.metadata[TAG_PSEUDO_RELEASE_ID] = "pseudo-123"
-        orig_album._pseudo_mbid = "pseudo-123"
-        orig_album._pseudo_tracks = {
-            "rec-1": {"title": "Translated Track 1", "artist-credit": [{"name": "English Artist"}]},
-            "1:2": {"title": "Translated Track 2", "artist-credit": [{"name": "English Artist 2"}]},
-        }
-
-        class MockTrackItem:
-            album = orig_album
-
-        # Test match by recording id
-        track1 = MockTrackItem()
-        meta1 = MockMetadata({"musicbrainz_recordingid": "rec-1", "title": "Japanese Track 1"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track1, meta1, {"recording": {"id": "rec-1"}}, None
-        )
-        self.assertEqual(meta1["title"], "Translated Track 1")
-        self.assertEqual(meta1["artist"], "English Artist")
-
-        # Test match by position fallback
-        track2 = MockTrackItem()
-        meta2 = MockMetadata({"discnumber": "1", "tracknumber": "2", "title": "Japanese Track 2"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track2, meta2, {}, None
-        )
-        self.assertEqual(meta2["title"], "Translated Track 2")
-        self.assertEqual(meta2["artist"], "English Artist 2")
-
-    def test_process_track_metadata_guards_against_pseudo_releases(self):
-        """Ensure track processor never overwrites native titles on pseudo-releases."""
-        pseudo_album = MockAlbum("pseudo-6a3c", "PERSONA3 Original Soundtrack")
-        # Simulate stale _pseudo_tracks lingering on the Album object
-        pseudo_album._pseudo_tracks = {
-            "rec-2": {"title": "The Poem for Everyone's Souls"},
-        }
-        pseudo_album._pseudo_mbid = "pseudo-2ade"
-
-        class MockTrackItem:
-            album = pseudo_album
-
-        track = MockTrackItem()
-
-        # Guard 1: release_node has status == 'Pseudo-Release'
-        meta1 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track, meta1, {"recording": {"id": "rec-2"}}, {"status": PSEUDO_RELEASE_STATUS}
-        )
-        self.assertEqual(meta1["title"], "Aria of the Soul")
-
-        # Guard 2: album.metadata has releasestatus == 'Pseudo-Release'
-        pseudo_album.metadata["releasestatus"] = PSEUDO_RELEASE_STATUS
-        meta2 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track, meta2, {"recording": {"id": "rec-2"}}, None
-        )
-        self.assertEqual(meta2["title"], "Aria of the Soul")
-
-        # Guard 3: album.metadata lacks TAG_PSEUDO_RELEASE_ID
-        pseudo_album.metadata = MockMetadata()
-        meta3 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track, meta3, {"recording": {"id": "rec-2"}}, None
-        )
-        self.assertEqual(meta3["title"], "Aria of the Soul")
-
-        # Guard 4: album.metadata TAG_PSEUDO_RELEASE_ID does not match _pseudo_mbid
-        pseudo_album.metadata[TAG_PSEUDO_RELEASE_ID] = "different-pseudo-id"
-        meta4 = MockMetadata({"musicbrainz_recordingid": "rec-2", "title": "Aria of the Soul"})
-        plugin_module.PseudoReleasePlugin.process_track_metadata(
-            self.api, track, meta4, {"recording": {"id": "rec-2"}}, None
-        )
-        self.assertEqual(meta4["title"], "Aria of the Soul")
-
-    def test_process_album_metadata_resets_pseudo_attributes(self):
-        """process_album_metadata must reset lingering _pseudo_tracks and _pseudo_mbid on load/switch."""
-        album = MockAlbum("album-switched", "Original or Pseudo")
-        album._pseudo_tracks = {"rec-old": {"title": "Old Stale Title"}}
-        album._pseudo_mbid = "old-stale-mbid"
-
+    def test_official_release_is_not_modified(self):
+        album = MockAlbum("official-1", "Original release")
         release_node = {
-            "id": "album-switched",
+            "id": "official-1",
             "status": "Official",
             "relations": [],
         }
-        meta = MockMetadata()
 
         plugin_module.PseudoReleasePlugin.process_album_metadata(
-            self.api, album, meta, release_node
+            self.api, album, album.metadata, release_node
         )
-        self.assertIsNone(album._pseudo_tracks)
-        self.assertIsNone(album._pseudo_mbid)
+
+        self.assertEqual(album.metadata["album"], "Original release")
+        self.assertEqual(self.api.added_tasks, [])
 
 
 if __name__ == '__main__':
