@@ -67,6 +67,7 @@ try:
         SCRIPT_MODE_LATN,
         TAG_ORIGINAL_RELEASE_ID,
         TAG_PSEUDO_RELEASE_ID,
+        get_config_value,
     )
     from .metadata_engine import (
         overlay_pseudo_metadata_on_album,
@@ -90,6 +91,7 @@ except (ImportError, ValueError):
         SCRIPT_MODE_LATN,
         TAG_ORIGINAL_RELEASE_ID,
         TAG_PSEUDO_RELEASE_ID,
+        get_config_value,
     )
     from metadata_engine import (
         overlay_pseudo_metadata_on_album,
@@ -99,12 +101,11 @@ except (ImportError, ValueError):
 
 
 class ManifestTranslations:
-    """Translation markers for the plugin manifest."""
+    """Translation strings for the plugin manifest."""
 
-    NAME = t_("manifest.name", "Pseudo-Releases")
-    DESC = t_(
-        "manifest.description",
-        "Supplements pseudo-releases with original catalog metadata & cover art, and overlays translated tracklists.",
+    NAME = "Pseudo-Releases"
+    DESC = (
+        "Supplements pseudo-releases with original catalog metadata & cover art, and overlays translated tracklists."
     )
 
 
@@ -141,7 +142,7 @@ class PseudoReleasePlugin:
         release_node: dict[str, Any],
     ) -> None:
         """Process loaded release to apply supplementation or translation overlays."""
-        if not api.plugin_config.get(OPT_ENABLED, True):
+        if not get_config_value(api.plugin_config, OPT_ENABLED, True):
             return
 
         album_id = getattr(album, 'id', '')
@@ -155,11 +156,11 @@ class PseudoReleasePlugin:
         is_pseudo = release_node.get('status') == PSEUDO_RELEASE_STATUS
 
         # DIRECTION 1: Supplement pseudo-release with original catalog metadata & cover art
-        if is_pseudo and api.plugin_config.get(OPT_AUTO_SUPPLEMENT, True):
+        if is_pseudo and get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
             cls._handle_supplement_pseudo(api, album, album_metadata, release_node)
 
         # DIRECTION 2: Overlay pseudo-release tracklist & artist credits onto original release
-        elif not is_pseudo and api.plugin_config.get(OPT_AUTO_OVERLAY, True):
+        elif not is_pseudo and get_config_value(api.plugin_config, OPT_AUTO_OVERLAY, True):
             cls._handle_overlay_original(api, album, album_metadata, release_node)
 
     @classmethod
@@ -203,7 +204,7 @@ class PseudoReleasePlugin:
     ) -> None:
         """Direction 2: Find best matching pseudo-release and queue translation overlay."""
         # Check if user opted to skip if original is already Latin script
-        if api.plugin_config.get(OPT_SKIP_LATIN_ORIGINALS, True):
+        if get_config_value(api.plugin_config, OPT_SKIP_LATIN_ORIGINALS, True):
             text_rep = release_node.get('text-representation') or {}
             if (text_rep.get('script') or '').capitalize() == 'Latn':
                 cls._log_debug(api, "Skipping translation overlay; original %s is already Latin script", album.id)
@@ -214,7 +215,7 @@ class PseudoReleasePlugin:
             cls._log_debug(api, "No forward transl-tracklisting relations found for %s", album.id)
             return
 
-        target_mode = api.plugin_config.get(OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
+        target_mode = get_config_value(api.plugin_config, OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
         best_pseudo = select_best_pseudo_candidate(candidates, target_mode=target_mode)
 
         if not best_pseudo or not best_pseudo.get('id'):

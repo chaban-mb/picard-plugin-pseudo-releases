@@ -27,6 +27,7 @@ except ImportError:
     class CoverArtProviderCaa:  # type: ignore[no-redef]
         NAME = "Cover Art Archive"
         TITLE = "Cover Art Archive: Release"
+        OPTIONS = None
 
         def __init__(self, coverart: Any = None) -> None:
             self.coverart = coverart
@@ -61,6 +62,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
 
     NAME = "pseudo_release_caa"
     TITLE = N_("Cover Art Archive (via Original Release)")
+    OPTIONS = None
 
     @property
     def _caa_path(self) -> str:

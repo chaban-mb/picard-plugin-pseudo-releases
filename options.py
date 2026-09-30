@@ -78,6 +78,7 @@ try:
         SCRIPT_MODE_ENG,
         SCRIPT_MODE_LATN,
         SCRIPT_MODE_LOCALES,
+        get_config_value,
     )
 except (ImportError, ValueError):
     from constants import (
@@ -89,6 +90,7 @@ except (ImportError, ValueError):
         SCRIPT_MODE_ENG,
         SCRIPT_MODE_LATN,
         SCRIPT_MODE_LOCALES,
+        get_config_value,
     )
 
 
@@ -96,7 +98,19 @@ class PseudoReleaseOptionsPage(OptionsPage):
     """Picard Options page for configuring Pseudo-Release features."""
 
     NAME = "pseudo_releases"
-    TITLE = t_("ui.options_title", "Pseudo-Releases")
+    TITLE = "Pseudo-Releases"
+
+    def _tr(self, key: str, text: str) -> str:
+        """Translate text if Picard API tr is available, otherwise return default text."""
+        api = getattr(self, 'api', None)
+        if api and hasattr(api, 'tr'):
+            try:
+                res = api.tr(key, text)
+                if res:
+                    return res
+            except Exception:
+                pass
+        return text
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -107,19 +121,19 @@ class PseudoReleaseOptionsPage(OptionsPage):
 
         # 1. Main Features
         group_features = QtWidgets.QGroupBox(
-            t_("ui.group_features", "Pseudo-Release Features"),
+            self._tr("ui.group_features", "Pseudo-Release Features"),
             self,
         )
         features_layout = QtWidgets.QVBoxLayout(group_features)
 
         self.cb_enabled = QtWidgets.QCheckBox(
-            t_("ui.enable_plugin", "Enable Pseudo-Release support"),
+            self._tr("ui.enable_plugin", "Enable Pseudo-Release support"),
             group_features,
         )
         features_layout.addWidget(self.cb_enabled)
 
         self.cb_auto_supplement = QtWidgets.QCheckBox(
-            t_(
+            self._tr(
                 "ui.auto_supplement",
                 "Supplement pseudo-releases with original catalog metadata & cover art (Goal 1)",
             ),
@@ -128,7 +142,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         features_layout.addWidget(self.cb_auto_supplement)
 
         self.cb_auto_overlay = QtWidgets.QCheckBox(
-            t_(
+            self._tr(
                 "ui.auto_overlay",
                 "Automatically translate original releases using pseudo-releases (Bonus Goal)",
             ),
@@ -140,7 +154,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
 
         # 2. Preferred Translation / Transliteration Script
         group_script = QtWidgets.QGroupBox(
-            t_("ui.group_script", "Preferred Translation Script / Language"),
+            self._tr("ui.group_script", "Preferred Translation Script / Language"),
             self,
         )
         script_layout = QtWidgets.QVBoxLayout(group_script)
@@ -148,21 +162,21 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.btn_group_script = QtWidgets.QButtonGroup(self)
 
         self.rb_latn = QtWidgets.QRadioButton(
-            t_("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
+            self._tr("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
             group_script,
         )
         self.btn_group_script.addButton(self.rb_latn)
         script_layout.addWidget(self.rb_latn)
 
         self.rb_eng = QtWidgets.QRadioButton(
-            t_("ui.script_eng", "English translations"),
+            self._tr("ui.script_eng", "English translations"),
             group_script,
         )
         self.btn_group_script.addButton(self.rb_eng)
         script_layout.addWidget(self.rb_eng)
 
         self.rb_locales = QtWidgets.QRadioButton(
-            t_("ui.script_locales", "Match Picard user interface language"),
+            self._tr("ui.script_locales", "Match Picard user interface language"),
             group_script,
         )
         self.btn_group_script.addButton(self.rb_locales)
@@ -172,13 +186,13 @@ class PseudoReleaseOptionsPage(OptionsPage):
 
         # 3. Behavior Rules
         group_behavior = QtWidgets.QGroupBox(
-            t_("ui.group_behavior", "Translation Rules"),
+            self._tr("ui.group_behavior", "Translation Rules"),
             self,
         )
         behavior_layout = QtWidgets.QVBoxLayout(group_behavior)
 
         self.cb_skip_latin = QtWidgets.QCheckBox(
-            t_(
+            self._tr(
                 "ui.skip_latin",
                 "Skip translation if original release is already in Latin script",
             ),
@@ -195,11 +209,11 @@ class PseudoReleaseOptionsPage(OptionsPage):
             return
 
         cfg = self.api.plugin_config
-        self.cb_enabled.setChecked(cfg.get(OPT_ENABLED, True))
-        self.cb_auto_supplement.setChecked(cfg.get(OPT_AUTO_SUPPLEMENT, True))
-        self.cb_auto_overlay.setChecked(cfg.get(OPT_AUTO_OVERLAY, True))
+        self.cb_enabled.setChecked(get_config_value(cfg, OPT_ENABLED, True))
+        self.cb_auto_supplement.setChecked(get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True))
+        self.cb_auto_overlay.setChecked(get_config_value(cfg, OPT_AUTO_OVERLAY, True))
 
-        mode = cfg.get(OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
+        mode = get_config_value(cfg, OPT_TARGET_SCRIPT_MODE, SCRIPT_MODE_LATN)
         if mode == SCRIPT_MODE_ENG:
             self.rb_eng.setChecked(True)
         elif mode == SCRIPT_MODE_LOCALES:
@@ -207,7 +221,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         else:
             self.rb_latn.setChecked(True)
 
-        self.cb_skip_latin.setChecked(cfg.get(OPT_SKIP_LATIN_ORIGINALS, True))
+        self.cb_skip_latin.setChecked(get_config_value(cfg, OPT_SKIP_LATIN_ORIGINALS, True))
 
     def save(self):
         """Save settings from UI widgets into plugin configuration."""
