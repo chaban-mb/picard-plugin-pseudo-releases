@@ -187,6 +187,69 @@ class TestPseudoReleaseOverlay(unittest.TestCase):
         self.assertEqual(t2.metadata["artistsort"], "Kimura, Yumi feat. Hisaishi, Joe")
         self.assertEqual(t2.metadata.getall("artists"), ["Yumi Kimura", "Joe Hisaishi"])
 
+    def test_overlay_before_tracks_loaded_updates_release_node(self):
+        """Simulate real Picard loading flow where album.tracks is empty while _release_node is waiting."""
+        rec_id_1 = "rec-uuid-1"
+        rec_id_2 = "rec-uuid-2"
+
+        album = MockAlbum(
+            album_title="「ペルソナ3」オリジナル・サウンドトラック",
+            album_artist="目黒将司",
+            tracks=[],  # Empty during async task!
+        )
+        album._release_node = {
+            "title": "「ペルソナ3」オリジナル・サウンドトラック",
+            "artist-credit": [{"name": "目黒将司"}],
+            "media": [
+                {
+                    "position": 1,
+                    "tracks": [
+                        {"position": 1, "title": "Burn My Dread", "recording": {"id": rec_id_1}, "artist-credit": [{"name": "目黒将司"}]},
+                        {"position": 2, "title": "全ての人の魂の詩", "recording": {"id": rec_id_2}, "artist-credit": [{"name": "目黒将司"}]},
+                    ],
+                }
+            ],
+        }
+        album._new_metadata = MockMetadata({
+            "album": "「ペルソナ3」オリジナル・サウンドトラック",
+            "albumartist": "目黒将司",
+        })
+
+        pseudo_node = {
+            "id": "2adea162-c1ce-4f71-8f77-bff74f0b7b2b",
+            "title": "PERSONA3 Original Soundtrack",
+            "artist-credit": [{"name": "Shoji Meguro"}],
+            "media": [
+                {
+                    "position": 1,
+                    "tracks": [
+                        {"position": 1, "title": "Burn My Dread", "recording": {"id": rec_id_1}, "artist-credit": [{"name": "Shoji Meguro"}]},
+                        {"position": 2, "title": "The Poem for Everyone's Souls", "recording": {"id": rec_id_2}, "artist-credit": [{"name": "Shoji Meguro"}]},
+                    ],
+                }
+            ],
+        }
+
+        overlay_pseudo_metadata_on_album(album, pseudo_node)
+
+        # 1. Check album.metadata
+        self.assertEqual(album.metadata["album"], "PERSONA3 Original Soundtrack")
+        self.assertEqual(album.metadata["albumartist"], "Shoji Meguro")
+
+        # 2. Check _new_metadata
+        self.assertEqual(album._new_metadata["album"], "PERSONA3 Original Soundtrack")
+        self.assertEqual(album._new_metadata["albumartist"], "Shoji Meguro")
+
+        # 3. Check _release_node['media'] was updated in-place
+        media_tracks = album._release_node["media"][0]["tracks"]
+        self.assertEqual(media_tracks[0]["title"], "Burn My Dread")
+        self.assertEqual(media_tracks[1]["title"], "The Poem for Everyone's Souls")
+        self.assertEqual(media_tracks[1]["artist-credit"][0]["name"], "Shoji Meguro")
+
+        # 4. Check _pseudo_tracks attached
+        self.assertIn("1:2", album._pseudo_tracks)
+        self.assertEqual(album._pseudo_tracks["1:2"]["title"], "The Poem for Everyone's Souls")
+
 
 if __name__ == '__main__':
     unittest.main()

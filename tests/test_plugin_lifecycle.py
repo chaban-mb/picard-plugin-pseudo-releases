@@ -95,6 +95,9 @@ class MockPluginApi:
     def register_album_metadata_processor(self, func, priority=50):
         self.processors.append((func, priority))
 
+    def register_track_metadata_processor(self, func, priority=50):
+        self.processors.append((func, priority))
+
     def register_album_post_removal_processor(self, func):
         self.removal_processors.append(func)
 
@@ -246,6 +249,34 @@ class TestPluginLifecycle(unittest.TestCase):
 
         plugin_module.PseudoReleasePlugin.remove_album(self.api, dummy_album)
         self.assertNotIn("album-to-remove", plugin_module.PseudoReleasePlugin.in_flight_albums)
+
+    def test_process_track_metadata(self):
+        orig_album = MockAlbum("orig-123", "Orig Album")
+        orig_album._pseudo_tracks = {
+            "rec-1": {"title": "Translated Track 1", "artist-credit": [{"name": "English Artist"}]},
+            "1:2": {"title": "Translated Track 2", "artist-credit": [{"name": "English Artist 2"}]},
+        }
+
+        class MockTrackItem:
+            album = orig_album
+
+        # Test match by recording id
+        track1 = MockTrackItem()
+        meta1 = MockMetadata({"musicbrainz_recordingid": "rec-1", "title": "Japanese Track 1"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track1, meta1, {"recording": {"id": "rec-1"}}, None
+        )
+        self.assertEqual(meta1["title"], "Translated Track 1")
+        self.assertEqual(meta1["artist"], "English Artist")
+
+        # Test match by position fallback
+        track2 = MockTrackItem()
+        meta2 = MockMetadata({"discnumber": "1", "tracknumber": "2", "title": "Japanese Track 2"})
+        plugin_module.PseudoReleasePlugin.process_track_metadata(
+            self.api, track2, meta2, {}, None
+        )
+        self.assertEqual(meta2["title"], "Translated Track 2")
+        self.assertEqual(meta2["artist"], "English Artist 2")
 
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ try:
         Album,
         Metadata,
         PluginApi,
+        Track,
         t_,
     )
 except ImportError:
@@ -42,6 +43,9 @@ except ImportError:
         pass
 
     class Album:  # type: ignore[no-redef]
+        pass
+
+    class Track:  # type: ignore[no-redef]
         pass
 
     class Metadata:  # type: ignore[no-redef]
@@ -71,6 +75,7 @@ try:
     )
     from .metadata_engine import (
         overlay_pseudo_metadata_on_album,
+        parse_artist_credit_node,
         supplement_pseudo_metadata,
     )
     from .options import PseudoReleaseOptionsPage
@@ -95,6 +100,7 @@ except (ImportError, ValueError):
     )
     from metadata_engine import (
         overlay_pseudo_metadata_on_album,
+        parse_artist_credit_node,
         supplement_pseudo_metadata,
     )
     from options import PseudoReleaseOptionsPage
@@ -281,6 +287,48 @@ class PseudoReleasePlugin:
                 blocking=True,
             )
 
+    @classmethod
+    def process_track_metadata(
+        cls,
+        api: PluginApi,
+        track: Track,
+        metadata: Metadata,
+        track_node: dict[str, Any],
+        release_node: dict[str, Any] | None = None,
+    ) -> None:
+        """Track metadata processor ensuring tracks of overlaid albums get pseudo translations."""
+        if not get_config_value(api.plugin_config, OPT_ENABLED, True):
+            return
+        if not get_config_value(api.plugin_config, OPT_AUTO_OVERLAY, True):
+            return
+
+        album = getattr(track, 'album', None)
+        pseudo_tracks = getattr(album, '_pseudo_tracks', None)
+        if not pseudo_tracks:
+            return
+
+        rec_id = metadata.get('musicbrainz_recordingid') or (track_node.get('recording', {}).get('id') if isinstance(track_node, dict) else None)
+        med_num = metadata.get('discnumber', '1')
+        trk_num = metadata.get('tracknumber', '1')
+        pos_key = f"{med_num}:{trk_num}"
+
+        matched = pseudo_tracks.get(rec_id) or pseudo_tracks.get(pos_key)
+        if not matched:
+            return
+
+        new_title = matched.get('title')
+        if new_title:
+            metadata['title'] = new_title
+
+        if 'artist-credit' in matched:
+            t_disp, t_sort, t_names = parse_artist_credit_node(matched['artist-credit'])
+            if t_disp:
+                metadata['artist'] = t_disp
+            if t_sort:
+                metadata['artistsort'] = t_sort
+            if t_names:
+                metadata['artists'] = t_names
+
 
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
@@ -295,6 +343,10 @@ def enable(api: PluginApi) -> None:
 
     # Register album metadata processor
     api.register_album_metadata_processor(plugin.process_album_metadata, priority=50)
+
+    # Register track metadata processor
+    if hasattr(api, 'register_track_metadata_processor'):
+        api.register_track_metadata_processor(plugin.process_track_metadata, priority=50)
 
     # Register post-removal processor for cleanup
     if hasattr(api, 'register_album_post_removal_processor'):

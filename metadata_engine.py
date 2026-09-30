@@ -176,9 +176,16 @@ def build_track_mapping(release_node: dict[str, Any]) -> dict[str, dict[str, Any
     media = release_node.get('media', [])
 
     for med_idx, medium in enumerate(media, 1):
-        tracks = medium.get('tracks', [])
-        for trk_idx, track in enumerate(tracks, 1):
+        for trk_idx, track in enumerate(medium.get('tracks', []), 1):
             pos_key = f"{med_idx}:{track.get('position', trk_idx)}"
+            mapping[pos_key] = track
+
+            rec_id = track.get('recording', {}).get('id')
+            if rec_id:
+                mapping[rec_id] = track
+
+        for trk_idx, track in enumerate(medium.get('data-tracks', []), 1):
+            pos_key = f"{med_idx}:data-{track.get('position', trk_idx)}"
             mapping[pos_key] = track
 
             rec_id = track.get('recording', {}).get('id')
@@ -208,28 +215,78 @@ def overlay_pseudo_metadata_on_album(album: Any, pseudo_node: dict[str, Any]) ->
     if not album.metadata.get(TAG_ORIGINAL_ALBUM_ARTIST):
         album.metadata[TAG_ORIGINAL_ALBUM_ARTIST] = album.metadata.get('albumartist', '')
 
-    # Apply Album-level pseudo-release title
     pseudo_title = pseudo_node.get('title')
-    if pseudo_title:
-        album.metadata['album'] = pseudo_title
-
-    # Apply Album-level artist credit & translated join phrases
+    disp, sort, names = ("", "", [])
     if 'artist-credit' in pseudo_node:
         disp, sort, names = parse_artist_credit_node(pseudo_node['artist-credit'])
-        if disp:
-            album.metadata['albumartist'] = disp
-        if sort:
-            album.metadata['albumartistsort'] = sort
-        if names:
-            album.metadata['albumartists'] = names
 
+    # 1. Update album.metadata
+    if pseudo_title:
+        album.metadata['album'] = pseudo_title
+    if disp:
+        album.metadata['albumartist'] = disp
+    if sort:
+        album.metadata['albumartistsort'] = sort
+    if names:
+        album.metadata['albumartists'] = names
     album.metadata[TAG_PSEUDO_RELEASE_ID] = pseudo_id
+
+    # 2. Update album._new_metadata if present (Picard assigns self.metadata = self._new_metadata in _finalize_loading_album)
+    new_meta = getattr(album, '_new_metadata', None)
+    if new_meta is not None:
+        if pseudo_title:
+            new_meta['album'] = pseudo_title
+        if disp:
+            new_meta['albumartist'] = disp
+        if sort:
+            new_meta['albumartistsort'] = sort
+        if names:
+            new_meta['albumartists'] = names
+        new_meta[TAG_PSEUDO_RELEASE_ID] = pseudo_id
 
     # Build track lookup from pseudo-release
     pseudo_tracks = build_track_mapping(pseudo_node)
+    album._pseudo_tracks = pseudo_tracks
 
-    # Apply track-level overlay
-    for track in getattr(album, 'tracks', []):
+    # 3. Update album._release_node in-place if present
+    # This is CRITICAL: in Picard's async loading pipeline, _load_tracks() creates Track objects
+    # from album._release_node['media'] AFTER the critical task completes.
+    release_node = getattr(album, '_release_node', None)
+    if release_node:
+        if pseudo_title:
+            release_node['title'] = pseudo_title
+        if 'artist-credit' in pseudo_node:
+            release_node['artist-credit'] = pseudo_node['artist-credit']
+
+        media = release_node.get('media', [])
+        for med_idx, medium in enumerate(media, 1):
+            for trk_idx, track_node in enumerate(medium.get('tracks', []), 1):
+                rec_id = track_node.get('recording', {}).get('id')
+                pos_key = f"{med_idx}:{track_node.get('position', trk_idx)}"
+                matched = pseudo_tracks.get(rec_id) or pseudo_tracks.get(pos_key)
+                if matched:
+                    if matched.get('title'):
+                        track_node['title'] = matched['title']
+                    if 'artist-credit' in matched:
+                        track_node['artist-credit'] = matched['artist-credit']
+
+            for trk_idx, track_node in enumerate(medium.get('data-tracks', []), 1):
+                rec_id = track_node.get('recording', {}).get('id')
+                pos_key = f"{med_idx}:data-{track_node.get('position', trk_idx)}"
+                matched = pseudo_tracks.get(rec_id) or pseudo_tracks.get(pos_key)
+                if matched:
+                    if matched.get('title'):
+                        track_node['title'] = matched['title']
+                    if 'artist-credit' in matched:
+                        track_node['artist-credit'] = matched['artist-credit']
+
+    # 4. If Track objects have ALREADY been instantiated (e.g. album.tracks or album._new_tracks)
+    track_list = list(getattr(album, 'tracks', None) or [])
+    for t in getattr(album, '_new_tracks', None) or []:
+        if t not in track_list:
+            track_list.append(t)
+
+    for track in track_list:
         rec_id = track.metadata.get('musicbrainz_recordingid')
         med_num = track.metadata.get('discnumber', '1')
         trk_num = track.metadata.get('tracknumber', '1')
@@ -256,6 +313,14 @@ def overlay_pseudo_metadata_on_album(album: Any, pseudo_node: dict[str, Any]) ->
         if hasattr(track, 'orig_metadata'):
             track.orig_metadata.copy(track.metadata)
 
-        # Notify files associated with this track
-        for file in getattr(track, 'linked_files', []):
-            track.update_file_metadata(file)
+        # Notify files associated with this track (Picard Track uses .files)
+        files = getattr(track, 'files', None) or getattr(track, 'linked_files', [])
+        for file in files:
+            if hasattr(track, 'update_file_metadata'):
+                track.update_file_metadata(file)
+
+        if hasattr(track, 'update'):
+            track.update()
+
+    if hasattr(album, 'update'):
+        album.update()
