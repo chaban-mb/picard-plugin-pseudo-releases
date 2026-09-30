@@ -59,7 +59,16 @@ except ImportError:
         def addWidget(self, *args):
             pass
 
+        def addLayout(self, *args):
+            pass
+
         def addStretch(self, *args):
+            pass
+
+        def setContentsMargins(self, *args):
+            pass
+
+        def setSpacing(self, *args):
             pass
 
         def isChecked(self):
@@ -206,57 +215,57 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.cb_enabled.toggled.connect(self._update_control_states)
         self.cb_auto_overlay.toggled.connect(self._update_control_states)
 
-        layout.addWidget(group_features)
+        self.overlay_options = QtWidgets.QWidget(group_features)
+        overlay_options_layout = QtWidgets.QVBoxLayout(self.overlay_options)
+        overlay_options_layout.setContentsMargins(24, 0, 0, 0)
+        overlay_options_layout.setSpacing(4)
 
-        # 2. Preferred Translation / Transliteration Script
-        group_script = QtWidgets.QGroupBox(
-            self._tr("ui.group_script", "Preferred Translation Script / Language"),
-            self,
+        self.lbl_overlay_options = QtWidgets.QLabel(
+            self._tr("ui.group_script", "Translation preferences for the overlay above"),
+            self.overlay_options,
         )
-        script_layout = QtWidgets.QVBoxLayout(group_script)
+        overlay_options_layout.addWidget(self.lbl_overlay_options)
 
-        self.btn_group_script = QtWidgets.QButtonGroup(self)
+        self.btn_group_script = QtWidgets.QButtonGroup(self.overlay_options)
 
         self.rb_latn = QtWidgets.QRadioButton(
             self._tr("ui.script_latn", "Latin script / Romaji transliterations (e.g. Hepburn Romaji)"),
-            group_script,
+            self.overlay_options,
         )
         self.btn_group_script.addButton(self.rb_latn)
-        script_layout.addWidget(self.rb_latn)
+        overlay_options_layout.addWidget(self.rb_latn)
 
         self.rb_eng = QtWidgets.QRadioButton(
             self._tr("ui.script_eng", "English translations"),
-            group_script,
+            self.overlay_options,
         )
         self.btn_group_script.addButton(self.rb_eng)
-        script_layout.addWidget(self.rb_eng)
+        overlay_options_layout.addWidget(self.rb_eng)
 
         self.rb_locales = QtWidgets.QRadioButton(
             self._tr("ui.script_locales", "Match Picard user interface language"),
-            group_script,
+            self.overlay_options,
         )
         self.btn_group_script.addButton(self.rb_locales)
-        script_layout.addWidget(self.rb_locales)
+        overlay_options_layout.addWidget(self.rb_locales)
 
-        layout.addWidget(group_script)
-
-        # 3. Behavior Rules
-        group_behavior = QtWidgets.QGroupBox(
-            self._tr("ui.group_behavior", "Translation Rules"),
-            self,
+        self.lbl_overlay_rules = QtWidgets.QLabel(
+            self._tr("ui.group_behavior", "Translation rule"),
+            self.overlay_options,
         )
-        behavior_layout = QtWidgets.QVBoxLayout(group_behavior)
+        overlay_options_layout.addWidget(self.lbl_overlay_rules)
 
         self.cb_skip_latin = QtWidgets.QCheckBox(
             self._tr(
                 "ui.skip_latin",
                 "Skip translation if original release is already in Latin script",
             ),
-            group_behavior,
+            self.overlay_options,
         )
-        behavior_layout.addWidget(self.cb_skip_latin)
+        overlay_options_layout.addWidget(self.cb_skip_latin)
 
-        layout.addWidget(group_behavior)
+        features_layout.addWidget(self.overlay_options)
+        layout.addWidget(group_features)
         layout.addStretch()
         self._update_control_states()
 
@@ -267,6 +276,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
 
         self.cb_auto_supplement.setEnabled(enabled)
         self.cb_auto_overlay.setEnabled(enabled)
+        self.overlay_options.setEnabled(overlay_enabled)
         for widget in (self.rb_latn, self.rb_eng, self.rb_locales, self.cb_skip_latin):
             widget.setEnabled(overlay_enabled)
 

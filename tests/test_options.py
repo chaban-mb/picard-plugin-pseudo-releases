@@ -125,6 +125,8 @@ class TestOptionsPage(unittest.TestCase):
         page.api = api
         page.load()
 
+        self.assertIn("overlay above", page.lbl_overlay_options.text())
+        self.assertFalse(page.overlay_options.isEnabled())
         self.assertFalse(page.cb_auto_supplement.isEnabled())
         self.assertFalse(page.cb_auto_overlay.isEnabled())
         self.assertFalse(page.rb_eng.isEnabled())
@@ -135,18 +137,21 @@ class TestOptionsPage(unittest.TestCase):
         self.assertTrue(page.cb_skip_latin.isChecked())
 
         page.cb_enabled.setChecked(True)
+        self.assertTrue(page.overlay_options.isEnabled())
         self.assertTrue(page.cb_auto_supplement.isEnabled())
         self.assertTrue(page.cb_auto_overlay.isEnabled())
         self.assertTrue(page.rb_eng.isEnabled())
         self.assertTrue(page.cb_skip_latin.isEnabled())
 
         page.cb_auto_overlay.setChecked(False)
+        self.assertFalse(page.overlay_options.isEnabled())
         self.assertFalse(page.rb_eng.isEnabled())
         self.assertFalse(page.cb_skip_latin.isEnabled())
         self.assertTrue(page.rb_eng.isChecked())
         self.assertTrue(page.cb_skip_latin.isChecked())
 
         page.cb_auto_overlay.setChecked(True)
+        self.assertTrue(page.overlay_options.isEnabled())
         self.assertTrue(page.rb_eng.isEnabled())
         self.assertTrue(page.cb_skip_latin.isEnabled())
 
