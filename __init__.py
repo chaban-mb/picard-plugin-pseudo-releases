@@ -30,6 +30,7 @@ except ImportError:
             self.text = text
             self.checked = False
             self.checkable = False
+            self.enabled = True
             self.triggered = _FallbackSignal()
 
         def setCheckable(self, value):
@@ -37,6 +38,9 @@ except ImportError:
 
         def setChecked(self, value):
             self.checked = value
+
+        def setEnabled(self, enabled):
+            self.enabled = bool(enabled)
 
         def trigger(self):
             self.triggered.emit(False)
@@ -192,15 +196,8 @@ class ChooseLinkedOriginalAction(BaseAction):
         selection_group = QtGui.QActionGroup(menu)
         selection_group.setExclusive(True)
 
-        automatic_action = menu.addAction("Automatic best match")
-        automatic_action.setCheckable(True)
-        automatic_action.setChecked(
-            getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'automatic'
-        )
-        selection_group.addAction(automatic_action)
-        automatic_action.triggered.connect(
-            lambda checked=False: PseudoReleasePlugin.select_linked_original(album, None)
-        )
+        heading = menu.addAction("Tracks / Year / Country / Format / Label / Cat No")
+        heading.setEnabled(False)
         menu.addSeparator()
 
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
@@ -390,41 +387,52 @@ class PseudoReleasePlugin:
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
         """Format a compact edition label for the linked-original menu."""
-        title = candidate.get('title') or 'Untitled release'
         media = candidate.get('media') or []
-        formats = list(dict.fromkeys(medium.get('format') for medium in media if medium.get('format')))
-        track_count = sum(medium.get('track-count', 0) for medium in media)
-        media_summary = ', '.join(formats) or 'unknown format'
-        if formats and media:
-            media_summary += f" x{len(media)}"
-        if track_count:
-            media_summary += f" {track_count} tracks"
+        track_counts = [
+            str(medium.get('track-count') or len(medium.get('tracks', [])))
+            for medium in media
+        ]
+        tracks = '+'.join(count for count in track_counts if count != '0')
+        year = (candidate.get('date') or '')[:4]
+        country = candidate.get('country') or '??'
 
+        format_counts: dict[str, int] = {}
+        for medium in media:
+            format_name = medium.get('format') or '(unknown)'
+            format_counts[format_name] = format_counts.get(format_name, 0) + 1
+        formats = ', '.join(
+            f"{count}\u00d7{format_name}"
+            for format_name, count in format_counts.items()
+        )
+
+        labels = []
         catalog_numbers = []
         for label_info in candidate.get('label-info', []):
+            label_name = (label_info.get('label') or {}).get('name')
             catalog_number = label_info.get('catalog-number')
+            if label_name and label_name not in labels:
+                labels.append(label_name)
             if catalog_number:
                 catalog_numbers.append(catalog_number)
 
-        details = [candidate.get('country') or '?', candidate.get('date') or '?', media_summary]
-        if catalog_numbers:
-            details.append(', '.join(catalog_numbers))
-        barcode = candidate.get('barcode')
-        if barcode:
-            details.append(barcode)
-        return f"{title}  |  " + '  |  '.join(details)
+        return ' / '.join((
+            tracks,
+            year,
+            country,
+            formats,
+            ', '.join(labels),
+            ', '.join(catalog_numbers),
+        ))
 
     @staticmethod
-    def select_linked_original(album: Album, selected_id: str | None) -> None:
-        """Set an automatic or manual edition preference and reload the album."""
+    def select_linked_original(album: Album, selected_id: str) -> None:
+        """Set the manually selected edition and reload the album."""
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        current_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
-        new_mode = 'manual' if selected_id else 'automatic'
-        if selected_id == current_id and new_mode == current_mode:
+        album._pseudo_original_selection_mode = 'manual'
+        album._pseudo_original_release_choice = selected_id
+        if selected_id == current_id:
             return
 
-        album._pseudo_original_selection_mode = new_mode
-        album._pseudo_original_release_choice = selected_id
         album.load(priority=True, refresh=True)
 
     @classmethod

@@ -224,7 +224,10 @@ class TestPluginLifecycle(unittest.TestCase):
                 "date": "2008-12-24",
                 "country": "JP",
                 "barcode": "111",
-                "media": [{"format": "CD", "track-count": 55}],
+                "media": [
+                    {"format": "CD", "track-count": 30},
+                    {"format": "CD", "track-count": 25},
+                ],
                 "label-info": [{"label": {"name": "Square Enix"}, "catalog-number": "SQEX-10130"}],
             },
             "original-2": {
@@ -233,7 +236,10 @@ class TestPluginLifecycle(unittest.TestCase):
                 "date": "2008-12-24",
                 "country": "JP",
                 "barcode": "222",
-                "media": [{"format": "CD", "track-count": 55}],
+                "media": [
+                    {"format": "CD", "track-count": 30},
+                    {"format": "CD", "track-count": 25},
+                ],
                 "label-info": [{"label": {"name": "Square Enix"}, "catalog-number": "SQEX-10132"}],
             },
         }
@@ -243,8 +249,11 @@ class TestPluginLifecycle(unittest.TestCase):
         action = self.api.album_actions[0]()
         shown_menu = action.menu()
         self.assertEqual(len([entry for entry in shown_menu.actions if entry is not None]), 3)
-        self.assertIn("SQEX-10130", shown_menu.actions[2].text)
-        self.assertIn("SQEX-10132", shown_menu.actions[3].text)
+        self.assertEqual(shown_menu.actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
+        self.assertNotIn("Automatic best match", [entry.text for entry in shown_menu.actions if entry is not None])
+        self.assertFalse(shown_menu.actions[0].enabled)
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", shown_menu.actions[2].text)
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", shown_menu.actions[3].text)
         self.assertFalse(shown_menu.actions[2].checked)
         self.assertFalse(shown_menu.actions[3].checked)
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)

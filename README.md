@@ -10,7 +10,7 @@ Seamlessly integrates MusicBrainz pseudo-releases into MusicBrainz Picard 3.0+.
 
 2. **Intelligent Disambiguation**:
    * Ranks linked original editions using available Disc ID / TOC, track-count, barcode, format, catalog-number, status, and cover-art data.
-   * Right-click a pseudo-release, hover **Plugins > Linked original editions**, and choose a linked source. Picard preloads edition details while the pseudo-release is processed, so opening the submenu makes no web requests. Choose **Automatic best match** to return to automatic selection.
+   * Right-click a pseudo-release and hover **Plugins > Linked original editions** to compare linked sources by tracks, year, country, format, label, and catalog number. Picard preloads edition details while the pseudo-release is processed, so opening the submenu makes no web requests.
 
 ## Installation
 
