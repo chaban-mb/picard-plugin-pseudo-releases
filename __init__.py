@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 try:
-    from PyQt6 import QtWidgets
+    from PyQt6 import QtGui, QtWidgets
     from picard.debug_opts import DebugOpt
     from picard.plugin3.api import (
         Album,
@@ -12,16 +12,47 @@ try:
         Metadata,
         PluginApi,
         Track,
-        t_,
     )
 except ImportError:
-    class _FallbackInputDialog:
+    class _FallbackAction:
+        def __init__(self, text):
+            self.text = text
+            self.checked = False
+            self.checkable = False
+
+        def setCheckable(self, value):
+            self.checkable = value
+
+        def setChecked(self, value):
+            self.checked = value
+
+    class _FallbackMenu:
+        selected_action = None
+
+        def __init__(self, *args, **kwargs):
+            self.actions = []
+
+        def addAction(self, text):
+            action = _FallbackAction(text)
+            self.actions.append(action)
+            return action
+
+        def addSeparator(self):
+            self.actions.append(None)
+
+        def exec(self, *args):
+            return self.selected_action
+
+    class _FallbackCursor:
         @staticmethod
-        def getItem(*args, **kwargs):
-            return "", False
+        def pos():
+            return None
+
+    class QtGui:  # type: ignore[no-redef]
+        QCursor = _FallbackCursor
 
     class QtWidgets:  # type: ignore[no-redef]
-        QInputDialog = _FallbackInputDialog
+        QMenu = _FallbackMenu
 
     # Fallback types for unit testing outside Picard runtime
     class DebugOpt:
@@ -41,9 +72,6 @@ except ImportError:
 
     class Metadata:  # type: ignore[no-redef]
         pass
-
-    def t_(key: str, text: str | None = None, plural: str | None = None) -> str:
-        return text or key
 
 try:
     from .caa_provider import PseudoReleaseCoverArtProvider
@@ -91,7 +119,7 @@ class ManifestTranslations:
 class ChooseLinkedOriginalAction(BaseAction):
     """Choose which linked original release supplies catalog metadata."""
 
-    TITLE = t_("action.choose_linked_original", "Choose linked original...")
+    TITLE = "Choose linked original..."
 
     def callback(self, objs) -> None:
         if len(objs) != 1:
@@ -199,40 +227,31 @@ class PseudoReleasePlugin:
         cls._queue_enrichment(api, album, orig_id)
 
     @staticmethod
-    def _format_original_candidate(candidate: dict[str, Any], current_id: str | None) -> str:
-        """Format an original release's distinguishing details for the chooser."""
-        release_id = candidate.get('id', '')
+    def _format_original_candidate(candidate: dict[str, Any]) -> str:
+        """Format a compact edition label for the linked-original menu."""
         title = candidate.get('title') or 'Untitled release'
         media = candidate.get('media') or []
         formats = list(dict.fromkeys(medium.get('format') for medium in media if medium.get('format')))
         track_count = sum(medium.get('track-count', 0) for medium in media)
-        media_summary = ', '.join(formats) or 'format unknown'
-        if media:
-            media_summary += f" x {len(media)}"
+        media_summary = ', '.join(formats) or 'unknown format'
+        if formats and media:
+            media_summary += f" x{len(media)}"
         if track_count:
-            media_summary += f", {track_count} tracks"
+            media_summary += f" {track_count} tracks"
 
-        labels = []
+        catalog_numbers = []
         for label_info in candidate.get('label-info', []):
-            label = (label_info.get('label') or {}).get('name')
             catalog_number = label_info.get('catalog-number')
-            if label and catalog_number:
-                labels.append(f"{label}: {catalog_number}")
-            elif catalog_number:
-                labels.append(catalog_number)
-            elif label:
-                labels.append(label)
+            if catalog_number:
+                catalog_numbers.append(catalog_number)
 
-        details = [candidate.get('country') or 'country unknown', candidate.get('date') or 'date unknown', media_summary]
-        if labels:
-            details.append('; '.join(labels))
+        details = [candidate.get('country') or '?', candidate.get('date') or '?', media_summary]
+        if catalog_numbers:
+            details.append(', '.join(catalog_numbers))
         barcode = candidate.get('barcode')
         if barcode:
-            details.append(f"barcode {barcode}")
-        if release_id:
-            details.append(release_id)
-        prefix = 'Currently used | ' if release_id and release_id == current_id else ''
-        return f"{prefix}{title} | " + ' | '.join(details)
+            details.append(barcode)
+        return f"{title}  |  " + '  |  '.join(details)
 
     @classmethod
     def choose_linked_original(cls, api: PluginApi, album: Album) -> None:
@@ -247,13 +266,17 @@ class PseudoReleasePlugin:
             return
 
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        resolved: dict[str, dict[str, Any]] = {}
-        remaining = len(candidates)
+        detail_cache = getattr(album, '_pseudo_original_details', None)
+        if detail_cache is None:
+            detail_cache = {}
+            album._pseudo_original_details = detail_cache
+
+        missing = [candidate for candidate in candidates if candidate.get('id') not in detail_cache]
         picker_token = object()
         picker_shown = False
         album._pseudo_original_picker_token = picker_token
 
-        def show_picker() -> None:
+        def show_menu() -> None:
             nonlocal picker_shown
             if picker_shown:
                 return
@@ -261,32 +284,33 @@ class PseudoReleasePlugin:
                 return
             picker_shown = True
 
-            complete_candidates = [
-                resolved.get(candidate.get('id'), candidate)
-                for candidate in candidates
-                if candidate.get('id')
-            ]
-            choices: list[tuple[str, str | None]] = [("Automatic best match", None)]
-            for candidate in complete_candidates:
-                choices.append((cls._format_original_candidate(candidate, current_id), candidate.get('id')))
+            menu = QtWidgets.QMenu(getattr(getattr(api, 'tagger', None), 'window', None))
+            automatic_action = menu.addAction("Automatic best match")
+            automatic_action.setCheckable(True)
+            automatic_action.setChecked(
+                getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'automatic'
+            )
+            menu.addSeparator()
 
-            current_index = next(
-                (index for index, (_, release_id) in enumerate(choices) if release_id == current_id),
-                0,
-            )
-            labels = [label for label, _ in choices]
-            selected_label, accepted = QtWidgets.QInputDialog.getItem(
-                getattr(getattr(api, 'tagger', None), 'window', None),
-                "Choose linked original",
-                "Select the original edition for catalog metadata and cover art:",
-                labels,
-                current_index,
-                False,
-            )
-            if not accepted:
+            actions_by_id = {}
+            complete_candidates = [detail_cache[candidate['id']] for candidate in candidates if candidate.get('id')]
+            for candidate in complete_candidates:
+                release_id = candidate.get('id')
+                action = menu.addAction(cls._format_original_candidate(candidate))
+                action.setCheckable(True)
+                action.setChecked(release_id == current_id)
+                actions_by_id[release_id] = action
+
+            selected_action = menu.exec(QtGui.QCursor.pos())
+            if selected_action is None:
                 return
 
-            selected_id = next((release_id for label, release_id in choices if label == selected_label), None)
+            selected_id = next(
+                (release_id for release_id, action in actions_by_id.items() if action is selected_action),
+                None,
+            )
+            if selected_action is not automatic_action and selected_id is None:
+                return
             current_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
             new_mode = 'manual' if selected_id else 'automatic'
             album._pseudo_original_selection_mode = new_mode
@@ -299,17 +323,28 @@ class PseudoReleasePlugin:
                 return
             album.load(priority=True, refresh=True)
 
+        if not missing:
+            show_menu()
+            return
+
+        if getattr(album, '_pseudo_original_details_loading', False):
+            return
+        album._pseudo_original_details_loading = True
+        remaining = len(missing)
+
         def on_loaded(candidate: dict[str, Any], http: Any, error: Any, fallback: dict[str, Any]) -> None:
             nonlocal remaining
             if not error and candidate:
-                resolved[candidate.get('id', '')] = candidate
+                detail_cache[fallback['id']] = candidate
             else:
                 cls._log_debug(api, "Could not load linked original %s details", fallback.get('id'))
+                detail_cache[fallback['id']] = fallback
             remaining -= 1
             if remaining == 0:
-                show_picker()
+                album._pseudo_original_details_loading = False
+                show_menu()
 
-        for candidate in candidates:
+        for candidate in missing:
             release_id = candidate.get('id')
             if not release_id:
                 remaining -= 1
@@ -321,7 +356,8 @@ class PseudoReleasePlugin:
             )
 
         if remaining <= 0:
-            show_picker()
+            album._pseudo_original_details_loading = False
+            show_menu()
 
     @classmethod
     def _queue_enrichment(

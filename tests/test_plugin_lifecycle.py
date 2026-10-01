@@ -239,26 +239,37 @@ class TestPluginLifecycle(unittest.TestCase):
             callback(details[release_id], None, None)
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get_release
-        selected_label = plugin_module.PseudoReleasePlugin._format_original_candidate(
-            details["original-2"], None
-        )
         action_cls = self.api.album_actions[0]
         action = action_cls()
         action.api = self.api
 
         with patch.object(
-            plugin_module.QtWidgets.QInputDialog,
-            "getItem",
-            return_value=(selected_label, True),
-        ) as get_item:
+            plugin_module.QtWidgets.QMenu,
+            "exec",
+            autospec=True,
+            side_effect=lambda menu, *_: menu.actions[3],
+        ) as execute_menu:
             action.callback([album])
 
-        self.assertEqual(len(get_item.call_args.args[3]), 3)
-        self.assertIn("SQEX-10130", get_item.call_args.args[3][1])
-        self.assertIn("SQEX-10132", get_item.call_args.args[3][2])
+        shown_menu = execute_menu.call_args.args[0]
+        self.assertEqual(len([entry for entry in shown_menu.actions if entry is not None]), 3)
+        self.assertIn("SQEX-10130", shown_menu.actions[2].text)
+        self.assertIn("SQEX-10132", shown_menu.actions[3].text)
         self.assertEqual(album._pseudo_original_release_choice, "original-2")
         self.assertEqual(album._pseudo_original_selection_mode, "manual")
         self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
+        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 2)
+
+        with patch.object(
+            plugin_module.QtWidgets.QMenu,
+            "exec",
+            autospec=True,
+            return_value=None,
+        ) as execute_menu:
+            action.callback([album])
+
+        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 2)
+        self.assertEqual(execute_menu.call_count, 1)
 
     def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
         self.api.plugin_config[OPT_AUTO_SUPPLEMENT] = False
