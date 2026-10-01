@@ -222,11 +222,10 @@ class ChooseLinkedOriginalAction(BaseAction):
 
         heading = menu.addAction("Tracks / Year / Country / Format / Label / Cat No")
         heading_font = heading.font()
-        heading_font.setBold(False)
+        heading_font.setBold(True)
         heading_font.setUnderline(False)
         heading.setFont(heading_font)
         heading.setEnabled(False)
-        menu.addSeparator()
 
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         if (

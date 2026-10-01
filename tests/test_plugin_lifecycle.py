@@ -252,15 +252,15 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(shown_menu.actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
         self.assertNotIn("Automatic best match", [entry.text for entry in shown_menu.actions if entry is not None])
         self.assertFalse(shown_menu.actions[0].enabled)
-        self.assertFalse(shown_menu.actions[0].font().bold())
+        self.assertTrue(shown_menu.actions[0].font().bold())
         self.assertFalse(shown_menu.actions[0].font().underline())
-        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", shown_menu.actions[2].text)
-        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", shown_menu.actions[3].text)
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", shown_menu.actions[1].text)
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", shown_menu.actions[2].text)
+        self.assertFalse(shown_menu.actions[1].checked)
         self.assertFalse(shown_menu.actions[2].checked)
-        self.assertFalse(shown_menu.actions[3].checked)
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
-        shown_menu.actions[3].trigger()
+        shown_menu.actions[2].trigger()
         self.assertEqual(album._pseudo_original_release_choice, "original-2")
         self.assertEqual(album._pseudo_original_selection_mode, "manual")
         self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
@@ -271,7 +271,7 @@ class TestPluginLifecycle(unittest.TestCase):
             }
         )
         reopened_menu = self.api.album_actions[0]().menu()
-        self.assertTrue(reopened_menu.actions[3].checked)
+        self.assertTrue(reopened_menu.actions[2].checked)
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
     def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
