@@ -109,6 +109,7 @@ class MockPluginApi:
 
     def add_album_task(self, album, task_id, description, timeout, request_factory, blocking=False):
         self.added_tasks.append((album, task_id, blocking))
+        self.metadata_at_task_add = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         if request_factory:
             request_factory()
 
@@ -177,6 +178,7 @@ class TestPluginLifecycle(unittest.TestCase):
         # Assert album task was added with blocking=True and completed
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" and task[2] is True for task in self.api.added_tasks))
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" for task in self.api.completed_tasks))
+        self.assertEqual(self.api.metadata_at_task_add, "orig-1")
 
         # Assert metadata supplementation succeeded
         self.assertEqual(pseudo_album.metadata["barcode"], "4988008610134")

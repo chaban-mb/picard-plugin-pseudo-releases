@@ -315,27 +315,29 @@ class PseudoReleasePlugin:
         album._pseudo_original_candidates = candidates
 
         selection_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
-        already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        if already_enriched_id:
-            preferred_id = already_enriched_id
-        elif selection_mode == 'manual':
+        if selection_mode == 'manual':
             preferred_id = getattr(album, '_pseudo_original_release_choice', None)
-        elif get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
-            files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
-            preferred = select_best_original_candidate(
-                candidates=candidates,
-                album_metadata=album_metadata,
-                files=list(files),
-                disc_ids=getattr(album, 'discids', None),
-            )
-            preferred_id = preferred.get('id') if preferred else None
         else:
-            preferred_id = None
+            already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
+            if already_enriched_id:
+                preferred_id = already_enriched_id
+            elif get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
+                files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
+                preferred = select_best_original_candidate(
+                    candidates=candidates,
+                    album_metadata=album_metadata,
+                    files=list(files),
+                    disc_ids=getattr(album, 'discids', None),
+                )
+                preferred_id = preferred.get('id') if preferred else None
+            else:
+                preferred_id = None
 
         cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
 
+        already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
         # Avoid re-processing already enriched albums after preserving chooser state.
-        if already_enriched_id:
+        if already_enriched_id and selection_mode != 'manual':
             return
         if (
             selection_mode != 'manual'
@@ -369,6 +371,8 @@ class PseudoReleasePlugin:
 
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
+        album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
+
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
         if cached_release:
             supplement_pseudo_metadata(album_metadata, cached_release)
@@ -530,6 +534,8 @@ class PseudoReleasePlugin:
                     api.complete_album_task(album, task_id)
                 if hasattr(album, '_finalize_loading'):
                     album._finalize_loading(None)
+                if not error:
+                    cls._trigger_cover_art_retrieval(album)
 
         if hasattr(api, 'add_album_task') and hasattr(api, 'mb_api'):
             api.add_album_task(
@@ -540,6 +546,16 @@ class PseudoReleasePlugin:
                 request_factory=lambda: api.mb_api.get_release_by_id(target_mbid, on_loaded, inc=inc),
                 blocking=True,
             )
+
+    @classmethod
+    def _trigger_cover_art_retrieval(cls, album: Album) -> None:
+        """Trigger cover art retrieval for the album after enrichment if needed."""
+        try:
+            from picard.coverart import _retrieve_coverart
+            release_node = getattr(album, '_release_node_cache', getattr(album, '_release_node', {}))
+            _retrieve_coverart(album, album.metadata, release_node)
+        except Exception:
+            pass
 
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
