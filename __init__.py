@@ -60,6 +60,9 @@ except ImportError:
         def setEnabled(self, enabled):
             self.enabled = bool(enabled)
 
+        def setToolTip(self, text):
+            self.tooltip = text
+
         def font(self):
             return self._font
 
@@ -83,6 +86,9 @@ except ImportError:
 
         def addSeparator(self):
             self.actions.append(None)
+
+        def setToolTipsVisible(self, visible):
+            self.tooltips_visible = bool(visible)
 
         def exec(self, *args):
             return self.selected_action
@@ -215,6 +221,7 @@ class ChooseLinkedOriginalAction(BaseAction):
             return
 
         menu = QtWidgets.QMenu(window)
+        menu.setToolTipsVisible(True)
         self.destroyed.connect(lambda *_: menu.deleteLater())
         self.setMenu(menu)
         selection_group = QtGui.QActionGroup(menu)
@@ -241,6 +248,9 @@ class ChooseLinkedOriginalAction(BaseAction):
             details = detail_cache.get(release_id, candidate)
             label = PseudoReleasePlugin._format_original_candidate(details).replace('&', '&&')
             action = menu.addAction(label)
+            tooltip = PseudoReleasePlugin._format_original_candidate_tooltip(details)
+            if tooltip:
+                action.setToolTip(tooltip)
             action.setCheckable(True)
             action.setChecked(release_id == current_id)
             selection_group.addAction(action)
@@ -451,6 +461,18 @@ class PseudoReleasePlugin:
             ', '.join(labels),
             ', '.join(catalog_numbers),
         ))
+
+    @staticmethod
+    def _format_original_candidate_tooltip(candidate: dict[str, Any]) -> str:
+        """Format additional release details using Picard's Other versions fields."""
+        details = [
+            f"Packaging: {candidate.get('packaging') or '??'}",
+            f"Barcode: {candidate.get('barcode') or '[no barcode]'}",
+        ]
+        disambiguation = candidate.get('disambiguation')
+        if disambiguation:
+            details.append(f"Disambiguation: {disambiguation}")
+        return '\n'.join(details)
 
     @staticmethod
     def select_linked_original(album: Album, selected_id: str) -> None:
