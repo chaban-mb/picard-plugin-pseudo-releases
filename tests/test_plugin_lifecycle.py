@@ -1,9 +1,9 @@
 # Integration tests for plugin lifecycle, task queues, and processor integration
 import unittest
 from unittest.mock import MagicMock
-from unittest.mock import patch
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 plugin_path = Path(__file__).resolve().parent.parent / '__init__.py'
 spec = importlib.util.spec_from_file_location('pseudo_releases_plugin', str(plugin_path))
@@ -65,6 +65,7 @@ class MockAlbum:
 
     def load(self, **kwargs):
         self.load_calls.append(kwargs)
+        self.metadata = MockMetadata()
 
 
 class MockPluginConfig(dict):
@@ -78,6 +79,7 @@ class MockPluginApi:
         self.plugin_config = MockPluginConfig({
             OPT_AUTO_SUPPLEMENT: True,
         })
+        self.tagger = SimpleNamespace(window=SimpleNamespace(selected_objects=[]))
         self.processors = []
 
         self.providers = []
@@ -96,6 +98,7 @@ class MockPluginApi:
         self.removal_processors.append(func)
 
     def register_album_action(self, action_cls):
+        action_cls.api = self
         self.album_actions.append(action_cls)
 
     def register_cover_art_provider(self, provider_cls):
@@ -235,41 +238,30 @@ class TestPluginLifecycle(unittest.TestCase):
             },
         }
 
-        def mock_get_release(release_id, callback, inc=None):
-            callback(details[release_id], None, None)
-
-        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
-        action_cls = self.api.album_actions[0]
-        action = action_cls()
-        action.api = self.api
-
-        with patch.object(
-            plugin_module.QtWidgets.QMenu,
-            "exec",
-            autospec=True,
-            side_effect=lambda menu, *_: menu.actions[3],
-        ) as execute_menu:
-            action.callback([album])
-
-        shown_menu = execute_menu.call_args.args[0]
+        album._pseudo_original_details = details
+        self.api.tagger.window.selected_objects = [album]
+        action = self.api.album_actions[0]()
+        shown_menu = action.menu()
         self.assertEqual(len([entry for entry in shown_menu.actions if entry is not None]), 3)
         self.assertIn("SQEX-10130", shown_menu.actions[2].text)
         self.assertIn("SQEX-10132", shown_menu.actions[3].text)
+        self.assertFalse(shown_menu.actions[2].checked)
+        self.assertFalse(shown_menu.actions[3].checked)
+        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
+
+        shown_menu.actions[3].trigger()
         self.assertEqual(album._pseudo_original_release_choice, "original-2")
         self.assertEqual(album._pseudo_original_selection_mode, "manual")
         self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
-        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 2)
-
-        with patch.object(
-            plugin_module.QtWidgets.QMenu,
-            "exec",
-            autospec=True,
-            return_value=None,
-        ) as execute_menu:
-            action.callback([album])
-
-        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 2)
-        self.assertEqual(execute_menu.call_count, 1)
+        album.metadata = MockMetadata(
+            {
+                "releasestatus": "pseudo-release",
+                TAG_ORIGINAL_RELEASE_ID: "original-2",
+            }
+        )
+        reopened_menu = self.api.album_actions[0]().menu()
+        self.assertTrue(reopened_menu.actions[3].checked)
+        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
     def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
         self.api.plugin_config[OPT_AUTO_SUPPLEMENT] = False
@@ -277,6 +269,13 @@ class TestPluginLifecycle(unittest.TestCase):
         album._pseudo_original_source_id = "pseudo-2"
         album._pseudo_original_selection_mode = "manual"
         album._pseudo_original_release_choice = "original-2"
+        album._pseudo_original_details = {
+            "original-2": {
+                "id": "original-2",
+                "barcode": "barcode-original-2",
+                "media": [],
+            }
+        }
         release_node = {
             "id": "pseudo-2",
             "status": "Pseudo-Release",
@@ -306,8 +305,10 @@ class TestPluginLifecycle(unittest.TestCase):
             self.api, album, album.metadata, release_node
         )
 
-        self.assertTrue(any(task[1] == "pseudo_enrich_original-2" for task in self.api.added_tasks))
+        self.assertEqual(self.api.added_tasks, [])
         self.assertEqual(album.metadata["barcode"], "barcode-original-2")
+        self.assertEqual(set(album._pseudo_original_details), {"original-1", "original-2"})
+        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 1)
 
 
 if __name__ == '__main__':

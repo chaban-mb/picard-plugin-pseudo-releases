@@ -14,17 +14,32 @@ try:
         Track,
     )
 except ImportError:
+    class _FallbackSignal:
+        def __init__(self):
+            self.callback = None
+
+        def connect(self, callback):
+            self.callback = callback
+
+        def emit(self, *args):
+            if self.callback:
+                self.callback(*args)
+
     class _FallbackAction:
         def __init__(self, text):
             self.text = text
             self.checked = False
             self.checkable = False
+            self.triggered = _FallbackSignal()
 
         def setCheckable(self, value):
             self.checkable = value
 
         def setChecked(self, value):
             self.checked = value
+
+        def trigger(self):
+            self.triggered.emit(False)
 
     class _FallbackMenu:
         selected_action = None
@@ -51,6 +66,16 @@ except ImportError:
     class QtGui:  # type: ignore[no-redef]
         QCursor = _FallbackCursor
 
+        class QActionGroup:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def setExclusive(self, exclusive):
+                pass
+
+            def addAction(self, action):
+                pass
+
     class QtWidgets:  # type: ignore[no-redef]
         QMenu = _FallbackMenu
 
@@ -60,6 +85,23 @@ except ImportError:
 
     class BaseAction:  # type: ignore[no-redef]
         api: Any = None
+
+        def __init__(self, parent=None):
+            self.tagger = getattr(self.api, 'tagger', None)
+            self._menu = None
+            self._enabled = True
+
+        def setMenu(self, menu):
+            self._menu = menu
+
+        def menu(self):
+            return self._menu
+
+        def setEnabled(self, enabled):
+            self._enabled = bool(enabled)
+
+        def isEnabled(self):
+            return self._enabled
 
     class PluginApi:  # type: ignore[no-redef]
         pass
@@ -119,12 +161,67 @@ class ManifestTranslations:
 class ChooseLinkedOriginalAction(BaseAction):
     """Choose which linked original release supplies catalog metadata."""
 
-    TITLE = "Choose linked original..."
+    TITLE = "Linked original editions"
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        window = getattr(self.tagger, 'window', None)
+        albums = getattr(window, 'selected_objects', [])
+        if len(albums) != 1:
+            self.setEnabled(False)
+            return
+
+        album = albums[0]
+        if album.metadata.get('releasestatus') != 'pseudo-release':
+            self.setEnabled(False)
+            return
+
+        candidates = getattr(album, '_pseudo_original_candidates', [])
+        if not candidates:
+            self.setEnabled(False)
+            return
+
+        menu = QtWidgets.QMenu(self)
+        self.setMenu(menu)
+        selection_group = QtGui.QActionGroup(menu)
+        selection_group.setExclusive(True)
+
+        automatic_action = menu.addAction("Automatic best match")
+        automatic_action.setCheckable(True)
+        automatic_action.setChecked(
+            getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'automatic'
+        )
+        selection_group.addAction(automatic_action)
+        automatic_action.triggered.connect(
+            lambda checked=False: PseudoReleasePlugin.select_linked_original(album, None)
+        )
+        menu.addSeparator()
+
+        current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        if (
+            not current_id
+            and getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'manual'
+        ):
+            current_id = getattr(album, '_pseudo_original_release_choice', None)
+        detail_cache = getattr(album, '_pseudo_original_details', {})
+        for candidate in candidates:
+            release_id = candidate.get('id')
+            if not release_id:
+                continue
+            details = detail_cache.get(release_id, candidate)
+            action = menu.addAction(PseudoReleasePlugin._format_original_candidate(details))
+            action.setCheckable(True)
+            action.setChecked(release_id == current_id)
+            selection_group.addAction(action)
+            action.triggered.connect(
+                lambda checked=False, selected_id=release_id: PseudoReleasePlugin.select_linked_original(
+                    album,
+                    selected_id,
+                )
+            )
 
     def callback(self, objs) -> None:
-        if len(objs) != 1:
-            return
-        PseudoReleasePlugin.choose_linked_original(self.api, objs[0])
+        pass
 
 
 class PseudoReleasePlugin:
@@ -176,17 +273,36 @@ class PseudoReleasePlugin:
         candidates = find_related_releases(release_node, direction='backward')
         album._pseudo_original_candidates = candidates
 
-        # Avoid re-processing already enriched albums after preserving chooser state.
-        if album_metadata.get(TAG_ORIGINAL_RELEASE_ID):
-            return
         selection_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
+        already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        if already_enriched_id:
+            preferred_id = already_enriched_id
+        elif selection_mode == 'manual':
+            preferred_id = getattr(album, '_pseudo_original_release_choice', None)
+        elif get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
+            files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
+            preferred = select_best_original_candidate(
+                candidates=candidates,
+                album_metadata=album_metadata,
+                files=list(files),
+                disc_ids=getattr(album, 'discids', None),
+            )
+            preferred_id = preferred.get('id') if preferred else None
+        else:
+            preferred_id = None
+
+        cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
+
+        # Avoid re-processing already enriched albums after preserving chooser state.
+        if already_enriched_id:
+            return
         if (
             selection_mode != 'manual'
             and not get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True)
         ):
             return
 
-        cls._handle_supplement_pseudo(api, album, album_metadata, candidates)
+        cls._handle_supplement_pseudo(api, album, album_metadata, preferred_id, candidates)
 
     @classmethod
     def _handle_supplement_pseudo(
@@ -194,6 +310,7 @@ class PseudoReleasePlugin:
         api: PluginApi,
         album: Album,
         album_metadata: Metadata,
+        preferred_id: str | None,
         candidates: list[dict[str, Any]],
     ) -> None:
         """Direction 1: Find best matching original release and queue supplementation."""
@@ -201,30 +318,68 @@ class PseudoReleasePlugin:
             cls._log_debug(api, "No backward transl-tracklisting relations found for %s", album.id)
             return
 
-        best_original = None
-        if getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'manual':
-            chosen_id = getattr(album, '_pseudo_original_release_choice', None)
-            best_original = next(
-                (candidate for candidate in candidates if candidate.get('id') == chosen_id),
-                None,
-            )
-        files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
-        disc_ids = getattr(album, 'discids', None)
-
-        if best_original is None:
-            best_original = select_best_original_candidate(
-                candidates=candidates,
-                album_metadata=album_metadata,
-                files=list(files),
-                disc_ids=disc_ids,
-            )
+        best_original = next(
+            (candidate for candidate in candidates if candidate.get('id') == preferred_id),
+            None,
+        )
 
         if not best_original or not best_original.get('id'):
             return
 
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
+        cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
+        if cached_release:
+            supplement_pseudo_metadata(album_metadata, cached_release)
+            cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
+            return
         cls._queue_enrichment(api, album, orig_id)
+
+    @classmethod
+    def _prefetch_linked_original_details(
+        cls,
+        api: PluginApi,
+        album: Album,
+        candidates: list[dict[str, Any]],
+        preferred_id: str | None,
+    ) -> None:
+        """Fetch menu details during album processing, never while opening the menu."""
+        if not hasattr(api, 'mb_api'):
+            return
+
+        detail_cache = getattr(album, '_pseudo_original_details', None)
+        if detail_cache is None:
+            detail_cache = {}
+            album._pseudo_original_details = detail_cache
+        loading_ids = getattr(album, '_pseudo_original_details_loading_ids', None)
+        if loading_ids is None:
+            loading_ids = set()
+            album._pseudo_original_details_loading_ids = loading_ids
+
+        for fallback in candidates:
+            release_id = fallback.get('id')
+            if not release_id or release_id == preferred_id:
+                continue
+            if release_id in detail_cache or release_id in loading_ids:
+                continue
+
+            loading_ids.add(release_id)
+
+            def on_loaded(
+                document: dict[str, Any],
+                http: Any,
+                error: Any,
+                fallback: dict[str, Any] = fallback,
+            ) -> None:
+                loading_ids.discard(fallback['id'])
+                if not error and document:
+                    detail_cache[fallback['id']] = document
+
+            api.mb_api.get_release_by_id(
+                release_id,
+                on_loaded,
+                inc=['labels', 'media', 'discids'],
+            )
 
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
@@ -253,111 +408,18 @@ class PseudoReleasePlugin:
             details.append(barcode)
         return f"{title}  |  " + '  |  '.join(details)
 
-    @classmethod
-    def choose_linked_original(cls, api: PluginApi, album: Album) -> None:
-        """Fetch linked original details and let the user choose a source edition."""
-        if getattr(album, 'metadata', {}).get('releasestatus') != 'pseudo-release':
-            return
-        if getattr(album, 'id', '') in cls.in_flight_albums:
-            return
-
-        candidates = getattr(album, '_pseudo_original_candidates', [])
-        if not candidates:
-            return
-
+    @staticmethod
+    def select_linked_original(album: Album, selected_id: str | None) -> None:
+        """Set an automatic or manual edition preference and reload the album."""
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        detail_cache = getattr(album, '_pseudo_original_details', None)
-        if detail_cache is None:
-            detail_cache = {}
-            album._pseudo_original_details = detail_cache
-
-        missing = [candidate for candidate in candidates if candidate.get('id') not in detail_cache]
-        picker_token = object()
-        picker_shown = False
-        album._pseudo_original_picker_token = picker_token
-
-        def show_menu() -> None:
-            nonlocal picker_shown
-            if picker_shown:
-                return
-            if getattr(album, '_pseudo_original_picker_token', None) is not picker_token:
-                return
-            picker_shown = True
-
-            menu = QtWidgets.QMenu(getattr(getattr(api, 'tagger', None), 'window', None))
-            automatic_action = menu.addAction("Automatic best match")
-            automatic_action.setCheckable(True)
-            automatic_action.setChecked(
-                getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'automatic'
-            )
-            menu.addSeparator()
-
-            actions_by_id = {}
-            complete_candidates = [detail_cache[candidate['id']] for candidate in candidates if candidate.get('id')]
-            for candidate in complete_candidates:
-                release_id = candidate.get('id')
-                action = menu.addAction(cls._format_original_candidate(candidate))
-                action.setCheckable(True)
-                action.setChecked(release_id == current_id)
-                actions_by_id[release_id] = action
-
-            selected_action = menu.exec(QtGui.QCursor.pos())
-            if selected_action is None:
-                return
-
-            selected_id = next(
-                (release_id for release_id, action in actions_by_id.items() if action is selected_action),
-                None,
-            )
-            if selected_action is not automatic_action and selected_id is None:
-                return
-            current_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
-            new_mode = 'manual' if selected_id else 'automatic'
-            album._pseudo_original_selection_mode = new_mode
-            album._pseudo_original_release_choice = selected_id
-            if (
-                selected_id == current_id
-                and new_mode == current_mode
-                and current_id
-            ):
-                return
-            album.load(priority=True, refresh=True)
-
-        if not missing:
-            show_menu()
+        current_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
+        new_mode = 'manual' if selected_id else 'automatic'
+        if selected_id == current_id and new_mode == current_mode:
             return
 
-        if getattr(album, '_pseudo_original_details_loading', False):
-            return
-        album._pseudo_original_details_loading = True
-        remaining = len(missing)
-
-        def on_loaded(candidate: dict[str, Any], http: Any, error: Any, fallback: dict[str, Any]) -> None:
-            nonlocal remaining
-            if not error and candidate:
-                detail_cache[fallback['id']] = candidate
-            else:
-                cls._log_debug(api, "Could not load linked original %s details", fallback.get('id'))
-                detail_cache[fallback['id']] = fallback
-            remaining -= 1
-            if remaining == 0:
-                album._pseudo_original_details_loading = False
-                show_menu()
-
-        for candidate in missing:
-            release_id = candidate.get('id')
-            if not release_id:
-                remaining -= 1
-                continue
-            api.mb_api.get_release_by_id(
-                release_id,
-                lambda document, http, error, fallback=candidate: on_loaded(document, http, error, fallback),
-                inc=['labels', 'media', 'discids'],
-            )
-
-        if remaining <= 0:
-            album._pseudo_original_details_loading = False
-            show_menu()
+        album._pseudo_original_selection_mode = new_mode
+        album._pseudo_original_release_choice = selected_id
+        album.load(priority=True, refresh=True)
 
     @classmethod
     def _queue_enrichment(
@@ -387,6 +449,8 @@ class PseudoReleasePlugin:
                     api.logger.error("Failed to load release %s: %s", target_mbid, error)
                     return
 
+                album._pseudo_original_details = getattr(album, '_pseudo_original_details', {})
+                album._pseudo_original_details[target_mbid] = document
                 supplement_pseudo_metadata(album.metadata, document)
                 new_meta = getattr(album, '_new_metadata', None)
                 if new_meta is not None:
