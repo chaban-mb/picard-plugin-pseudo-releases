@@ -46,6 +46,7 @@ except ImportError:
 
         def __init__(self, *args, **kwargs):
             self.actions = []
+            self.parent = args[0] if args else None
 
         def addAction(self, text):
             action = _FallbackAction(text)
@@ -57,6 +58,9 @@ except ImportError:
 
         def exec(self, *args):
             return self.selected_action
+
+        def deleteLater(self):
+            pass
 
     class _FallbackCursor:
         @staticmethod
@@ -90,6 +94,7 @@ except ImportError:
             self.tagger = getattr(self.api, 'tagger', None)
             self._menu = None
             self._enabled = True
+            self.destroyed = _FallbackSignal()
 
         def setMenu(self, menu):
             self._menu = menu
@@ -181,7 +186,8 @@ class ChooseLinkedOriginalAction(BaseAction):
             self.setEnabled(False)
             return
 
-        menu = QtWidgets.QMenu(self)
+        menu = QtWidgets.QMenu(window)
+        self.destroyed.connect(lambda *_: menu.deleteLater())
         self.setMenu(menu)
         selection_group = QtGui.QActionGroup(menu)
         selection_group.setExclusive(True)
