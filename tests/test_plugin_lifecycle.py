@@ -252,6 +252,8 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(shown_menu.actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
         self.assertNotIn("Automatic best match", [entry.text for entry in shown_menu.actions if entry is not None])
         self.assertFalse(shown_menu.actions[0].enabled)
+        self.assertFalse(shown_menu.actions[0].font().bold())
+        self.assertFalse(shown_menu.actions[0].font().underline())
         self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", shown_menu.actions[2].text)
         self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", shown_menu.actions[3].text)
         self.assertFalse(shown_menu.actions[2].checked)

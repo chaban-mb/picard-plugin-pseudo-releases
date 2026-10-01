@@ -14,6 +14,23 @@ try:
         Track,
     )
 except ImportError:
+    class _FallbackFont:
+        def __init__(self):
+            self._bold = False
+            self._underline = False
+
+        def setBold(self, value):
+            self._bold = bool(value)
+
+        def setUnderline(self, value):
+            self._underline = bool(value)
+
+        def bold(self):
+            return self._bold
+
+        def underline(self):
+            return self._underline
+
     class _FallbackSignal:
         def __init__(self):
             self.callback = None
@@ -32,6 +49,7 @@ except ImportError:
             self.checkable = False
             self.enabled = True
             self.triggered = _FallbackSignal()
+            self._font = _FallbackFont()
 
         def setCheckable(self, value):
             self.checkable = value
@@ -41,6 +59,12 @@ except ImportError:
 
         def setEnabled(self, enabled):
             self.enabled = bool(enabled)
+
+        def font(self):
+            return self._font
+
+        def setFont(self, font):
+            self._font = font
 
         def trigger(self):
             self.triggered.emit(False)
@@ -197,6 +221,10 @@ class ChooseLinkedOriginalAction(BaseAction):
         selection_group.setExclusive(True)
 
         heading = menu.addAction("Tracks / Year / Country / Format / Label / Cat No")
+        heading_font = heading.font()
+        heading_font.setBold(False)
+        heading_font.setUnderline(False)
+        heading.setFont(heading_font)
         heading.setEnabled(False)
         menu.addSeparator()
 
@@ -212,7 +240,8 @@ class ChooseLinkedOriginalAction(BaseAction):
             if not release_id:
                 continue
             details = detail_cache.get(release_id, candidate)
-            action = menu.addAction(PseudoReleasePlugin._format_original_candidate(details))
+            label = PseudoReleasePlugin._format_original_candidate(details).replace('&', '&&')
+            action = menu.addAction(label)
             action.setCheckable(True)
             action.setChecked(release_id == current_id)
             selection_group.addAction(action)
