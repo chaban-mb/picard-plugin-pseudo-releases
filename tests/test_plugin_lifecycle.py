@@ -387,6 +387,65 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(handled_right)
         mock_file_lookup.album_lookup.assert_called_with("orig-mbid-2")
 
+    def test_register_ca_provider_in_config_inserts_after_caa(self):
+        mock_cfg = SimpleNamespace(
+            setting={
+                "ca_providers": [
+                    ("CaaReleaseGroup", True),
+                    ("Cover Art Archive", True),
+                    ("UrlRelationships", True),
+                    ("Local Files", False),
+                ]
+            }
+        )
+        plugin_module._register_ca_provider_in_config(mock_cfg)
+        self.assertEqual(
+            mock_cfg.setting["ca_providers"],
+            [
+                ("CaaReleaseGroup", True),
+                ("Cover Art Archive", True),
+                ("pseudo_release_caa", True),
+                ("UrlRelationships", True),
+                ("Local Files", False),
+            ],
+        )
+
+    def test_register_ca_provider_in_config_preserves_existing_user_configuration(self):
+        # User explicitly placed it elsewhere and disabled it
+        mock_cfg = SimpleNamespace(
+            setting={
+                "ca_providers": [
+                    ("pseudo_release_caa", False),
+                    ("Cover Art Archive", True),
+                ]
+            }
+        )
+        plugin_module._register_ca_provider_in_config(mock_cfg)
+        self.assertEqual(
+            mock_cfg.setting["ca_providers"],
+            [
+                ("pseudo_release_caa", False),
+                ("Cover Art Archive", True),
+            ],
+        )
+
+    def test_register_ca_provider_in_config_fallback_when_caa_not_present(self):
+        mock_cfg = SimpleNamespace(
+            setting={
+                "ca_providers": [
+                    ("Local Files", True),
+                ]
+            }
+        )
+        plugin_module._register_ca_provider_in_config(mock_cfg)
+        self.assertEqual(
+            mock_cfg.setting["ca_providers"],
+            [
+                ("Local Files", True),
+                ("pseudo_release_caa", True),
+            ],
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

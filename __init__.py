@@ -143,6 +143,7 @@ except ImportError:
         QMenu = _FallbackMenu
 
 try:
+    from picard import config
     from picard.debug_opts import DebugOpt
     from picard.plugin3.api import (
         Album,
@@ -152,6 +153,7 @@ try:
         Track,
     )
 except ImportError:
+    config = None  # type: ignore[assignment]
     class DebugOpt:
         PLUGIN_DEVELOPMENT = "plugin-development"
 
@@ -654,6 +656,29 @@ class PseudoReleasePlugin:
         except Exception:
             pass
 
+
+def _register_ca_provider_in_config(cfg: Any = None) -> None:
+    """Ensure pseudo_release_caa is enabled and placed right after Cover Art Archive by default."""
+    target_config = cfg or config
+    if not target_config or not getattr(target_config, 'setting', None):
+        return
+    try:
+        raw_providers = target_config.setting['ca_providers']
+        if not isinstance(raw_providers, list):
+            return
+        providers = list(raw_providers)
+        provider_names = [p[0] for p in providers if isinstance(p, (tuple, list)) and len(p) >= 2]
+        if 'pseudo_release_caa' not in provider_names:
+            if 'Cover Art Archive' in provider_names:
+                idx = provider_names.index('Cover Art Archive') + 1
+            else:
+                idx = len(providers)
+            providers.insert(idx, ('pseudo_release_caa', True))
+            target_config.setting['ca_providers'] = providers
+    except Exception:
+        pass
+
+
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
     PseudoReleasePlugin.api = api
@@ -673,6 +698,7 @@ def enable(api: PluginApi) -> None:
 
     # Register Cover Art Archive provider
     api.register_cover_art_provider(PseudoReleaseCoverArtProvider)
+    _register_ca_provider_in_config()
 
     # Register Options page
     api.register_options_page(PseudoReleaseOptionsPage)
