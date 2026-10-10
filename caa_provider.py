@@ -58,9 +58,22 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     ignore_json_not_found_error = True
 
     @property
+    def _original_id(self) -> str | None:
+        """Resolve the linked original release ID from metadata or album state."""
+        orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        if orig_id:
+            return orig_id
+        album = getattr(self, 'album', None)
+        if not album and hasattr(self, 'coverart') and self.coverart:
+            album = getattr(self.coverart, 'album', None)
+        if album:
+            return getattr(album, '_pseudo_original_id', getattr(album, '_pseudo_original_release_choice', None))
+        return None
+
+    @property
     def original_release(self) -> dict[str, Any] | None:
         """Retrieve original release document from album cache if available."""
-        orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        orig_id = self._original_id
         if not orig_id:
             return None
         album = getattr(self, 'album', None)
@@ -74,21 +87,15 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     @property
     def _caa_path(self) -> str:
         """Route CAA request to the original release MBID if available."""
-        orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        orig_id = self._original_id
         if orig_id:
             return f"/release/{orig_id}/"
         return super()._caa_path
 
     @property
     def _has_suitable_artwork(self) -> bool:
-        """Check if original release has artwork available in CAA.
-
-        If full original release details are cached, inspect the original release's
-        'cover-art-archive' block (respecting user type restrictions).
-        Otherwise, if TAG_ORIGINAL_RELEASE_ID is known, return True to allow
-        querying coverartarchive.org directly (ignore_json_not_found_error handles 404s).
-        """
-        orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+        """Check if original release has artwork available in CAA."""
+        orig_id = self._original_id
         if not orig_id:
             return False
 
@@ -108,7 +115,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
 
     def enabled(self) -> bool:
         """Activate for pseudo-releases that have resolved an original release candidate."""
-        if not self.metadata.get(TAG_ORIGINAL_RELEASE_ID):
+        if not self._original_id:
             return False
         if hasattr(self, 'coverart') and self.coverart:
             tagger = getattr(self.coverart, 'tagger', None)

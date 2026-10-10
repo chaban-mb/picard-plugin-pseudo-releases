@@ -394,11 +394,20 @@ class PseudoReleasePlugin:
 
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
-        album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
+        album._pseudo_original_id = orig_id
+        if get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True):
+            album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
         if cached_release:
-            supplement_pseudo_metadata(album_metadata, cached_release)
+            preserve_existing = get_config_value(api.plugin_config, OPT_PRESERVE_EXISTING_TAGS, False)
+            set_original_id = get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True)
+            supplement_pseudo_metadata(
+                album_metadata,
+                cached_release,
+                preserve_existing=preserve_existing,
+                set_original_id=set_original_id,
+            )
             cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
             return
         cls._queue_enrichment(api, album, orig_id)
