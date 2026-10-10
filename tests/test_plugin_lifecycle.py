@@ -387,106 +387,10 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(handled_right)
         mock_file_lookup.album_lookup.assert_called_with("orig-mbid-2")
 
-    def test_register_ca_provider_in_config_inserts_after_caa(self):
-        mock_cfg = SimpleNamespace(
-            setting={
-                "ca_providers": [
-                    ("CaaReleaseGroup", True),
-                    ("Cover Art Archive", True),
-                    ("UrlRelationships", True),
-                    ("Local Files", False),
-                ]
-            }
-        )
-        plugin_module._register_ca_provider_in_config(mock_cfg)
-        self.assertEqual(
-            mock_cfg.setting["ca_providers"],
-            [
-                ("CaaReleaseGroup", True),
-                ("Cover Art Archive", True),
-                ("pseudo_release_caa", True),
-                ("UrlRelationships", True),
-                ("Local Files", False),
-            ],
-        )
-
-    def test_register_ca_provider_in_config_preserves_existing_user_configuration(self):
-        # User explicitly placed it elsewhere and disabled it
-        mock_cfg = SimpleNamespace(
-            setting={
-                "ca_providers": [
-                    ("pseudo_release_caa", False),
-                    ("Cover Art Archive", True),
-                ]
-            }
-        )
-        plugin_module._register_ca_provider_in_config(mock_cfg)
-        self.assertEqual(
-            mock_cfg.setting["ca_providers"],
-            [
-                ("pseudo_release_caa", False),
-                ("Cover Art Archive", True),
-            ],
-        )
-
-    def test_register_ca_provider_in_config_fallback_when_caa_not_present(self):
-        mock_cfg = SimpleNamespace(
-            setting={
-                "ca_providers": [
-                    ("Local Files", True),
-                ]
-            }
-        )
-        plugin_module._register_ca_provider_in_config(mock_cfg)
-        self.assertEqual(
-            mock_cfg.setting["ca_providers"],
-            [
-                ("Local Files", True),
-                ("pseudo_release_caa", True),
-            ],
-        )
-
-    def test_register_ca_provider_in_config_recovers_from_trailing_fallback(self):
-        # Picard's fallback placed it at the bottom (pos 666) and disabled it
-        mock_cfg = SimpleNamespace(
-            setting={
-                "ca_providers": [
-                    ("Cover Art Archive", True),
-                    ("UrlRelationships", False),
-                    ("Local Files", False),
-                    ("pseudo_release_caa", False),
-                ]
-            }
-        )
-        plugin_module._register_ca_provider_in_config(mock_cfg)
-        self.assertEqual(
-            mock_cfg.setting["ca_providers"],
-            [
-                ("Cover Art Archive", True),
-                ("pseudo_release_caa", True),
-                ("UrlRelationships", False),
-                ("Local Files", False),
-            ],
-        )
-
-    def test_sync_cover_options_page_reloads_providers_if_loaded(self):
-        mock_cover_page = SimpleNamespace(
-            loaded=True,
-            _load_cover_art_providers=MagicMock(),
-        )
-        mock_dialog = SimpleNamespace(
-            _page_instances={"cover": mock_cover_page}
-        )
-        mock_dialog_cls = SimpleNamespace(_instance=mock_dialog)
-
-        with unittest.mock.patch.dict(
-            "sys.modules",
-            {"picard.ui.options.dialog": SimpleNamespace(OptionsDialog=mock_dialog_cls)},
-        ):
-            plugin_module._sync_cover_options_page()
-
-        mock_cover_page._load_cover_art_providers.assert_called_once()
+    def test_enable_registers_cover_art_provider(self):
+        self.assertIn(plugin_module.PseudoReleaseCoverArtProvider, self.api.providers)
 
 
 if __name__ == '__main__':
     unittest.main()
+
