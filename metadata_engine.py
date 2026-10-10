@@ -30,7 +30,6 @@ def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, 
     date = release_node.get('date', '')
     if date:
         extracted['date'] = date
-        extracted['originaldate'] = date
 
     country = release_node.get('country', '')
     if country:

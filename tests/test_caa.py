@@ -121,34 +121,7 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "edition-2018"
         self.assertEqual(self.provider._caa_path, "/release/edition-2018/")
 
-    def test_disabled_when_original_cover_art_option_is_false(self):
-        class MockConfig:
-            def __init__(self, data):
-                self.data = data
-
-            def get(self, key, default=None):
-                return self.data.get(key, default)
-
-            def __getitem__(self, key):
-                return self.data[key]
-
-        class MockTagger:
-            def __init__(self, config):
-                self.config = config
-
-        class MockCoverArt:
-            def __init__(self, tagger):
-                self.tagger = tagger
-                self.front_image_found = False
-
-        from constants import OPT_ENABLE_ORIGINAL_COVER_ART
-
-        tagger = MockTagger(MockConfig({OPT_ENABLE_ORIGINAL_COVER_ART: False}))
-        self.provider.coverart = MockCoverArt(tagger)
-        self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-release-uuid-7a1"
-
-        self.assertFalse(self.provider.enabled())
-
 
 if __name__ == '__main__':
     unittest.main()
+

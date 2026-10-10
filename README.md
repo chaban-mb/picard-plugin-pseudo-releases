@@ -1,33 +1,89 @@
-# MusicBrainz Picard Plugin: Pseudo-Releases
+# Pseudo-Releases
 
-Seamlessly integrates MusicBrainz pseudo-releases into MusicBrainz Picard 3.0+.
+Supplements MusicBrainz pseudo-releases (such as Romaji, transliterated, or translated tracklists) with original release metadata and cover artwork from their linked original release.
 
-## Key Features
+---
 
-1. **Supplement Pseudo-Releases**:
-   * When loading a pseudo-release directly (e.g. Romaji or English translated tracklist), automatically retrieves missing physical and catalog metadata (`date`, `originaldate`, `releasecountry`, `barcode`, `label`, `catalognumber`, `media`) from the linked original release.
-   * Supplements cover artwork via the Cover Art Archive (CAA) using the original release ID.
+## How It Works
 
-2. **Intelligent Disambiguation**:
-   * Ranks linked original editions using available Disc ID / TOC, track-count, barcode, format, catalog-number, status, and cover-art data.
-   * Right-click a pseudo-release and hover **Plugins > Linked original editions** to compare linked sources by tracks, year, country, format, label, and catalog number. Picard preloads edition details while the pseudo-release is processed, so opening the submenu makes no web requests.
+[MusicBrainz pseudo-releases](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases) contain alternate tracklists (such as transliterations or translations) linked to an original release via the [`transl-tracklisting`](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644) relationship. Because pseudo-releases are virtual representations rather than distinct releases, this plugin uses that relationship to bridge the gap: giving you translated or transliterated track titles while retaining full catalog metadata and artwork from the original release.
+
+### Automatic Metadata Supplementation
+When you load an album into Picard whose status is `pseudo-release`:
+1. The plugin checks the `transl-tracklisting` release relationships for linked original editions.
+2. It enriches your album with the original release's metadata tags (`date`, `releasecountry`, `barcode`, `label`, `catalognumber`, and media format specifications) while preserving your translated track titles and artist credits.
+3. It sets the hidden Picard variable `%~original_musicbrainz_albumid%` to the original release's MBID, allowing your [tagger scripts and file naming scripts](https://picard-docs.musicbrainz.org/en/extending/scripting.html) to reference the original release ID.
+
+### Cover Art
+Pseudo-releases are not supposed to have cover artwork in MusicBrainz. The plugin provides a dedicated Cover Art Archive provider—**Cover Art Archive: Pseudo-Release (Original)**—that fetches front covers and additional artwork directly from the linked original release.
+
+---
+
+## Choosing Between Editions
+
+When an album has multiple physical pressings (such as an initial limited edition, standard release, or releases for different countries), Picard automatically selects the best matching candidate based on track counts, Disc ID / TOC matches, barcode, and media format.
+
+To manually choose a different pressing:
+
+1. Right-click the loaded album in Picard's album pane.
+2. Hover over **Plugins > Linked original editions**.
+3. A menu of candidate editions is displayed, formatted with Picard's standard columns:
+   ```text
+   Tracks / Year / Country / Format / Label / Cat No
+   ```
+   Hovering over any edition displays packaging, barcode, and disambiguation details.
+4. **Left-click** an edition to switch to it and reload the album with that edition's metadata.
+5. **Middle-click** or **right-click** any edition to open that release directly on [MusicBrainz](https://musicbrainz.org) in your web browser.
+
+---
+
+## Configuration
+
+The plugin operates automatically upon being enabled. Configuration guidance and integration links can be viewed in Picard under **Options > Options... > Plugins > Pseudo-Releases**:
+
+### Cover Art Integration
+Cover art is retrieved via Picard's native cover art provider architecture. You can enable, disable, and prioritize **Cover Art Archive: Pseudo-Release (Original)** directly in Picard under **Options > Options... > Cover Art > Providers** (or by clicking **Configure Providers...** on the plugin options page).
+
+---
+
+## Behavior & Quirks
+
+- **Scope:** The plugin strictly acts on albums with the status `pseudo-release`. Official/standard releases are never altered.
+- **Hidden Variable:** `%~original_musicbrainz_albumid%` is a hidden Picard variable (indicated by the leading tilde `~`). Hidden variables are available to scripts and file naming formats during tagging, but Picard will not write them into your audio file tags unless you explicitly map them in a script (for example: `$set(original_album_id,%~original_musicbrainz_albumid%)`).
+
+---
 
 ## Installation
 
-### Manual Installation
-Copy the `picard-plugin-pseudo-releases` folder into your Picard v3 plugins directory:
-* **Windows**: `%APPDATA%\MusicBrainz\Picard\plugins3\`
-* **Linux**: `~/.config/MusicBrainz/Picard/plugins3/`
-* **macOS**: `~/Library/Preferences/MusicBrainz/Picard/plugins3/`
+### Using picard-cli
 
-### CLI Installation
 ```bash
 picard-cli plugins install /path/to/picard-plugin-pseudo-releases
 ```
 
-## Requirements
-* MusicBrainz Picard 3.0 or higher
-* Python 3.10 or higher
+### Manual Installation
+
+Place the `picard-plugin-pseudo-releases` folder into Picard's plugin directory:
+
+- **Windows:** `%APPDATA%\MusicBrainz\Picard\plugins3\`
+- **Linux:** `~/.config/MusicBrainz/Picard/plugins3/`
+- **macOS:** `~/Library/Preferences/MusicBrainz/Picard/plugins3/`
+
+Restart Picard (or open **Options > Options... > Plugins**), locate **Pseudo-Releases**, and ensure it is checked and enabled.
+
+---
+
+## Useful Links
+
+- [MusicBrainz: Pseudo-Releases Style Guideline](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases)
+- [MusicBrainz: Release Status Documentation](https://musicbrainz.org/doc/Release#Status)
+- [MusicBrainz: Relationship Types (transl-tracklisting)](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644)
+- [Picard User Guide](https://picard-docs.musicbrainz.org/)
+- [Picard Scripting Documentation](https://picard-docs.musicbrainz.org/en/extending/scripting.html)
+- [Picard Plugin System v3 Specification](https://github.com/metabrainz/picard/tree/master/docs/PLUGINSV3)
+
+---
 
 ## License
-MIT License.
+
+This project is licensed under the [MIT License](LICENSE).

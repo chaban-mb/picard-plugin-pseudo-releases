@@ -200,11 +200,6 @@ try:
         select_best_original_candidate,
     )
     from .constants import (
-        OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLE_ORIGINAL_COVER_ART,
-        OPT_PRESERVE_EXISTING_TAGS,
-        OPT_SET_ORIGINAL_RELEASE_ID,
-        OPT_SHOW_CONTEXT_MENU,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -220,11 +215,6 @@ except (ImportError, ValueError):
         select_best_original_candidate,
     )
     from constants import (
-        OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLE_ORIGINAL_COVER_ART,
-        OPT_PRESERVE_EXISTING_TAGS,
-        OPT_SET_ORIGINAL_RELEASE_ID,
-        OPT_SHOW_CONTEXT_MENU,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -281,19 +271,6 @@ class ChooseLinkedOriginalAction(BaseAction):
         super().__init__(parent)
         if getattr(self, 'tagger', None) is None and getattr(PseudoReleasePlugin, 'api', None):
             self.tagger = getattr(PseudoReleasePlugin.api, 'tagger', None)
-        cfg = None
-        if hasattr(self, 'tagger') and self.tagger:
-            cfg = getattr(self.tagger, 'config', None)
-        if not cfg and getattr(PseudoReleasePlugin, 'api', None):
-            cfg = getattr(PseudoReleasePlugin.api, 'plugin_config', None)
-        if cfg:
-            if not get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True) or not get_config_value(
-                cfg, OPT_SHOW_CONTEXT_MENU, True
-            ):
-                self.setEnabled(False)
-                if hasattr(self, 'setVisible'):
-                    self.setVisible(False)
-                return
 
         window = getattr(self.tagger, 'window', None)
         albums = getattr(window, 'selected_objects', [])
@@ -419,7 +396,7 @@ class PseudoReleasePlugin:
             already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
             if already_enriched_id:
                 preferred_id = already_enriched_id
-            elif get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True):
+            else:
                 files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
                 preferred = select_best_original_candidate(
                     candidates=candidates,
@@ -428,19 +405,12 @@ class PseudoReleasePlugin:
                     disc_ids=getattr(album, 'discids', None),
                 )
                 preferred_id = preferred.get('id') if preferred else None
-            else:
-                preferred_id = None
 
         cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
 
         already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
         # Avoid re-processing already enriched albums after preserving chooser state.
         if already_enriched_id and selection_mode != 'manual':
-            return
-        if (
-            selection_mode != 'manual'
-            and not get_config_value(api.plugin_config, OPT_AUTO_SUPPLEMENT, True)
-        ):
             return
 
         cls._handle_supplement_pseudo(api, album, album_metadata, preferred_id, candidates)
@@ -470,18 +440,14 @@ class PseudoReleasePlugin:
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
         album._pseudo_original_id = orig_id
-        if get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True):
-            album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
+        album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
         if cached_release:
-            preserve_existing = get_config_value(api.plugin_config, OPT_PRESERVE_EXISTING_TAGS, False)
-            set_original_id = get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True)
             supplement_pseudo_metadata(
                 album_metadata,
                 cached_release,
-                preserve_existing=preserve_existing,
-                set_original_id=set_original_id,
+                set_original_id=True,
             )
             cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
             return
@@ -642,21 +608,17 @@ class PseudoReleasePlugin:
 
                 album._pseudo_original_details = getattr(album, '_pseudo_original_details', {})
                 album._pseudo_original_details[target_mbid] = document
-                preserve_existing = get_config_value(api.plugin_config, OPT_PRESERVE_EXISTING_TAGS, False)
-                set_original_id = get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True)
                 supplement_pseudo_metadata(
                     album.metadata,
                     document,
-                    preserve_existing=preserve_existing,
-                    set_original_id=set_original_id,
+                    set_original_id=True,
                 )
                 new_meta = getattr(album, '_new_metadata', None)
                 if new_meta is not None:
                     supplement_pseudo_metadata(
                         new_meta,
                         document,
-                        preserve_existing=preserve_existing,
-                        set_original_id=set_original_id,
+                        set_original_id=True,
                     )
                 cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 
@@ -685,8 +647,6 @@ class PseudoReleasePlugin:
     @classmethod
     def _trigger_cover_art_retrieval(cls, album: Album, api: PluginApi | None = None) -> None:
         """Trigger cover art retrieval for the album after enrichment if needed."""
-        if api and not get_config_value(api.plugin_config, OPT_ENABLE_ORIGINAL_COVER_ART, True):
-            return
         try:
             from picard.coverart import _retrieve_coverart
             release_node = getattr(album, '_release_node_cache', getattr(album, '_release_node', {}))
@@ -697,13 +657,6 @@ class PseudoReleasePlugin:
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
     PseudoReleasePlugin.api = api
-
-    # Register default plugin configurations
-    api.plugin_config.register_option(OPT_AUTO_SUPPLEMENT, True)
-    api.plugin_config.register_option(OPT_PRESERVE_EXISTING_TAGS, False)
-    api.plugin_config.register_option(OPT_SET_ORIGINAL_RELEASE_ID, True)
-    api.plugin_config.register_option(OPT_ENABLE_ORIGINAL_COVER_ART, True)
-    api.plugin_config.register_option(OPT_SHOW_CONTEXT_MENU, True)
 
     plugin = PseudoReleasePlugin
 

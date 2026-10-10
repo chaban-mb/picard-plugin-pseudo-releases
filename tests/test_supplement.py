@@ -56,7 +56,7 @@ class TestMetadataSupplementation(unittest.TestCase):
 
         catalog = extract_release_catalog_metadata(orig_node)
         self.assertEqual(catalog["date"], "2001-07-18")
-        self.assertEqual(catalog["originaldate"], "2001-07-18")
+        self.assertNotIn("originaldate", catalog)
         self.assertEqual(catalog["releasecountry"], "JP")
         self.assertEqual(catalog["barcode"], "4988008610134")
         self.assertEqual(catalog["media"], "CD")
@@ -91,7 +91,7 @@ class TestMetadataSupplementation(unittest.TestCase):
 
         # Catalog data should be populated
         self.assertEqual(pseudo_meta["date"], "2001-07-18")
-        self.assertEqual(pseudo_meta["originaldate"], "2001-07-18")
+        self.assertEqual(pseudo_meta["originaldate"], "")
         self.assertEqual(pseudo_meta["releasecountry"], "JP")
         self.assertEqual(pseudo_meta["barcode"], "4988008610134")
         self.assertEqual(pseudo_meta["media"], "CD")

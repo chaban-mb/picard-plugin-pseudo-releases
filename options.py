@@ -26,6 +26,8 @@ except ImportError:
             self._enabled = True
             self._text = args[0] if args and isinstance(args[0], str) else ""
             self.toggled = _DummySignal()
+            self.clicked = _DummySignal()
+            self.linkActivated = _DummySignal()
 
         def setStyleSheet(self, *args):
             pass
@@ -66,8 +68,14 @@ except ImportError:
         def setWordWrap(self, enabled):
             pass
 
+        def setOpenExternalLinks(self, enabled):
+            pass
+
         def text(self):
             return self._text
+
+        def setText(self, text):
+            self._text = str(text)
 
         def title(self):
             return self._text
@@ -81,6 +89,7 @@ except ImportError:
         QHBoxLayout = _DummyWidget
         QLabel = _DummyWidget
         QCheckBox = _DummyWidget
+        QPushButton = _DummyWidget
         QGroupBox = _DummyWidget
         QFrame = _DummyWidget
 
@@ -102,25 +111,6 @@ except ImportError:
     def t_(key: str, text: str | None = None, plural: str | None = None) -> str:  # type: ignore[no-redef]
         return text or key
 
-try:
-    from .constants import (
-        OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLE_ORIGINAL_COVER_ART,
-        OPT_PRESERVE_EXISTING_TAGS,
-        OPT_SET_ORIGINAL_RELEASE_ID,
-        OPT_SHOW_CONTEXT_MENU,
-        get_config_value,
-    )
-except (ImportError, ValueError):
-    from constants import (
-        OPT_AUTO_SUPPLEMENT,
-        OPT_ENABLE_ORIGINAL_COVER_ART,
-        OPT_PRESERVE_EXISTING_TAGS,
-        OPT_SET_ORIGINAL_RELEASE_ID,
-        OPT_SHOW_CONTEXT_MENU,
-        get_config_value,
-    )
-
 
 class PseudoReleaseOptionsPage(OptionsPage):
     """Picard Options page for configuring Pseudo-Release features."""
@@ -129,13 +119,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
     TITLE = "Pseudo-Releases"
     PARENT = "plugins"
 
-    OPTIONS: ClassVar[PageOptionConfigs] = {
-        OPT_AUTO_SUPPLEMENT: {'widgets': ['cb_auto_supplement']},
-        OPT_PRESERVE_EXISTING_TAGS: {'widgets': ['cb_preserve_existing']},
-        OPT_SET_ORIGINAL_RELEASE_ID: {'widgets': ['cb_set_original_tag']},
-        OPT_ENABLE_ORIGINAL_COVER_ART: {'widgets': ['cb_enable_original_cover_art']},
-        OPT_SHOW_CONTEXT_MENU: {'widgets': ['cb_show_context_menu']},
-    }
+    OPTIONS: ClassVar[PageOptionConfigs] = {}
 
     def _tr(self, key: str, text: str) -> str:
         """Translate text if Picard API tr is available, otherwise return default text."""
@@ -157,186 +141,94 @@ class PseudoReleaseOptionsPage(OptionsPage):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Header description
-        self.lbl_info = QtWidgets.QLabel(
-            self._tr(
-                "ui.info_pseudo_releases",
-                "MusicBrainz pseudo-releases contain alternate tracklists (such as transliterated or "
-                "translated titles) linked to an original physical release via the transl-tracklisting relationship.",
-            ),
-            self,
+        # Header description with formatting and external documentation links
+        info_text = self._tr(
+            "ui.info_pseudo_releases",
+            "MusicBrainz <a href=\"https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases\">"
+            "pseudo-releases</a> contain alternate tracklists (such as transliterated or "
+            "translated titles) linked to an original release via the "
+            "<a href=\"https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644\">"
+            "transl-tracklisting</a> relationship.<br><br>"
+            "When a pseudo-release is loaded, this plugin automatically supplements missing catalog metadata "
+            "(<code>date</code>, <code>releasecountry</code>, <code>barcode</code>, <code>media</code>, "
+            "<code>label</code>, and <code>catalognumber</code>) from the best-matched original release.<br><br>"
+            "Additionally, the original release ID is made available to tagger scripts and file naming scripts "
+            "via the hidden variable <code>%~original_musicbrainz_albumid%</code>.",
         )
+        self.lbl_info = QtWidgets.QLabel(info_text, self)
         self.lbl_info.setWordWrap(True)
+        self.lbl_info.setOpenExternalLinks(True)
         layout.addWidget(self.lbl_info)
 
-        # Group 1: Metadata Supplementation
-        self.group_metadata = QtWidgets.QGroupBox(
-            self._tr("ui.group_metadata", "Metadata Supplementation"),
-            self,
-        )
-        meta_layout = QtWidgets.QVBoxLayout(self.group_metadata)
-        meta_layout.setSpacing(6)
-
-        self.cb_auto_supplement = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.auto_supplement",
-                "Automatically supplement catalog metadata",
-            ),
-            self.group_metadata,
-        )
-        meta_layout.addWidget(self.cb_auto_supplement)
-
-        self.lbl_auto_supplement_description = QtWidgets.QLabel(
-            self._tr(
-                "ui.auto_supplement_description",
-                "When loading a pseudo-release, populate date, originaldate, releasecountry, barcode, "
-                "media, label, and catalognumber from the best-matched original release.",
-            ),
-            self.group_metadata,
-        )
-        self.lbl_auto_supplement_description.setWordWrap(True)
-        meta_layout.addWidget(self.lbl_auto_supplement_description)
-
-        # Indented sub-options container
-        sub_widget = QtWidgets.QWidget(self.group_metadata)
-        sub_layout = QtWidgets.QVBoxLayout(sub_widget)
-        sub_layout.setContentsMargins(20, 4, 0, 0)
-        sub_layout.setSpacing(6)
-
-        self.cb_preserve_existing = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.preserve_existing",
-                "Preserve existing pseudo-release tags (fill missing only)",
-            ),
-            sub_widget,
-        )
-        sub_layout.addWidget(self.cb_preserve_existing)
-
-        self.cb_set_original_tag = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.set_original_tag",
-                "Save linked original MBID as tag (~original_musicbrainz_albumid)",
-            ),
-            sub_widget,
-        )
-        sub_layout.addWidget(self.cb_set_original_tag)
-
-        self.lbl_set_original_tag_description = QtWidgets.QLabel(
-            self._tr(
-                "ui.set_original_tag_description",
-                "Enables tagger scripts and file naming patterns to reference the original release ID.",
-            ),
-            sub_widget,
-        )
-        self.lbl_set_original_tag_description.setWordWrap(True)
-        sub_layout.addWidget(self.lbl_set_original_tag_description)
-
-        meta_layout.addWidget(sub_widget)
-        layout.addWidget(self.group_metadata)
-
-        # Group 2: Cover Art Integration
+        # Group: Cover Art Integration
         self.group_cover_art = QtWidgets.QGroupBox(
             self._tr("ui.group_cover_art", "Cover Art Integration"),
             self,
         )
         cover_layout = QtWidgets.QVBoxLayout(self.group_cover_art)
-        cover_layout.setSpacing(6)
-
-        self.cb_enable_original_cover_art = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.enable_cover_art",
-                "Retrieve cover artwork from linked original release",
-            ),
-            self.group_cover_art,
-        )
-        cover_layout.addWidget(self.cb_enable_original_cover_art)
+        cover_layout.setSpacing(10)
 
         self.lbl_cover_art_description = QtWidgets.QLabel(
             self._tr(
                 "ui.enable_cover_art_description",
-                "Fetches artwork from the Cover Art Archive using the original release ID if the pseudo-release has none.",
+                "Pseudo-releases are not supposed to have cover artwork in MusicBrainz. Artwork is fetched from the "
+                "Cover Art Archive using the linked original release MBID.",
             ),
             self.group_cover_art,
         )
         self.lbl_cover_art_description.setWordWrap(True)
         cover_layout.addWidget(self.lbl_cover_art_description)
 
+        # Navigation row: Clean Push Button Style
+        row_nav_layout = QtWidgets.QHBoxLayout()
+        row_nav_layout.setSpacing(10)
+
         self.lbl_cover_art_note = QtWidgets.QLabel(
             self._tr(
                 "ui.cover_art_note",
-                "Note: Also ensure \"Cover Art Archive (via Original Release)\" is enabled in Options > Cover Art > Providers.",
+                "Provider order and enablement are configured under <b>Options &gt; Cover Art &gt; Providers</b>.",
             ),
             self.group_cover_art,
         )
         self.lbl_cover_art_note.setWordWrap(True)
-        cover_layout.addWidget(self.lbl_cover_art_note)
+        row_nav_layout.addWidget(self.lbl_cover_art_note, 1)
+
+        self.btn_open_cover_providers = QtWidgets.QPushButton(
+            self._tr(
+                "ui.open_cover_providers",
+                "Configure Providers...",
+            ),
+            self.group_cover_art,
+        )
+        self.btn_open_cover_providers.clicked.connect(self._open_cover_providers_page)
+        row_nav_layout.addWidget(self.btn_open_cover_providers, 0)
+        cover_layout.addLayout(row_nav_layout)
 
         layout.addWidget(self.group_cover_art)
 
-        # Group 3: Linked Original Editions
-        self.group_context_menu = QtWidgets.QGroupBox(
-            self._tr("ui.group_context_menu", "Linked Original Editions"),
-            self,
-        )
-        menu_layout = QtWidgets.QVBoxLayout(self.group_context_menu)
-        menu_layout.setSpacing(6)
-
-        self.cb_show_context_menu = QtWidgets.QCheckBox(
-            self._tr(
-                "ui.show_context_menu",
-                "Enable \"Linked original editions\" right-click context menu",
-            ),
-            self.group_context_menu,
-        )
-        menu_layout.addWidget(self.cb_show_context_menu)
-
-        self.lbl_context_menu_description = QtWidgets.QLabel(
-            self._tr(
-                "ui.show_context_menu_description",
-                "Allows manually choosing an alternative original release edition from the album context menu.",
-            ),
-            self.group_context_menu,
-        )
-        self.lbl_context_menu_description.setWordWrap(True)
-        menu_layout.addWidget(self.lbl_context_menu_description)
-
-        layout.addWidget(self.group_context_menu)
-
-        # Cascade master toggle state across all dependent options
-        self.cb_auto_supplement.toggled.connect(self.cb_preserve_existing.setEnabled)
-        self.cb_auto_supplement.toggled.connect(self.cb_set_original_tag.setEnabled)
-        self.cb_auto_supplement.toggled.connect(self.cb_enable_original_cover_art.setEnabled)
-        self.cb_auto_supplement.toggled.connect(self.cb_show_context_menu.setEnabled)
-
         layout.addStretch()
+
+    def _open_cover_providers_page(self):
+        """Navigate directly to Picard's native Cover Art options page if hosted inside OptionsDialog."""
+        dialog = getattr(self, 'dialog', None)
+        if not dialog:
+            # Fallback check on parent hierarchy
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'pagename_to_item'):
+                    dialog = parent
+                    break
+                parent = parent.parent() if hasattr(parent, 'parent') else None
+
+        if dialog and hasattr(dialog, 'pagename_to_item') and hasattr(dialog, 'ui'):
+            item = dialog.pagename_to_item.get('cover')
+            if item and hasattr(dialog.ui, 'pages_tree'):
+                dialog.ui.pages_tree.setCurrentItem(item)
 
     def load(self):
         """Load settings from plugin configuration into UI widgets."""
-        if not hasattr(self, 'api') or not self.api:
-            return
-
-        cfg = self.api.plugin_config
-        auto_supplement = get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True)
-        self.cb_auto_supplement.setChecked(auto_supplement)
-        self.cb_preserve_existing.setChecked(get_config_value(cfg, OPT_PRESERVE_EXISTING_TAGS, False))
-        self.cb_set_original_tag.setChecked(get_config_value(cfg, OPT_SET_ORIGINAL_RELEASE_ID, True))
-        self.cb_enable_original_cover_art.setChecked(get_config_value(cfg, OPT_ENABLE_ORIGINAL_COVER_ART, True))
-        self.cb_show_context_menu.setChecked(get_config_value(cfg, OPT_SHOW_CONTEXT_MENU, True))
-
-        # Ensure dependent options reflect master toggle enabled state
-        self.cb_preserve_existing.setEnabled(auto_supplement)
-        self.cb_set_original_tag.setEnabled(auto_supplement)
-        self.cb_enable_original_cover_art.setEnabled(auto_supplement)
-        self.cb_show_context_menu.setEnabled(auto_supplement)
+        pass
 
     def save(self):
         """Save settings from UI widgets into plugin configuration."""
-        if not hasattr(self, 'api') or not self.api:
-            return
-
-        cfg = self.api.plugin_config
-        cfg[OPT_AUTO_SUPPLEMENT] = self.cb_auto_supplement.isChecked()
-        cfg[OPT_PRESERVE_EXISTING_TAGS] = self.cb_preserve_existing.isChecked()
-        cfg[OPT_SET_ORIGINAL_RELEASE_ID] = self.cb_set_original_tag.isChecked()
-        cfg[OPT_ENABLE_ORIGINAL_COVER_ART] = self.cb_enable_original_cover_art.isChecked()
-        cfg[OPT_SHOW_CONTEXT_MENU] = self.cb_show_context_menu.isChecked()
+        pass

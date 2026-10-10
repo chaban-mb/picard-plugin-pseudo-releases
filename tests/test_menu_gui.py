@@ -9,10 +9,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtTest import QTest
 
 import __init__ as plugin_module
-from constants import (
-    OPT_AUTO_SUPPLEMENT,
-    OPT_SHOW_CONTEXT_MENU,
-)
 
 
 @pytest.fixture(autouse=True)
@@ -93,10 +89,7 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
 
     api = SimpleNamespace(
         tagger=mock_tagger,
-        plugin_config={
-            OPT_AUTO_SUPPLEMENT: True,
-            OPT_SHOW_CONTEXT_MENU: True,
-        },
+        plugin_config={},
         logger=MagicMock(),
     )
     plugin_module.PseudoReleasePlugin.api = api

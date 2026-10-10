@@ -34,15 +34,11 @@ except ImportError:
 
 try:
     from .constants import (
-        OPT_ENABLE_ORIGINAL_COVER_ART,
         TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
     )
 except (ImportError, ValueError):
     from constants import (
-        OPT_ENABLE_ORIGINAL_COVER_ART,
         TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
     )
 
 
@@ -52,7 +48,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     """
 
     NAME = "pseudo_release_caa"
-    TITLE = N_("Cover Art Archive (via Original Release)")
+    TITLE = N_("Cover Art Archive: Pseudo-Release (Original)")
     OPTIONS = None
 
     ignore_json_not_found_error = True
@@ -118,10 +114,6 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
         if not self._original_id:
             return False
         if hasattr(self, 'coverart') and self.coverart:
-            tagger = getattr(self.coverart, 'tagger', None)
-            cfg = getattr(tagger, 'config', None)
-            if cfg and not get_config_value(cfg, OPT_ENABLE_ORIGINAL_COVER_ART, True):
-                return False
             if getattr(self.coverart, 'front_image_found', False):
                 return False
         return self._has_suitable_artwork
