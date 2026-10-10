@@ -207,7 +207,9 @@ try:
         get_config_value,
     )
     from .metadata_engine import (
+        get_enrichment_inc_params,
         supplement_pseudo_metadata,
+        supplement_release_relationships_and_genres,
     )
     from .options import PseudoReleaseOptionsPage
 except (ImportError, ValueError):
@@ -222,7 +224,9 @@ except (ImportError, ValueError):
         get_config_value,
     )
     from metadata_engine import (
+        get_enrichment_inc_params,
         supplement_pseudo_metadata,
+        supplement_release_relationships_and_genres,
     )
     from options import PseudoReleaseOptionsPage
 
@@ -451,6 +455,10 @@ class PseudoReleasePlugin:
                 cached_release,
                 set_original_id=True,
             )
+            supplement_release_relationships_and_genres(
+                album,
+                cached_release,
+            )
             cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
             return
         cls._queue_enrichment(api, album, orig_id)
@@ -592,15 +600,7 @@ class PseudoReleasePlugin:
         cls.in_flight_albums.add(album_id)
 
         task_id = f"pseudo_enrich_{target_mbid}"
-        inc = [
-            'artists',
-            'labels',
-            'recordings',
-            'release-rels',
-            'artist-credits',
-            'media',
-            'discids',
-        ]
+        inc = get_enrichment_inc_params()
 
         def on_loaded(document: dict[str, Any], http: Any, error: Any) -> None:
             try:
@@ -622,6 +622,10 @@ class PseudoReleasePlugin:
                         document,
                         set_original_id=True,
                     )
+                supplement_release_relationships_and_genres(
+                    album,
+                    document,
+                )
                 cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 
             except Exception as exc:

@@ -3,16 +3,23 @@
 from typing import Any
 
 try:
+    from picard import config
+except ImportError:
+    config = None  # type: ignore[assignment]
+
+try:
     from .constants import (
         SUPPLEMENTARY_ALBUM_TAGS,
         SUPPLEMENTARY_MULTI_TAGS,
         TAG_ORIGINAL_RELEASE_ID,
+        get_config_value,
     )
 except (ImportError, ValueError):
     from constants import (
         SUPPLEMENTARY_ALBUM_TAGS,
         SUPPLEMENTARY_MULTI_TAGS,
         TAG_ORIGINAL_RELEASE_ID,
+        get_config_value,
     )
 
 
@@ -110,7 +117,138 @@ def supplement_pseudo_metadata(
         album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
 
-__all__ = ('extract_release_catalog_metadata', 'supplement_pseudo_metadata')
+def get_enrichment_inc_params(config_obj: Any = None) -> list[str]:
+    """Determine the inc parameters to fetch for original release enrichment.
+
+    Respects Picard core options:
+    - config.setting['release_ars']: release-level relationships
+    - config.setting['use_genres']: folksonomy tags and genres
+    """
+    target_config = config_obj if config_obj is not None else config
+    setting = getattr(target_config, 'setting', None) if target_config else None
+
+    inc = [
+        'artists',
+        'labels',
+        'media',
+        'discids',
+        'release-rels',
+        'artist-credits',
+    ]
+
+    # "Use release relationships" in Options -> Metadata
+    if get_config_value(setting, 'release_ars', False):
+        inc.extend([
+            'artist-rels',
+            'url-rels',
+            'series-rels',
+            'label-rels',
+        ])
+
+    # "Use genres from MusicBrainz" in Options -> Metadata -> Genres
+    if get_config_value(setting, 'use_genres', False):
+        if get_config_value(setting, 'only_my_genres', False):
+            inc.extend(['user-tags', 'user-genres'])
+        else:
+            inc.extend(['tags', 'genres'])
+
+    return inc
+
+
+def supplement_release_relationships_and_genres(
+    album: Any,
+    orig_release_node: dict[str, Any],
+    config_obj: Any = None,
+) -> None:
+    """Supplement release-level relationships and folksonomy tags/genres onto an album.
+
+    Respects Picard core options:
+    - config.setting['release_ars']: governs release relationship importing
+    - config.setting['use_genres']: governs folksonomy tags and genres importing
+    """
+    target_config = config_obj if config_obj is not None else config
+    setting = getattr(target_config, 'setting', None) if target_config else None
+
+    # 1. Merge relationships into album._release_node['relations']
+    orig_relations = orig_release_node.get('relations', [])
+    if orig_relations and hasattr(album, '_release_node') and isinstance(album._release_node, dict):
+        existing_rels = album._release_node.setdefault('relations', [])
+        existing_signatures = set()
+        for r in existing_rels:
+            if isinstance(r, dict):
+                target_type = r.get('target-type', '')
+                target_val = r.get(target_type)
+                target_id = target_val.get('id') if isinstance(target_val, dict) else None
+                existing_signatures.add((r.get('type'), r.get('direction'), target_type, target_id))
+
+        for rel in orig_relations:
+            if not isinstance(rel, dict):
+                continue
+            # Skip reciprocal transl-tracklisting link back to the pseudo-release
+            if rel.get('type') == 'transl-tracklisting':
+                continue
+            target_type = rel.get('target-type', '')
+            target_val = rel.get(target_type)
+            target_id = target_val.get('id') if isinstance(target_val, dict) else None
+            sig = (rel.get('type'), rel.get('direction'), target_type, target_id)
+            if sig not in existing_signatures:
+                existing_rels.append(rel)
+                existing_signatures.add(sig)
+
+    # 2. Release relationships to metadata
+    if get_config_value(setting, 'release_ars', False) and orig_relations:
+        try:
+            from picard.mbjson import _relations_to_metadata
+
+            if hasattr(album, 'metadata'):
+                _relations_to_metadata(orig_relations, album.metadata, config=target_config, entity='release')
+            new_meta = getattr(album, '_new_metadata', None)
+            if new_meta is not None:
+                _relations_to_metadata(orig_relations, new_meta, config=target_config, entity='release')
+        except Exception:
+            pass
+
+    # 3. Folksonomy tags and genres
+    if get_config_value(setting, 'use_genres', False):
+        if hasattr(album, '_release_node') and isinstance(album._release_node, dict):
+            if 'tags' in orig_release_node:
+                album._release_node.setdefault('tags', []).extend(
+                    [t for t in orig_release_node['tags'] if t not in album._release_node.get('tags', [])]
+                )
+            if 'genres' in orig_release_node:
+                album._release_node.setdefault('genres', []).extend(
+                    [g for g in orig_release_node['genres'] if g not in album._release_node.get('genres', [])]
+                )
+
+        try:
+            from picard.mbjson import add_genres_from_node
+
+            add_genres_from_node(orig_release_node, album)
+        except Exception:
+            if hasattr(album, 'add_folksonomy_tag') and 'tags' in orig_release_node:
+                for tag in orig_release_node['tags']:
+                    album.add_folksonomy_tag(tag.get('name'), tag.get('count', 1))
+            if hasattr(album, 'add_genre') and 'genres' in orig_release_node:
+                for genre in orig_release_node['genres']:
+                    album.add_genre(genre.get('name'), genre.get('count', 1))
+
+        # Update tracks on the album to calculate merged genres / folksonomy tags
+        tracks = getattr(album, 'tracks', [])
+        for track in tracks:
+            if hasattr(track, '_convert_folksonomy_tags_to_genre'):
+                track._convert_folksonomy_tags_to_genre()
+            if hasattr(track, '_add_folksonomy_tags_variable'):
+                track._add_folksonomy_tags_variable()
+            if hasattr(track, '_add_genres_variable'):
+                track._add_genres_variable()
+
+
+__all__ = (
+    'extract_release_catalog_metadata',
+    'get_enrichment_inc_params',
+    'supplement_pseudo_metadata',
+    'supplement_release_relationships_and_genres',
+)
 
 
 

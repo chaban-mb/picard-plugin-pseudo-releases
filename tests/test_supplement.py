@@ -156,6 +156,112 @@ class TestMetadataSupplementation(unittest.TestCase):
         self.assertEqual(pseudo_meta["date"], "2001-07-18")
         self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, pseudo_meta._data)
 
+    def test_get_enrichment_inc_params(self):
+        from types import SimpleNamespace
+        from metadata_engine import get_enrichment_inc_params
+
+        # Default: no ARs, no genres
+        cfg_default = SimpleNamespace(setting={"release_ars": False, "use_genres": False})
+        params = get_enrichment_inc_params(cfg_default)
+        self.assertIn("labels", params)
+        self.assertIn("media", params)
+        self.assertNotIn("artist-rels", params)
+        self.assertNotIn("tags", params)
+
+        # release_ars = True
+        cfg_ars = SimpleNamespace(setting={"release_ars": True, "use_genres": False})
+        params_ars = get_enrichment_inc_params(cfg_ars)
+        self.assertIn("artist-rels", params_ars)
+        self.assertIn("url-rels", params_ars)
+        self.assertIn("series-rels", params_ars)
+        self.assertIn("label-rels", params_ars)
+        self.assertNotIn("tags", params_ars)
+
+        # use_genres = True
+        cfg_genres = SimpleNamespace(setting={"release_ars": False, "use_genres": True, "only_my_genres": False})
+        params_genres = get_enrichment_inc_params(cfg_genres)
+        self.assertIn("tags", params_genres)
+        self.assertIn("genres", params_genres)
+        self.assertNotIn("artist-rels", params_genres)
+
+        # only_my_genres = True
+        cfg_user_genres = SimpleNamespace(setting={"release_ars": False, "use_genres": True, "only_my_genres": True})
+        params_user_genres = get_enrichment_inc_params(cfg_user_genres)
+        self.assertIn("user-tags", params_user_genres)
+        self.assertIn("user-genres", params_user_genres)
+
+    def test_supplement_relationships_and_genres(self):
+        from types import SimpleNamespace
+        from collections import Counter
+        from metadata_engine import supplement_release_relationships_and_genres
+
+        class DummyAlbum:
+            def __init__(self):
+                self._release_node = {
+                    "id": "pseudo-1",
+                    "relations": [
+                        {
+                            "type": "transl-tracklisting",
+                            "direction": "backward",
+                            "target-type": "release",
+                            "release": {"id": "orig-1"},
+                        }
+                    ],
+                }
+                self.metadata = MockMetadata()
+                self._folksonomy_tags = Counter()
+                self._genres = Counter()
+                self.tracks = []
+
+            def add_folksonomy_tag(self, name, count):
+                self._folksonomy_tags[name] += count
+
+            def add_genre(self, name, count):
+                self._genres[name] += count
+
+        orig_node = {
+            "id": "orig-1",
+            "relations": [
+                {
+                    "type": "design/illustration",
+                    "target-type": "artist",
+                    "artist": {"id": "artist-tadano", "name": "只野和子"},
+                },
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "forward",
+                    "target-type": "release",
+                    "release": {"id": "pseudo-1"},
+                },
+                {
+                    "type": "amazon asin",
+                    "target-type": "url",
+                    "url": {"resource": "https://www.amazon.co.jp/dp/B00005GLB2"},
+                },
+            ],
+            "tags": [{"name": "美少女戦士セーラームーン", "count": 5}],
+            "genres": [{"name": "anime", "count": 3}],
+        }
+
+        album = DummyAlbum()
+        cfg = SimpleNamespace(setting={"release_ars": True, "use_genres": True, "only_my_genres": False})
+
+        supplement_release_relationships_and_genres(album, orig_node, config_obj=cfg)
+
+        # Relations were merged into _release_node (skipping self-referential transl-tracklisting)
+        rel_types = [r.get("type") for r in album._release_node["relations"]]
+        self.assertIn("design/illustration", rel_types)
+        self.assertIn("amazon asin", rel_types)
+        # transl-tracklisting not duplicated
+        self.assertEqual(rel_types.count("transl-tracklisting"), 1)
+
+        # Tags and genres stored on release_node
+        self.assertEqual(album._release_node["tags"], [{"name": "美少女戦士セーラームーン", "count": 5}])
+        self.assertEqual(album._release_node["genres"], [{"name": "anime", "count": 3}])
+        # album item received folksonomy tags and genres
+        self.assertEqual(album._folksonomy_tags["美少女戦士セーラームーン"], 5)
+        self.assertEqual(album._genres["anime"], 3)
+
 
 if __name__ == '__main__':
     unittest.main()
