@@ -150,7 +150,7 @@ class TestPluginLifecycle(unittest.TestCase):
         }
 
         # Mock the mb_api.get_release_by_id to simulate network return
-        def mock_get_release(rel_id, callback, inc=None):
+        def mock_get_release(rel_id, callback, inc=None, **kwargs):
             orig_doc = {
                 "id": "orig-1",
                 "title": "千と千尋の神隠し",
@@ -389,6 +389,96 @@ class TestPluginLifecycle(unittest.TestCase):
 
     def test_enable_registers_cover_art_provider(self):
         self.assertIn(plugin_module.PseudoReleaseCoverArtProvider, self.api.providers)
+
+    def test_enrichment_request_uses_mblogin_when_authorized(self):
+        pseudo_album = MockAlbum("pseudo-1", title="Title", status="Pseudo-Release")
+        pseudo_node = {
+            "id": "pseudo-1",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "orig-auth", "status": "Official"},
+                }
+            ],
+        }
+
+        mock_oauth = MagicMock()
+        mock_oauth.is_authorized.return_value = True
+        self.api.tagger = SimpleNamespace(
+            webservice=SimpleNamespace(oauth_manager=mock_oauth)
+        )
+
+        captured_kwargs = {}
+
+        def mock_get_release(rel_id, callback, **kwargs):
+            captured_kwargs.update(kwargs)
+            callback({"id": rel_id}, None, None)
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
+
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            api=self.api,
+            album=pseudo_album,
+            album_metadata=pseudo_album.metadata,
+            release_node=pseudo_node,
+        )
+
+        self.assertTrue(captured_kwargs.get("mblogin"))
+
+    def test_enrichment_request_falls_back_when_not_authorized(self):
+        pseudo_album = MockAlbum("pseudo-2", title="Title", status="Pseudo-Release")
+        pseudo_node = {
+            "id": "pseudo-2",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "orig-unauth", "status": "Official"},
+                }
+            ],
+        }
+
+        # User is not logged in / not authorized
+        mock_oauth = MagicMock()
+        mock_oauth.is_authorized.return_value = False
+        self.api.tagger = SimpleNamespace(
+            webservice=SimpleNamespace(oauth_manager=mock_oauth)
+        )
+
+        captured_kwargs = {}
+
+        def mock_get_release(rel_id, callback, **kwargs):
+            captured_kwargs.update(kwargs)
+            callback({"id": rel_id}, None, None)
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
+
+        # Configure only_my_genres on global config
+        mock_cfg = SimpleNamespace(
+            setting={
+                "release_ars": False,
+                "use_genres": True,
+                "only_my_genres": True,
+            }
+        )
+
+        with unittest.mock.patch("metadata_engine.config", mock_cfg), \
+             unittest.mock.patch.object(plugin_module, "config", mock_cfg):
+            plugin_module.PseudoReleasePlugin.process_album_metadata(
+                api=self.api,
+                album=pseudo_album,
+                album_metadata=pseudo_album.metadata,
+                release_node=pseudo_node,
+            )
+
+        inc = captured_kwargs.get("inc", [])
+        self.assertNotIn("user-tags", inc)
+        self.assertNotIn("user-genres", inc)
+        self.assertIn("tags", inc)
+        self.assertIn("genres", inc)
 
 
 if __name__ == '__main__':

@@ -152,7 +152,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get_release(rel_id, callback, inc=None):
+        def mock_get_release(rel_id, callback, inc=None, **kwargs):
             self.assertEqual(rel_id, "7a16f215-079e-4c55-abda-06f9a4228b6a")
             callback(orig_node, None, None)
 
@@ -204,7 +204,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get_release(rel_id, callback, inc=None):
+        def mock_get_release(rel_id, callback, inc=None, **kwargs):
             self.assertEqual(rel_id, "1268ebdb-2fa4-423f-95da-ed7accfbb845")
             callback(orig_node, None, None)
 
@@ -242,7 +242,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get_release(rel_id, callback, inc=None):
+        def mock_get_release(rel_id, callback, inc=None, **kwargs):
             callback(orig_node, None, None)
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get_release
@@ -289,7 +289,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get(rel_id, cb, inc=None):
+        def mock_get(rel_id, cb, inc=None, **kwargs):
             cb(orig_node, None, None)
 
         api.mb_api.get_release_by_id.side_effect = mock_get
@@ -318,7 +318,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get(rel_id, cb, inc=None):
+        def mock_get(rel_id, cb, inc=None, **kwargs):
             cb(orig_node, None, None)
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get
@@ -345,7 +345,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             status="Pseudo-Release",
         )
 
-        def mock_get(rel_id, cb, inc=None):
+        def mock_get(rel_id, cb, inc=None, **kwargs):
             cb(orig_node, None, None)
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get

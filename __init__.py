@@ -600,7 +600,33 @@ class PseudoReleasePlugin:
         cls.in_flight_albums.add(album_id)
 
         task_id = f"pseudo_enrich_{target_mbid}"
-        inc = get_enrichment_inc_params()
+        inc = list(get_enrichment_inc_params())
+
+        # Determine authentication state for MusicBrainz web service
+        tagger = getattr(api, 'tagger', None)
+        webservice = getattr(tagger, 'webservice', None)
+        oauth_mgr = getattr(webservice, 'oauth_manager', None)
+        is_authorized = bool(
+            oauth_mgr
+            and hasattr(oauth_mgr, 'is_authorized')
+            and oauth_mgr.is_authorized()
+        )
+        requires_auth = any(
+            p in inc for p in ('user-tags', 'user-genres', 'user-ratings', 'user-collections')
+        )
+
+        # If user-specific tags were requested but client is not logged in,
+        # fallback to public tags/genres so MusicBrainz does not reject with 401.
+        if requires_auth and not is_authorized:
+            inc = [
+                'tags' if p == 'user-tags' else ('genres' if p == 'user-genres' else p)
+                for p in inc
+            ]
+            requires_auth = False
+
+        request_kwargs: dict[str, Any] = {'inc': inc}
+        if is_authorized or requires_auth:
+            request_kwargs['mblogin'] = True
 
         def on_loaded(document: dict[str, Any], http: Any, error: Any) -> None:
             try:
@@ -646,7 +672,11 @@ class PseudoReleasePlugin:
                 task_id=task_id,
                 description=f"Loading pseudo-release data for {target_mbid}",
                 timeout=15.0,
-                request_factory=lambda: api.mb_api.get_release_by_id(target_mbid, on_loaded, inc=inc),
+                request_factory=lambda: api.mb_api.get_release_by_id(
+                    target_mbid,
+                    on_loaded,
+                    **request_kwargs,
+                ),
                 blocking=True,
             )
 
