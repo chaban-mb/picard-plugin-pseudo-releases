@@ -70,30 +70,44 @@ def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, 
     return extracted
 
 
-def supplement_pseudo_metadata(album_metadata: Any, orig_release_node: dict[str, Any]) -> None:
+def supplement_pseudo_metadata(
+    album_metadata: Any,
+    orig_release_node: dict[str, Any],
+    preserve_existing: bool = False,
+    set_original_id: bool = True,
+) -> None:
     """Supplement a pseudo-release's metadata with catalog data from an original release.
 
-    Direction 1: Fills in missing barcode, date, country, label, catalog numbers,
-    media formats, and sets the original MBID reference.
+    Direction 1: Populates barcode, date, country, label, catalog numbers,
+    media formats, and optionally sets the original MBID reference.
 
     Args:
         album_metadata: Picard Metadata instance of the loaded pseudo-release.
         orig_release_node: MusicBrainz API dictionary of the source original release.
+        preserve_existing: If True, only fills missing tags. If False (default),
+                           overwrites existing pseudo-release tags.
+        set_original_id: If True (default), sets the ~original_musicbrainz_albumid tag.
     """
     catalog_data = extract_release_catalog_metadata(orig_release_node)
 
     for tag in SUPPLEMENTARY_ALBUM_TAGS:
         val = catalog_data.get(tag)
-        if val and not album_metadata.get(tag):
-            album_metadata[tag] = val
+        if not val:
+            continue
+        if preserve_existing and album_metadata.get(tag):
+            continue
+        album_metadata[tag] = val
 
     for tag in SUPPLEMENTARY_MULTI_TAGS:
         val_list = catalog_data.get(tag)
-        if val_list and not album_metadata.getall(tag):
-            album_metadata[tag] = val_list
+        if not val_list:
+            continue
+        if preserve_existing and album_metadata.getall(tag):
+            continue
+        album_metadata[tag] = val_list
 
     orig_id = orig_release_node.get('id')
-    if orig_id:
+    if orig_id and set_original_id:
         album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
 

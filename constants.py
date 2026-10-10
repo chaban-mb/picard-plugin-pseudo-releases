@@ -10,6 +10,10 @@ PSEUDO_RELEASE_STATUS = 'Pseudo-Release'
 
 # Plugin configuration keys
 OPT_AUTO_SUPPLEMENT = 'auto_supplement_pseudo'
+OPT_PRESERVE_EXISTING_TAGS = 'preserve_existing_pseudo_tags'
+OPT_SET_ORIGINAL_RELEASE_ID = 'set_original_release_id_tag'
+OPT_ENABLE_ORIGINAL_COVER_ART = 'enable_original_cover_art'
+OPT_SHOW_CONTEXT_MENU = 'show_linked_editions_menu'
 
 # Metadata keys supplemented on pseudo-releases from original releases
 SUPPLEMENTARY_ALBUM_TAGS = (

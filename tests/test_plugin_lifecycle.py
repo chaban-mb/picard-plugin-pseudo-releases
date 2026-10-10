@@ -12,6 +12,10 @@ spec.loader.exec_module(plugin_module)
 
 from constants import (
     OPT_AUTO_SUPPLEMENT,
+    OPT_ENABLE_ORIGINAL_COVER_ART,
+    OPT_PRESERVE_EXISTING_TAGS,
+    OPT_SET_ORIGINAL_RELEASE_ID,
+    OPT_SHOW_CONTEXT_MENU,
     PSEUDO_RELEASE_STATUS,
     TAG_ORIGINAL_RELEASE_ID,
 )
@@ -128,6 +132,14 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(len(self.api.removal_processors) > 0)
         self.assertTrue(len(self.api.providers) > 0)
         self.assertTrue(len(self.api.options_pages) > 0)
+
+        # Verify options registration
+        cfg = self.api.plugin_config
+        self.assertTrue(cfg[OPT_AUTO_SUPPLEMENT])
+        self.assertFalse(cfg[OPT_PRESERVE_EXISTING_TAGS])
+        self.assertTrue(cfg[OPT_SET_ORIGINAL_RELEASE_ID])
+        self.assertTrue(cfg[OPT_ENABLE_ORIGINAL_COVER_ART])
+        self.assertTrue(cfg[OPT_SHOW_CONTEXT_MENU])
 
     def test_direction_1_supplement_pseudo_release(self):
         # A loaded pseudo-release with backward link to original
@@ -328,6 +340,21 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(album.metadata["barcode"], "barcode-original-2")
         self.assertEqual(set(album._pseudo_original_details), {"original-1", "original-2"})
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 1)
+
+    def test_choose_linked_original_action_disabled_when_option_is_false(self):
+        album = MockAlbum("pseudo-1", "Translated soundtrack", status="Pseudo-Release")
+        self.api.tagger.window.selected_objects = [album]
+
+        # Case 1: show_linked_editions_menu is False
+        self.api.plugin_config[OPT_SHOW_CONTEXT_MENU] = False
+        action = plugin_module.ChooseLinkedOriginalAction()
+        self.assertFalse(action.isEnabled())
+
+        # Case 2: show_linked_editions_menu is True, but master toggle auto_supplement_pseudo is False
+        self.api.plugin_config[OPT_SHOW_CONTEXT_MENU] = True
+        self.api.plugin_config[OPT_AUTO_SUPPLEMENT] = False
+        action2 = plugin_module.ChooseLinkedOriginalAction()
+        self.assertFalse(action2.isEnabled())
 
 
 if __name__ == '__main__':

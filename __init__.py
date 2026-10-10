@@ -162,6 +162,10 @@ try:
     )
     from .constants import (
         OPT_AUTO_SUPPLEMENT,
+        OPT_ENABLE_ORIGINAL_COVER_ART,
+        OPT_PRESERVE_EXISTING_TAGS,
+        OPT_SET_ORIGINAL_RELEASE_ID,
+        OPT_SHOW_CONTEXT_MENU,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -178,6 +182,10 @@ except (ImportError, ValueError):
     )
     from constants import (
         OPT_AUTO_SUPPLEMENT,
+        OPT_ENABLE_ORIGINAL_COVER_ART,
+        OPT_PRESERVE_EXISTING_TAGS,
+        OPT_SET_ORIGINAL_RELEASE_ID,
+        OPT_SHOW_CONTEXT_MENU,
         PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
         get_config_value,
@@ -204,6 +212,20 @@ class ChooseLinkedOriginalAction(BaseAction):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        cfg = None
+        if hasattr(self, 'tagger'):
+            cfg = getattr(self.tagger, 'config', None)
+        if not cfg and getattr(PseudoReleasePlugin, 'api', None):
+            cfg = getattr(PseudoReleasePlugin.api, 'plugin_config', None)
+        if cfg:
+            if not get_config_value(cfg, OPT_AUTO_SUPPLEMENT, True) or not get_config_value(
+                cfg, OPT_SHOW_CONTEXT_MENU, True
+            ):
+                self.setEnabled(False)
+                if hasattr(self, 'setVisible'):
+                    self.setVisible(False)
+                return
+
         window = getattr(self.tagger, 'window', None)
         albums = getattr(window, 'selected_objects', [])
         if len(albums) != 1:
@@ -269,6 +291,7 @@ class PseudoReleasePlugin:
     """Plugin logic orchestrator for MusicBrainz Pseudo-Releases."""
 
     in_flight_albums: set[str] = set()
+    api: PluginApi | None = None
 
     @classmethod
     def _log_debug(cls, api: PluginApi, message: str, *args: Any) -> None:
@@ -519,10 +542,22 @@ class PseudoReleasePlugin:
 
                 album._pseudo_original_details = getattr(album, '_pseudo_original_details', {})
                 album._pseudo_original_details[target_mbid] = document
-                supplement_pseudo_metadata(album.metadata, document)
+                preserve_existing = get_config_value(api.plugin_config, OPT_PRESERVE_EXISTING_TAGS, False)
+                set_original_id = get_config_value(api.plugin_config, OPT_SET_ORIGINAL_RELEASE_ID, True)
+                supplement_pseudo_metadata(
+                    album.metadata,
+                    document,
+                    preserve_existing=preserve_existing,
+                    set_original_id=set_original_id,
+                )
                 new_meta = getattr(album, '_new_metadata', None)
                 if new_meta is not None:
-                    supplement_pseudo_metadata(new_meta, document)
+                    supplement_pseudo_metadata(
+                        new_meta,
+                        document,
+                        preserve_existing=preserve_existing,
+                        set_original_id=set_original_id,
+                    )
                 cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 
             except Exception as exc:
@@ -535,7 +570,7 @@ class PseudoReleasePlugin:
                 if hasattr(album, '_finalize_loading'):
                     album._finalize_loading(None)
                 if not error:
-                    cls._trigger_cover_art_retrieval(album)
+                    cls._trigger_cover_art_retrieval(album, api)
 
         if hasattr(api, 'add_album_task') and hasattr(api, 'mb_api'):
             api.add_album_task(
@@ -548,8 +583,10 @@ class PseudoReleasePlugin:
             )
 
     @classmethod
-    def _trigger_cover_art_retrieval(cls, album: Album) -> None:
+    def _trigger_cover_art_retrieval(cls, album: Album, api: PluginApi | None = None) -> None:
         """Trigger cover art retrieval for the album after enrichment if needed."""
+        if api and not get_config_value(api.plugin_config, OPT_ENABLE_ORIGINAL_COVER_ART, True):
+            return
         try:
             from picard.coverart import _retrieve_coverart
             release_node = getattr(album, '_release_node_cache', getattr(album, '_release_node', {}))
@@ -559,8 +596,14 @@ class PseudoReleasePlugin:
 
 def enable(api: PluginApi) -> None:
     """Called when the plugin is enabled in Picard."""
+    PseudoReleasePlugin.api = api
+
     # Register default plugin configurations
     api.plugin_config.register_option(OPT_AUTO_SUPPLEMENT, True)
+    api.plugin_config.register_option(OPT_PRESERVE_EXISTING_TAGS, False)
+    api.plugin_config.register_option(OPT_SET_ORIGINAL_RELEASE_ID, True)
+    api.plugin_config.register_option(OPT_ENABLE_ORIGINAL_COVER_ART, True)
+    api.plugin_config.register_option(OPT_SHOW_CONTEXT_MENU, True)
 
     plugin = PseudoReleasePlugin
 
@@ -585,3 +628,4 @@ def enable(api: PluginApi) -> None:
 def disable(api: PluginApi | None = None) -> None:
     """Called when the plugin is disabled in Picard."""
     PseudoReleasePlugin.in_flight_albums.clear()
+    PseudoReleasePlugin.api = None

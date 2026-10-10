@@ -103,6 +103,59 @@ class TestMetadataSupplementation(unittest.TestCase):
         self.assertEqual(pseudo_meta["album"], "Spirited Away: Original Soundtrack")
         self.assertEqual(pseudo_meta["albumartist"], "Joe Hisaishi")
 
+    def test_supplement_overwrites_by_default(self):
+        # Default behavior: preserve_existing is False, so existing tags get overwritten
+        pseudo_meta = MockMetadata(
+            {
+                "album": "Spirited Away",
+                "date": "1999-01-01",
+                "releasecountry": "US",
+            }
+        )
+        orig_node = {
+            "id": "orig-123",
+            "date": "2001-07-18",
+            "country": "JP",
+            "barcode": "4988008610134",
+        }
+
+        supplement_pseudo_metadata(pseudo_meta, orig_node, preserve_existing=False)
+
+        self.assertEqual(pseudo_meta["date"], "2001-07-18")
+        self.assertEqual(pseudo_meta["releasecountry"], "JP")
+        self.assertEqual(pseudo_meta["barcode"], "4988008610134")
+
+    def test_supplement_preserves_existing_when_enabled(self):
+        # When preserve_existing is True, existing tags must NOT be overwritten
+        pseudo_meta = MockMetadata(
+            {
+                "album": "Spirited Away",
+                "date": "1999-01-01",
+                "releasecountry": "US",
+            }
+        )
+        orig_node = {
+            "id": "orig-123",
+            "date": "2001-07-18",
+            "country": "JP",
+            "barcode": "4988008610134",
+        }
+
+        supplement_pseudo_metadata(pseudo_meta, orig_node, preserve_existing=True)
+
+        self.assertEqual(pseudo_meta["date"], "1999-01-01")
+        self.assertEqual(pseudo_meta["releasecountry"], "US")
+        self.assertEqual(pseudo_meta["barcode"], "4988008610134")
+
+    def test_supplement_omits_original_id_tag_when_disabled(self):
+        pseudo_meta = MockMetadata({"album": "Spirited Away"})
+        orig_node = {"id": "orig-123", "date": "2001-07-18"}
+
+        supplement_pseudo_metadata(pseudo_meta, orig_node, set_original_id=False)
+
+        self.assertEqual(pseudo_meta["date"], "2001-07-18")
+        self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, pseudo_meta._data)
+
 
 if __name__ == '__main__':
     unittest.main()
