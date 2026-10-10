@@ -428,6 +428,13 @@ class TestRealWorldFixtures(unittest.TestCase):
         # Tooltip formatting verification
         tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(orig_node)
         self.assertIn("4988008604535", tooltip)
+        self.assertIn("Middle-click or right-click to open in browser.", tooltip)
+
+        # Catalog number deduplication test with Minimoni candidate (1268ebdb)
+        minimoni_orig = load_fixture("1268ebdb-2fa4-423f-95da-ed7accfbb845")
+        minimoni_label = plugin_module.PseudoReleasePlugin._format_original_candidate(minimoni_orig)
+        self.assertEqual(minimoni_label.count("EPCE-5265"), 1)
+        self.assertTrue(minimoni_label.endswith("zetima / EPCE-5265"))
 
         # Case B: Disabled
         self.api.plugin_config[OPT_SHOW_CONTEXT_MENU] = False

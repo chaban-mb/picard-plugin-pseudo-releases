@@ -4,16 +4,42 @@ from collections.abc import Callable
 from typing import Any
 
 try:
-    from PyQt6 import QtGui, QtWidgets
-    from picard.debug_opts import DebugOpt
-    from picard.plugin3.api import (
-        Album,
-        BaseAction,
-        Metadata,
-        PluginApi,
-        Track,
-    )
+    from PyQt6 import QtCore, QtGui, QtWidgets
 except ImportError:
+    class QtCore:  # type: ignore[no-redef]
+        class QObject:
+            def __init__(self, parent=None):
+                self._parent = parent
+
+        class QEvent:
+            class Type:
+                MouseButtonRelease = 3
+
+        class Qt:
+            class MouseButton:
+                NoButton = 0
+                LeftButton = 1
+                RightButton = 2
+                MiddleButton = 4
+
+    class _FallbackCursor:
+        @staticmethod
+        def pos():
+            return None
+
+    class QtGui:  # type: ignore[no-redef]
+        QCursor = _FallbackCursor
+
+        class QActionGroup:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def setExclusive(self, exclusive):
+                pass
+
+            def addAction(self, action):
+                pass
+
     class _FallbackFont:
         def __init__(self):
             self._bold = False
@@ -50,6 +76,7 @@ except ImportError:
             self.enabled = True
             self.triggered = _FallbackSignal()
             self._font = _FallbackFont()
+            self._data = None
 
         def setCheckable(self, value):
             self.checkable = value
@@ -62,6 +89,12 @@ except ImportError:
 
         def setToolTip(self, text):
             self.tooltip = text
+
+        def setData(self, data):
+            self._data = data
+
+        def data(self):
+            return self._data
 
         def font(self):
             return self._font
@@ -78,6 +111,7 @@ except ImportError:
         def __init__(self, *args, **kwargs):
             self.actions = []
             self.parent = args[0] if args else None
+            self.event_filters = []
 
         def addAction(self, text):
             action = _FallbackAction(text)
@@ -90,45 +124,49 @@ except ImportError:
         def setToolTipsVisible(self, visible):
             self.tooltips_visible = bool(visible)
 
+        def installEventFilter(self, filter_obj):
+            self.event_filters.append(filter_obj)
+
+        def actionAt(self, pos):
+            return self.selected_action
+
+        def close(self):
+            pass
+
         def exec(self, *args):
             return self.selected_action
 
         def deleteLater(self):
             pass
 
-    class _FallbackCursor:
-        @staticmethod
-        def pos():
-            return None
-
-    class QtGui:  # type: ignore[no-redef]
-        QCursor = _FallbackCursor
-
-        class QActionGroup:
-            def __init__(self, *args, **kwargs):
-                pass
-
-            def setExclusive(self, exclusive):
-                pass
-
-            def addAction(self, action):
-                pass
-
     class QtWidgets:  # type: ignore[no-redef]
         QMenu = _FallbackMenu
 
-    # Fallback types for unit testing outside Picard runtime
+try:
+    from picard.debug_opts import DebugOpt
+    from picard.plugin3.api import (
+        Album,
+        BaseAction,
+        Metadata,
+        PluginApi,
+        Track,
+    )
+except ImportError:
     class DebugOpt:
         PLUGIN_DEVELOPMENT = "plugin-development"
 
-    class BaseAction:  # type: ignore[no-redef]
+    _Base = QtCore.QObject if hasattr(QtCore, 'QObject') else object
+
+    class BaseAction(_Base):  # type: ignore[no-redef]
         api: Any = None
 
         def __init__(self, parent=None):
+            super().__init__(parent)
             self.tagger = getattr(self.api, 'tagger', None)
             self._menu = None
             self._enabled = True
-            self.destroyed = _FallbackSignal()
+            if not hasattr(self, 'destroyed') or not hasattr(self.destroyed, 'connect'):
+                self.destroyed = _FallbackSignal()
 
         def setMenu(self, menu):
             self._menu = menu
@@ -153,6 +191,7 @@ except ImportError:
 
     class Metadata:  # type: ignore[no-redef]
         pass
+
 
 try:
     from .caa_provider import PseudoReleaseCoverArtProvider
@@ -205,6 +244,35 @@ class ManifestTranslations:
     )
 
 
+class LinkedEditionsMenuFilter(QtCore.QObject):
+    """Event filter on the linked editions menu to handle middle or right click."""
+
+    def __init__(self, menu, tagger=None, parent=None):
+        super().__init__(parent or menu)
+        self._menu = menu
+        self._tagger = tagger
+
+    def eventFilter(self, obj, event):
+        try:
+            if (
+                event.type() == QtCore.QEvent.Type.MouseButtonRelease
+                and event.button() in {QtCore.Qt.MouseButton.MiddleButton, QtCore.Qt.MouseButton.RightButton}
+            ):
+                action = self._menu.actionAt(event.pos()) if hasattr(self._menu, 'actionAt') else None
+                release_id = action.data() if (action and hasattr(action, 'data')) else None
+                if release_id:
+                    PseudoReleasePlugin.open_release_in_browser(release_id, self._tagger)
+                    p = self._menu
+                    while p:
+                        if hasattr(p, 'close'):
+                            p.close()
+                        p = getattr(p, 'parent', lambda: None)() if callable(getattr(p, 'parent', None)) else getattr(p, 'parent', None)
+                    return True
+        except Exception:
+            pass
+        return super().eventFilter(obj, event) if hasattr(super(), 'eventFilter') else False
+
+
 class ChooseLinkedOriginalAction(BaseAction):
     """Choose which linked original release supplies catalog metadata."""
 
@@ -212,8 +280,10 @@ class ChooseLinkedOriginalAction(BaseAction):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        if getattr(self, 'tagger', None) is None and getattr(PseudoReleasePlugin, 'api', None):
+            self.tagger = getattr(PseudoReleasePlugin.api, 'tagger', None)
         cfg = None
-        if hasattr(self, 'tagger'):
+        if hasattr(self, 'tagger') and self.tagger:
             cfg = getattr(self.tagger, 'config', None)
         if not cfg and getattr(PseudoReleasePlugin, 'api', None):
             cfg = getattr(PseudoReleasePlugin.api, 'plugin_config', None)
@@ -242,10 +312,15 @@ class ChooseLinkedOriginalAction(BaseAction):
             self.setEnabled(False)
             return
 
-        menu = QtWidgets.QMenu(window)
+        parent_widget = window if isinstance(window, QtWidgets.QWidget) else None
+        menu = QtWidgets.QMenu(parent_widget)
         menu.setToolTipsVisible(True)
         self.destroyed.connect(lambda *_: menu.deleteLater())
         self.setMenu(menu)
+
+        self._menu_filter = LinkedEditionsMenuFilter(menu, tagger=getattr(self, 'tagger', None), parent=menu)
+        menu.installEventFilter(self._menu_filter)
+
         selection_group = QtGui.QActionGroup(menu)
         selection_group.setExclusive(True)
 
@@ -270,6 +345,7 @@ class ChooseLinkedOriginalAction(BaseAction):
             details = detail_cache.get(release_id, candidate)
             label = PseudoReleasePlugin._format_original_candidate(details).replace('&', '&&')
             action = menu.addAction(label)
+            action.setData(release_id)
             tooltip = PseudoReleasePlugin._format_original_candidate_tooltip(details)
             if tooltip:
                 action.setToolTip(tooltip)
@@ -486,7 +562,7 @@ class PseudoReleasePlugin:
             catalog_number = label_info.get('catalog-number')
             if label_name and label_name not in labels:
                 labels.append(label_name)
-            if catalog_number:
+            if catalog_number and catalog_number not in catalog_numbers:
                 catalog_numbers.append(catalog_number)
 
         return ' / '.join((
@@ -508,7 +584,23 @@ class PseudoReleasePlugin:
         disambiguation = candidate.get('disambiguation')
         if disambiguation:
             details.append(f"Disambiguation: {disambiguation}")
+        details.append("Middle-click or right-click to open in browser.")
         return '\n'.join(details)
+
+    @classmethod
+    def open_release_in_browser(cls, release_id: str, tagger: Any = None) -> None:
+        """Open a release page in the MusicBrainz web browser."""
+        tagger = tagger or getattr(cls.api, 'tagger', None)
+        if tagger and hasattr(tagger, 'get_file_lookup'):
+            tagger.get_file_lookup().album_lookup(release_id)
+            return
+
+        try:
+            from picard.util import webbrowser2
+            webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
+        except Exception:
+            import webbrowser
+            webbrowser.open(f"https://musicbrainz.org/release/{release_id}")
 
     @staticmethod
     def select_linked_original(album: Album, selected_id: str) -> None:

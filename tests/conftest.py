@@ -1,7 +1,14 @@
 """Pytest configuration and session fixtures for plugin tests."""
 
 import os
+from pathlib import Path
+import sys
 import pytest
+
+# Add sibling Picard repository to sys.path if available so full Picard runtime imports work in tests
+picard_repo = Path(__file__).resolve().parent.parent.parent / "picard"
+if picard_repo.exists() and str(picard_repo) not in sys.path:
+    sys.path.insert(0, str(picard_repo))
 
 # Ensure offscreen Qt platform for all tests
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

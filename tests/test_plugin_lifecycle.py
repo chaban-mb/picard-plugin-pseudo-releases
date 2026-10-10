@@ -264,21 +264,28 @@ class TestPluginLifecycle(unittest.TestCase):
         self.api.tagger.window.selected_objects = [album]
         action = self.api.album_actions[0]()
         shown_menu = action.menu()
-        self.assertTrue(shown_menu.tooltips_visible)
-        real_actions = [entry for entry in shown_menu.actions if entry is not None]
+        tooltips_vis = shown_menu.toolTipsVisible() if hasattr(shown_menu, 'toolTipsVisible') else shown_menu.tooltips_visible
+        self.assertTrue(tooltips_vis)
+        raw_actions = shown_menu.actions() if callable(shown_menu.actions) else shown_menu.actions
+        real_actions = [entry for entry in raw_actions if entry is not None]
         self.assertEqual(len(real_actions), 3)
-        self.assertEqual(real_actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
-        self.assertNotIn("Automatic best match", [entry.text for entry in real_actions])
-        self.assertFalse(real_actions[0].enabled)
+        self.assertEqual(real_actions[0].text() if callable(real_actions[0].text) else real_actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
+        texts = [entry.text() if callable(entry.text) else entry.text for entry in real_actions]
+        self.assertNotIn("Automatic best match", texts)
+        is_enabled = real_actions[0].isEnabled() if hasattr(real_actions[0], 'isEnabled') else real_actions[0].enabled
+        self.assertFalse(is_enabled)
         self.assertTrue(real_actions[0].font().bold())
         self.assertFalse(real_actions[0].font().underline())
-        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", real_actions[1].text)
-        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", real_actions[2].text)
-        self.assertIn("Packaging: Jewel Case", real_actions[1].tooltip)
-        self.assertIn("Barcode: 111", real_actions[1].tooltip)
-        self.assertIn("Disambiguation: First pressing", real_actions[1].tooltip)
-        self.assertFalse(real_actions[1].checked)
-        self.assertFalse(real_actions[2].checked)
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", texts[1])
+        self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", texts[2])
+        tip1 = real_actions[1].toolTip() if hasattr(real_actions[1], 'toolTip') else getattr(real_actions[1], 'tooltip', '')
+        self.assertIn("Packaging: Jewel Case", tip1)
+        self.assertIn("Barcode: 111", tip1)
+        self.assertIn("Disambiguation: First pressing", tip1)
+        is_checked1 = real_actions[1].isChecked() if hasattr(real_actions[1], 'isChecked') else real_actions[1].checked
+        is_checked2 = real_actions[2].isChecked() if hasattr(real_actions[2], 'isChecked') else real_actions[2].checked
+        self.assertFalse(is_checked1)
+        self.assertFalse(is_checked2)
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
         real_actions[2].trigger()
@@ -292,8 +299,10 @@ class TestPluginLifecycle(unittest.TestCase):
             }
         )
         reopened_menu = self.api.album_actions[0]().menu()
-        reopened_real = [entry for entry in reopened_menu.actions if entry is not None]
-        self.assertTrue(reopened_real[2].checked)
+        reopened_raw = reopened_menu.actions() if callable(reopened_menu.actions) else reopened_menu.actions
+        reopened_real = [entry for entry in reopened_raw if entry is not None]
+        reopened_checked2 = reopened_real[2].isChecked() if hasattr(reopened_real[2], 'isChecked') else reopened_real[2].checked
+        self.assertTrue(reopened_checked2)
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
     def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
@@ -357,6 +366,50 @@ class TestPluginLifecycle(unittest.TestCase):
         self.api.plugin_config[OPT_AUTO_SUPPLEMENT] = False
         action2 = plugin_module.ChooseLinkedOriginalAction()
         self.assertFalse(action2.isEnabled())
+
+    def test_middle_click_and_right_click_open_browser(self):
+        """Test middle-click and right-click on linked edition action opens release in browser."""
+        album = MockAlbum("pseudo-1", "Translated soundtrack", status="Pseudo-Release")
+        album._pseudo_original_candidates = [
+            {"id": "orig-mbid-1", "title": "Orig 1", "media": []},
+            {"id": "orig-mbid-2", "title": "Orig 2", "media": []},
+        ]
+        mock_file_lookup = MagicMock()
+        self.api.tagger.get_file_lookup = MagicMock(return_value=mock_file_lookup)
+        self.api.tagger.window.selected_objects = [album]
+
+        action_instance = plugin_module.ChooseLinkedOriginalAction()
+        menu = action_instance.menu()
+        self.assertIsNotNone(menu)
+
+        raw_actions = menu.actions() if callable(menu.actions) else menu.actions
+        actions = [a for a in raw_actions if a is not None]
+        target_action = actions[1]  # first edition candidate
+        self.assertEqual(target_action.data(), "orig-mbid-1")
+
+        # Mock actionAt on menu for the eventFilter
+        menu.actionAt = MagicMock(return_value=target_action)
+
+        event_middle = SimpleNamespace(
+            type=lambda: plugin_module.QtCore.QEvent.Type.MouseButtonRelease,
+            button=lambda: plugin_module.QtCore.Qt.MouseButton.MiddleButton,
+            pos=lambda: None,
+        )
+        filt = action_instance._menu_filter
+        handled = filt.eventFilter(menu, event_middle)
+        self.assertTrue(handled)
+        mock_file_lookup.album_lookup.assert_called_with("orig-mbid-1")
+
+        # Simulate event filter receiving RightButton release for the second candidate
+        menu.actionAt = MagicMock(return_value=actions[2])
+        event_right = SimpleNamespace(
+            type=lambda: plugin_module.QtCore.QEvent.Type.MouseButtonRelease,
+            button=lambda: plugin_module.QtCore.Qt.MouseButton.RightButton,
+            pos=lambda: None,
+        )
+        handled_right = filt.eventFilter(menu, event_right)
+        self.assertTrue(handled_right)
+        mock_file_lookup.album_lookup.assert_called_with("orig-mbid-2")
 
 
 if __name__ == '__main__':
