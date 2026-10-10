@@ -59,7 +59,7 @@ class TestOptionsPage(unittest.TestCase):
             "media",
             "label",
             "catalognumber",
-            "%~original_musicbrainz_albumid%",
+            "%_original_musicbrainz_albumid%",
         ):
             self.assertIn(tag, info_description)
 

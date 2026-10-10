@@ -153,7 +153,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
             "(<code>date</code>, <code>releasecountry</code>, <code>barcode</code>, <code>media</code>, "
             "<code>label</code>, and <code>catalognumber</code>) from the best-matched original release.<br><br>"
             "Additionally, the original release ID is made available to tagger scripts and file naming scripts "
-            "via the hidden variable <code>%~original_musicbrainz_albumid%</code>.",
+            "via the hidden variable <code>%_original_musicbrainz_albumid%</code>.",
         )
         self.lbl_info = QtWidgets.QLabel(info_text, self)
         self.lbl_info.setWordWrap(True)

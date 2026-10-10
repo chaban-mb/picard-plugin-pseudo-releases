@@ -12,7 +12,7 @@ Supplements MusicBrainz pseudo-releases (such as Romaji, transliterated, or tran
 When you load an album into Picard whose status is `pseudo-release`:
 1. The plugin checks the `transl-tracklisting` release relationships for linked original editions.
 2. It enriches your album with the original release's metadata tags (`date`, `releasecountry`, `barcode`, `label`, `catalognumber`, and media format specifications) while preserving your translated track titles and artist credits.
-3. It sets the hidden Picard variable `%~original_musicbrainz_albumid%` to the original release's MBID, allowing your [tagger scripts and file naming scripts](https://picard-docs.musicbrainz.org/en/extending/scripting.html) to reference the original release ID.
+3. It sets the hidden Picard variable `%_original_musicbrainz_albumid%` to the original release's MBID, allowing your [tagger scripts and file naming scripts](https://picard-docs.musicbrainz.org/en/extending/scripting.html) to reference the original release ID.
 
 ### Cover Art
 Pseudo-releases are not supposed to have cover artwork in MusicBrainz. The plugin provides a dedicated Cover Art Archive provider—**Cover Art Archive: Pseudo-Release (Original)**—that fetches front covers and additional artwork directly from the linked original release.
@@ -49,7 +49,7 @@ Cover art is retrieved via Picard's native cover art provider architecture. You 
 ## Behavior & Quirks
 
 - **Scope:** The plugin strictly acts on albums with the status `pseudo-release`. Official/standard releases are never altered.
-- **Hidden Variable:** `%~original_musicbrainz_albumid%` is a hidden Picard variable (indicated by the leading tilde `~`). Hidden variables are available to scripts and file naming formats during tagging, but Picard will not write them into your audio file tags unless you explicitly map them in a script (for example: `$set(original_album_id,%~original_musicbrainz_albumid%)`).
+- **Hidden Variable:** `%_original_musicbrainz_albumid%` is a hidden Picard variable (indicated by the leading underscore `_`). Hidden variables are available to scripts and file naming formats during tagging, but Picard will not write them into your audio file tags unless you explicitly map them in a script (for example: `$set(original_album_id,%_original_musicbrainz_albumid%)`).
 
 ---
 
