@@ -33,7 +33,7 @@ To manually choose a different pressing:
    ```
    Hovering over any edition displays packaging, barcode, and disambiguation details.
 4. **Left-click** an edition to switch to it and reload the album with that edition's metadata.
-5. **Middle-click** or **right-click** any edition to open that release directly on [MusicBrainz](https://musicbrainz.org) in your web browser.
+5. **Middle-click** or **right-click** any edition to open that release directly on MusicBrainz in your web browser.
 
 ---
 
@@ -50,37 +50,6 @@ Cover art is retrieved via Picard's native cover art provider architecture. You 
 
 - **Scope:** The plugin strictly acts on albums with the status `pseudo-release`. Official/standard releases are never altered.
 - **Hidden Variable:** `%_original_musicbrainz_albumid%` is a hidden Picard variable (indicated by the leading underscore `_`). Hidden variables are available to scripts and file naming formats during tagging, but Picard will not write them into your audio file tags unless you explicitly map them in a script (for example: `$set(original_album_id,%_original_musicbrainz_albumid%)`).
-
----
-
-## Installation
-
-### Using picard-cli
-
-```bash
-picard-cli plugins install /path/to/picard-plugin-pseudo-releases
-```
-
-### Manual Installation
-
-Place the `picard-plugin-pseudo-releases` folder into Picard's plugin directory:
-
-- **Windows:** `%APPDATA%\MusicBrainz\Picard\plugins3\`
-- **Linux:** `~/.config/MusicBrainz/Picard/plugins3/`
-- **macOS:** `~/Library/Preferences/MusicBrainz/Picard/plugins3/`
-
-Restart Picard (or open **Options > Options... > Plugins**), locate **Pseudo-Releases**, and ensure it is checked and enabled.
-
----
-
-## Useful Links
-
-- [MusicBrainz: Pseudo-Releases Style Guideline](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases)
-- [MusicBrainz: Release Status Documentation](https://musicbrainz.org/doc/Release#Status)
-- [MusicBrainz: Relationship Types (transl-tracklisting)](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644)
-- [Picard User Guide](https://picard-docs.musicbrainz.org/)
-- [Picard Scripting Documentation](https://picard-docs.musicbrainz.org/en/extending/scripting.html)
-- [Picard Plugin System v3 Specification](https://github.com/metabrainz/picard/tree/master/docs/PLUGINSV3)
 
 ---
 
