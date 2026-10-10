@@ -171,7 +171,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.lbl_cover_art_description = QtWidgets.QLabel(
             self._tr(
                 "ui.enable_cover_art_description",
-                "Pseudo-releases are not supposed to have cover artwork in MusicBrainz. Artwork is fetched from the "
+                "Pseudo-releases are not supposed to have cover art in MusicBrainz. Artwork is fetched from the "
                 "Cover Art Archive using the linked original release MBID.",
             ),
             self.group_cover_art,
