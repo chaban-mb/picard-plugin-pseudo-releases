@@ -15,7 +15,7 @@ When you load an album into Picard whose status is `pseudo-release`:
 3. It sets the hidden Picard variable `%_original_musicbrainz_albumid%` to the original release's MBID, allowing your [tagger scripts and file naming scripts](https://picard-docs.musicbrainz.org/en/extending/scripting.html) to reference the original release ID.
 
 ### Cover Art
-Pseudo-releases are not supposed to have cover art in MusicBrainz. The plugin provides a dedicated Cover Art Archive provider—**Cover Art Archive: Pseudo-Release (Original)**—that fetches front covers and additional artwork directly from the linked original release.
+Pseudo-releases are not supposed to have cover art in MusicBrainz. The plugin provides a dedicated Cover Art Archive provider—**Cover Art Archive: Pseudo-Release (Original)**—that fetches artwork directly from the linked original release.
 
 ---
 
