@@ -446,6 +446,47 @@ class TestPluginLifecycle(unittest.TestCase):
             ],
         )
 
+    def test_register_ca_provider_in_config_recovers_from_trailing_fallback(self):
+        # Picard's fallback placed it at the bottom (pos 666) and disabled it
+        mock_cfg = SimpleNamespace(
+            setting={
+                "ca_providers": [
+                    ("Cover Art Archive", True),
+                    ("UrlRelationships", False),
+                    ("Local Files", False),
+                    ("pseudo_release_caa", False),
+                ]
+            }
+        )
+        plugin_module._register_ca_provider_in_config(mock_cfg)
+        self.assertEqual(
+            mock_cfg.setting["ca_providers"],
+            [
+                ("Cover Art Archive", True),
+                ("pseudo_release_caa", True),
+                ("UrlRelationships", False),
+                ("Local Files", False),
+            ],
+        )
+
+    def test_sync_cover_options_page_reloads_providers_if_loaded(self):
+        mock_cover_page = SimpleNamespace(
+            loaded=True,
+            _load_cover_art_providers=MagicMock(),
+        )
+        mock_dialog = SimpleNamespace(
+            _page_instances={"cover": mock_cover_page}
+        )
+        mock_dialog_cls = SimpleNamespace(_instance=mock_dialog)
+
+        with unittest.mock.patch.dict(
+            "sys.modules",
+            {"picard.ui.options.dialog": SimpleNamespace(OptionsDialog=mock_dialog_cls)},
+        ):
+            plugin_module._sync_cover_options_page()
+
+        mock_cover_page._load_cover_art_providers.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

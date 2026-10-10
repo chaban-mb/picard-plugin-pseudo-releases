@@ -152,8 +152,10 @@ try:
         PluginApi,
         Track,
     )
+    from picard.ui.options.dialog import OptionsDialog
 except ImportError:
     config = None  # type: ignore[assignment]
+    OptionsDialog = None  # type: ignore[assignment, misc]
     class DebugOpt:
         PLUGIN_DEVELOPMENT = "plugin-development"
 
@@ -671,14 +673,52 @@ def _register_ca_provider_in_config(cfg: Any = None) -> None:
         if not isinstance(raw_providers, list):
             return
         providers = list(raw_providers)
-        provider_names = [p[0] for p in providers if isinstance(p, (tuple, list)) and len(p) >= 2]
-        if 'pseudo_release_caa' not in provider_names:
-            if 'Cover Art Archive' in provider_names:
-                idx = provider_names.index('Cover Art Archive') + 1
+        provider_tuples = [
+            (p[0], bool(p[1])) for p in providers if isinstance(p, (tuple, list)) and len(p) >= 2
+        ]
+        provider_names = [p[0] for p in provider_tuples]
+
+        # Check if pseudo_release_caa is already present
+        if 'pseudo_release_caa' in provider_names:
+            idx = provider_names.index('pseudo_release_caa')
+            # Check if it was relegated to the bottom as disabled (Picard's position 666 fallback)
+            # e.g., it is the last item and disabled, or positioned after 'Local' / 'Local Files' and disabled
+            is_trailing_fallback = (
+                not provider_tuples[idx][1]
+                and (
+                    idx == len(provider_tuples) - 1
+                    or any(p in provider_names[:idx] for p in ('Local', 'Local Files'))
+                )
+            )
+            if is_trailing_fallback:
+                providers.pop(idx)
+                provider_names.pop(idx)
             else:
-                idx = len(providers)
-            providers.insert(idx, ('pseudo_release_caa', True))
-            target_config.setting['ca_providers'] = providers
+                return
+
+        # Insert right after Cover Art Archive, or at index 1 (or end) if CAA not found
+        if 'Cover Art Archive' in provider_names:
+            insert_idx = provider_names.index('Cover Art Archive') + 1
+        else:
+            insert_idx = min(1, len(providers))
+        providers.insert(insert_idx, ('pseudo_release_caa', True))
+        target_config.setting['ca_providers'] = providers
+    except Exception:
+        pass
+
+
+def _sync_cover_options_page() -> None:
+    """If Picard's OptionsDialog is currently open and CoverOptionsPage is loaded, reload its providers list."""
+    try:
+        dialog_cls = OptionsDialog
+        if dialog_cls is None:
+            # Inline fallback if imported dynamically in tests or late binding
+            from picard.ui.options.dialog import OptionsDialog as dialog_cls  # noqa: PLC0415
+        dialog = getattr(dialog_cls, '_instance', None)
+        if dialog and hasattr(dialog, '_page_instances'):
+            cover_page = dialog._page_instances.get('cover')
+            if cover_page and getattr(cover_page, 'loaded', False):
+                cover_page._load_cover_art_providers()
     except Exception:
         pass
 
@@ -703,6 +743,7 @@ def enable(api: PluginApi) -> None:
     # Register Cover Art Archive provider
     api.register_cover_art_provider(PseudoReleaseCoverArtProvider)
     _register_ca_provider_in_config()
+    _sync_cover_options_page()
 
     # Register Options page
     api.register_options_page(PseudoReleaseOptionsPage)
@@ -712,3 +753,5 @@ def disable(api: PluginApi | None = None) -> None:
     """Called when the plugin is disabled in Picard."""
     PseudoReleasePlugin.in_flight_albums.clear()
     PseudoReleasePlugin.api = None
+    _sync_cover_options_page()
+
