@@ -80,11 +80,16 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     ]
 
     mock_file_lookup = MagicMock()
+    real_main_window = QtWidgets.QMainWindow()
+    qtbot.addWidget(real_main_window)
+    real_main_window.show()
+
     mock_tagger = SimpleNamespace(
-        window=SimpleNamespace(selected_objects=[album]),
+        window=real_main_window,
         config=None,
         get_file_lookup=MagicMock(return_value=mock_file_lookup),
     )
+    real_main_window.selected_objects = [album]
 
     api = SimpleNamespace(
         tagger=mock_tagger,
@@ -124,6 +129,8 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     handled = QtWidgets.QApplication.sendEvent(menu, event_middle)
     assert handled is True
     mock_file_lookup.album_lookup.assert_called_once_with("rel-orig-1")
+    # Verify main window is still open and was NOT closed
+    assert real_main_window.isVisible() is True
 
     # Post MouseButtonRelease with RightButton over action2
     mock_file_lookup.reset_mock()
@@ -139,3 +146,4 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     handled_right = QtWidgets.QApplication.sendEvent(menu, event_right)
     assert handled_right is True
     mock_file_lookup.album_lookup.assert_called_once_with("rel-orig-2")
+    assert real_main_window.isVisible() is True

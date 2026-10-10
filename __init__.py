@@ -263,10 +263,9 @@ class LinkedEditionsMenuFilter(QtCore.QObject):
                 if release_id:
                     PseudoReleasePlugin.open_release_in_browser(release_id, self._tagger)
                     p = self._menu
-                    while p:
-                        if hasattr(p, 'close'):
-                            p.close()
-                        p = getattr(p, 'parent', lambda: None)() if callable(getattr(p, 'parent', None)) else getattr(p, 'parent', None)
+                    while p and isinstance(p, QtWidgets.QMenu):
+                        p.close()
+                        p = p.parent()
                     return True
         except Exception:
             pass
