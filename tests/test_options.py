@@ -32,6 +32,14 @@ class ProfileConfigSectionMock:
 
 
 class TestOptionsPage(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from PyQt6.QtWidgets import QApplication
+            cls.app = QApplication.instance() or QApplication([])
+        except ImportError:
+            cls.app = None
+
     def test_options_page_metadata(self):
         self.assertEqual(PseudoReleaseOptionsPage.TITLE, "Pseudo-Releases")
         self.assertEqual(PseudoReleaseOptionsPage.NAME, "pseudo_releases")
@@ -146,8 +154,8 @@ class TestOptionsPage(unittest.TestCase):
             self.assertIn(tag, supplement_description)
 
         self.assertIn("~original_musicbrainz_albumid", page.cb_set_original_tag.text())
-        self.assertIn("Cover Art", page.group_cover_art.text())
-        self.assertIn("Linked Original Editions", page.group_context_menu.text())
+        self.assertIn("Cover Art", page.group_cover_art.title())
+        self.assertIn("Linked Original Editions", page.group_context_menu.title())
 
     def test_profile_config_section_without_get(self):
         """Verify load() and save() work on ProfileConfigSection which has NO .get() method."""

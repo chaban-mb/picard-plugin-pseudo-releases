@@ -7,11 +7,6 @@ from typing import (
 
 try:
     from PyQt6 import QtWidgets
-    from picard.plugin3.api import (
-        OptionsPage,
-        PageOptionConfigs,
-        t_,
-    )
 except ImportError:
     # Stubs for headless testing environments without PyQt6
     class _DummySignal:
@@ -74,6 +69,9 @@ except ImportError:
         def text(self):
             return self._text
 
+        def title(self):
+            return self._text
+
         def addButton(self, *args):
             pass
 
@@ -86,6 +84,13 @@ except ImportError:
         QGroupBox = _DummyWidget
         QFrame = _DummyWidget
 
+try:
+    from picard.plugin3.api import (
+        OptionsPage,
+        PageOptionConfigs,
+        t_,
+    )
+except ImportError:
     class OptionsPage(QtWidgets.QWidget):  # type: ignore[no-redef]
         NAME = ""
         TITLE = ""
