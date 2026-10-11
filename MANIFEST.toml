@@ -4,6 +4,7 @@ authors = ["chaban"]
 description = "Supplements pseudo-releases with original catalog metadata and cover art."
 version = "1.0.0"
 api = ["3.0"]
+min_python_version = "3.10"
 categories = ["metadata", "coverart"]
 license = "MIT"
 license_url = "https://opensource.org/licenses/MIT"
