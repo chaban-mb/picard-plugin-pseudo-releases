@@ -405,11 +405,12 @@ class PseudoReleasePlugin:
                 preferred_id = already_enriched_id
             else:
                 files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
+                disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
                 preferred = select_best_original_candidate(
                     candidates=candidates,
                     album_metadata=album_metadata,
                     files=list(files),
-                    disc_ids=getattr(album, 'discids', None),
+                    disc_ids=list(disc_ids) if disc_ids else None,
                 )
                 preferred_id = preferred.get('id') if preferred else None
 
