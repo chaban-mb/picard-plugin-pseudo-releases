@@ -321,10 +321,12 @@ class ChooseLinkedOriginalAction(BaseAction):
             current_id = getattr(album, '_pseudo_original_release_choice', None)
         detail_cache = getattr(album, '_pseudo_original_details', {})
         stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
+        seen_candidate_ids: set[str] = set()
         for candidate in candidates:
             release_id = candidate.get('id')
-            if not release_id:
+            if not release_id or release_id in seen_candidate_ids:
                 continue
+            seen_candidate_ids.add(release_id)
             details = detail_cache.get(release_id) or stub_cache.get(release_id, candidate)
             label = PseudoReleasePlugin._format_original_candidate(details).replace('&', '&&')
             action = menu.addAction(label)
@@ -577,22 +579,24 @@ class PseudoReleasePlugin:
 
         labels = []
         catalog_numbers = []
-        for label_info in candidate.get('label-info', []):
-            label_name = (label_info.get('label') or {}).get('name')
-            catalog_number = label_info.get('catalog-number')
-            if label_name and label_name not in labels:
-                labels.append(label_name)
-            if catalog_number and catalog_number not in catalog_numbers:
-                catalog_numbers.append(catalog_number)
+        for label_info in candidate.get('label-info') or []:
+            if isinstance(label_info, dict):
+                label_name = (label_info.get('label') or {}).get('name')
+                catalog_number = label_info.get('catalog-number')
+                if label_name and label_name not in labels:
+                    labels.append(label_name)
+                if catalog_number and catalog_number not in catalog_numbers:
+                    catalog_numbers.append(catalog_number)
 
-        return ' / '.join((
-            tracks,
-            year,
+        parts = [
+            tracks or '??',
+            year or '????',
             country,
-            formats,
-            ', '.join(labels),
-            ', '.join(catalog_numbers),
-        ))
+            formats or '(unknown format)',
+            ', '.join(labels) if labels else '',
+            ', '.join(catalog_numbers) if catalog_numbers else '',
+        ]
+        return ' / '.join(p for p in parts if p)
 
     @staticmethod
     def _format_original_candidate_tooltip(candidate: dict[str, Any]) -> str:
