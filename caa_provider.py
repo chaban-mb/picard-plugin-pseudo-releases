@@ -4,7 +4,7 @@ from typing import Any
 
 try:
     from picard.coverart.providers.caa import CoverArtProviderCaa
-    from picard.i18n import N_
+    from picard.plugin3.api import t_
 except ImportError:
     # Fallback base class for isolated unit testing
     class CoverArtProviderCaa:  # type: ignore[no-redef]
@@ -29,8 +29,18 @@ except ImportError:
             caa = self.release.get('cover-art-archive', {})
             return bool(caa.get('artwork'))
 
-    def N_(text: str) -> str:
-        return text
+        @classmethod
+        def display_title(cls) -> str:
+            title = getattr(cls, 'TITLE', getattr(cls, 'NAME', None)) or cls.__name__
+            api = getattr(cls, 'api', None)
+            if api and hasattr(api, 'tr'):
+                return api.tr(title)
+            return title
+
+    def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tuple[str, str, str]:  # type: ignore[no-redef]
+        if plural is not None:
+            return (key, text or "", plural)
+        return key
 
 try:
     from .constants import (
@@ -48,7 +58,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     """
 
     NAME = "pseudo_release_caa"
-    TITLE = N_("Cover Art Archive: Pseudo-Release (Original)")
+    TITLE = t_("provider.caa.title", "Cover Art Archive: Pseudo-Release (Original)")
     OPTIONS = None
 
     ignore_json_not_found_error = True

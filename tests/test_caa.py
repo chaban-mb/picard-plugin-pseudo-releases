@@ -149,6 +149,21 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
             except (AttributeError, TypeError):
                 pass
 
+    def test_provider_display_title_uses_api_tr(self):
+        from unittest.mock import MagicMock
+
+        mock_api = MagicMock()
+        mock_api.tr.return_value = "Cover-Art Archiv: Pseudo-Veröffentlichung (Original)"
+        PseudoReleaseCoverArtProvider.api = mock_api
+        try:
+            self.assertEqual(
+                PseudoReleaseCoverArtProvider.display_title(),
+                "Cover-Art Archiv: Pseudo-Veröffentlichung (Original)",
+            )
+            mock_api.tr.assert_called_with("provider.caa.title")
+        finally:
+            delattr(PseudoReleaseCoverArtProvider, "api")
+
 
 if __name__ == '__main__':
     unittest.main()

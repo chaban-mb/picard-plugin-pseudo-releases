@@ -1,5 +1,6 @@
 "action.linked_original_editions" = "Verknüpfte Originalveröffentlichungen"
 "options.title" = "Pseudo-Releases"
+"provider.caa.title" = "Cover-Art Archiv: Pseudo-Veröffentlichung (Original)"
 "ui.info_pseudo_releases" = "MusicBrainz-<a href=\"https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases\">Pseudo-Releases</a> enthalten alternative Titellisten (wie transliterierte oder übersetzte Titel), die über die Beziehung <a href=\"https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644\">transl-tracklisting</a> mit einer Originalveröffentlichung verknüpft sind.<br><br>Beim Laden eines Pseudo-Releases ergänzt dieses Plugin fehlende Metadaten (<code>date</code>, <code>releasecountry</code>, <code>barcode</code>, <code>media</code>, <code>label</code> und <code>catalognumber</code>) automatisch anhand der am besten passenden Originalveröffentlichung.<br><br>Zusätzlich steht die ID der Originalveröffentlichung in Tagger- und Dateibenennungsskripten über die versteckte Variable <code>%_original_musicbrainz_albumid%</code> zur Verfügung."
 "ui.group_cover_art" = "Cover-Art-Integration"
 "ui.enable_cover_art_description" = "Pseudo-Releases sollen in MusicBrainz keine eigenen Cover-Bilder enthalten. Cover-Bilder werden über die MBID der verknüpften Originalveröffentlichung aus dem Cover-Art-Archiv geladen."
