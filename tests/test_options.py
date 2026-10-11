@@ -13,7 +13,7 @@ class TestOptionsPage(unittest.TestCase):
     def setUpClass(cls):
         try:
             from PyQt6.QtWidgets import QApplication
-            cls.app = QApplication.instance() or QApplication([])
+            cls.app = QApplication.instance()
         except ImportError:
             cls.app = None
 
