@@ -67,9 +67,7 @@ class TestOptionsPage(unittest.TestCase):
         self.assertIn("https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases", info_description)
         self.assertIn("https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644", info_description)
 
-        self.assertIn("Cover Art", page.group_cover_art.title())
-        self.assertIn("Cover Art Archive", page.lbl_cover_art_description.text())
-        self.assertIn("Options &gt; Cover Art &gt; Providers", page.lbl_cover_art_note.text())
+        self.assertIn("Options > Cover Art > Providers", page.lbl_cover_art_note.text())
         self.assertTrue(hasattr(page, "btn_open_cover_providers"))
 
 

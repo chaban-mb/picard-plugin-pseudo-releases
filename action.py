@@ -88,9 +88,11 @@ class ChooseLinkedOriginalAction(BaseAction):
         selection_group = QtGui.QActionGroup(menu)
         selection_group.setExclusive(True)
 
-        heading_text = getattr(getattr(album, 'release_group', None), 'version_headings', None)
-        if not heading_text:
-            heading_text = "Tracks / Year / Country / Format / Label / Cat No"
+        heading_text = getattr(
+            getattr(album, 'release_group', None),
+            'version_headings',
+            "Tracks / Year / Country / Format / Label / Cat No",
+        )
         heading = menu.addAction(str(heading_text))
         heading_font = heading.font()
         heading_font.setBold(True)

@@ -57,18 +57,10 @@ def enable(api: PluginApi) -> None:
 
     # Register custom script variables
     if hasattr(api, 'register_script_variable'):
-        title = (
-            api.tr("variable.original_albumid.title", "Original MusicBrainz Album ID")
-            if hasattr(api, 'tr')
-            else "Original MusicBrainz Album ID"
-        )
-        doc = (
-            api.tr(
-                "variable.original_albumid.doc",
-                "MusicBrainz Release ID of the linked original release for pseudo-releases",
-            )
-            if hasattr(api, 'tr')
-            else "MusicBrainz Release ID of the linked original release for pseudo-releases"
+        title = api.tr("variable.original_albumid.title", "Original MusicBrainz Album ID")
+        doc = api.tr(
+            "variable.original_albumid.doc",
+            "MusicBrainz Release ID of the linked original release for pseudo-releases",
         )
         api.register_script_variable(
             "_original_musicbrainz_albumid",

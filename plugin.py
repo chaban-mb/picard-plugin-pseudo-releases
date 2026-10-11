@@ -1,7 +1,6 @@
 """Pseudo-Releases core plugin orchestrator for catalog and cover-art supplementation."""
 
 from typing import Any
-import webbrowser
 
 from picard.i18n import (
     gettext as _,
@@ -328,8 +327,8 @@ class PseudoReleasePlugin:
         ]
         return ' / '.join(p for p in parts if p)
 
-    @staticmethod
-    def _format_original_candidate_tooltip(candidate: dict[str, Any]) -> str:
+    @classmethod
+    def _format_original_candidate_tooltip(cls, candidate: dict[str, Any]) -> str:
         """Format additional release details using Picard's Other versions fields."""
         if not isinstance(candidate, dict):
             candidate = {}
@@ -350,7 +349,13 @@ class PseudoReleasePlugin:
         if disambiguation:
             disambig_heading = _(VERSIONS_EXTRA_HEADINGS.get('disambiguation', 'Disambiguation'))
             details.append(f"{disambig_heading}: {disambiguation}")
-        details.append("Middle-click or right-click to open in browser.")
+        api = getattr(cls, 'api', None)
+        hint = (
+            api.tr("action.tooltip_open_browser", "Middle-click or right-click to open in browser.")
+            if api and hasattr(api, 'tr')
+            else "Middle-click or right-click to open in browser."
+        )
+        details.append(hint)
         return '\n'.join(details)
 
     @classmethod
@@ -361,10 +366,7 @@ class PseudoReleasePlugin:
             tagger.get_file_lookup().album_lookup(release_id)
             return
 
-        try:
-            webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
-        except Exception:
-            webbrowser.open(f"https://musicbrainz.org/release/{release_id}")
+        webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
 
     @staticmethod
     def select_linked_original(album: Album, selected_id: str) -> None:

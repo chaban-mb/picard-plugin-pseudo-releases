@@ -4,7 +4,10 @@ from typing import (
     ClassVar,
 )
 
-from PyQt6 import QtWidgets
+from PyQt6 import (
+    QtCore,
+    QtWidgets,
+)
 from picard.plugin3.api import (
     OptionsPage,
     PageOptionConfigs,
@@ -44,18 +47,17 @@ class PseudoReleaseOptionsPage(OptionsPage):
         # Header description with formatting and external documentation links
         info_text = self._tr(
             "ui.info_pseudo_releases",
-            "MusicBrainz <a href=\"https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases\">"
-            "pseudo-releases</a> contain alternate tracklists (such as transliterated or "
-            "translated titles) linked to an original release via the "
-            "<a href=\"https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644\">"
-            "transl-tracklisting</a> relationship.<br><br>"
+            "MusicBrainz [pseudo-releases](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases) "
+            "contain alternate tracklists (such as transliterated or translated titles) linked to an original release "
+            "via the [transl-tracklisting](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644) "
+            "relationship.\n\n"
             "When a pseudo-release is loaded, this plugin automatically supplements missing metadata "
-            "(<code>date</code>, <code>releasecountry</code>, <code>barcode</code>, <code>media</code>, "
-            "<code>label</code>, and <code>catalognumber</code>) from the best-matched original release.<br><br>"
+            "(`date`, `releasecountry`, `barcode`, `media`, `label`, and `catalognumber`) from the best-matched original release.\n\n"
             "Additionally, the original release ID is made available to tagger scripts and file naming scripts "
-            "via the hidden variable <code>%_original_musicbrainz_albumid%</code>.",
+            "via the hidden variable `%_original_musicbrainz_albumid%`.",
         )
         self.lbl_info = QtWidgets.QLabel(info_text, self)
+        self.lbl_info.setTextFormat(QtCore.Qt.TextFormat.MarkdownText)
         self.lbl_info.setWordWrap(True)
         self.lbl_info.setOpenExternalLinks(True)
         layout.addWidget(self.lbl_info)
@@ -86,10 +88,11 @@ class PseudoReleaseOptionsPage(OptionsPage):
         self.lbl_cover_art_note = QtWidgets.QLabel(
             self._tr(
                 "ui.cover_art_note",
-                "Provider order and enablement are configured under <b>Options &gt; Cover Art &gt; Providers</b>.",
+                "Provider order and enablement are configured under **Options > Cover Art > Providers**.",
             ),
             self.group_cover_art,
         )
+        self.lbl_cover_art_note.setTextFormat(QtCore.Qt.TextFormat.MarkdownText)
         self.lbl_cover_art_note.setWordWrap(True)
         row_nav_layout.addWidget(self.lbl_cover_art_note, 1)
 

@@ -1,7 +1,7 @@
-"""Candidate discovery, ranking, and disambiguation algorithms."""
-
 from collections.abc import Sequence
 from typing import Any
+
+from picard.util import strip_non_alnum
 
 try:
     from .constants import (
@@ -156,9 +156,9 @@ def score_original_candidate(
     # 3. Barcode Match (+30.0)
     candidate_barcode = candidate.get('barcode')
     if candidate_barcode:
-        clean_candidate_bc = ''.join(c for c in str(candidate_barcode) if c.isalnum()).lower()
+        clean_candidate_bc = strip_non_alnum(str(candidate_barcode)).replace(" ", "").lower()
         file_barcodes = {
-            ''.join(c for c in b if c.isalnum()).lower()
+            strip_non_alnum(str(b)).replace(" ", "").lower()
             for b in _get_tag_from_files_or_metadata('barcode', album_metadata, files)
         }
         if clean_candidate_bc and clean_candidate_bc in file_barcodes:
