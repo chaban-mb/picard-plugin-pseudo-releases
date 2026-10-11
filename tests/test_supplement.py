@@ -7,37 +7,7 @@ from metadata_engine import (
 from constants import (
     TAG_ORIGINAL_RELEASE_ID,
 )
-
-
-class MockMetadata:
-    """Mock Picard Metadata object matching internal behavior."""
-
-    def __init__(self, initial=None):
-        self._data = {}
-        if initial:
-            for k, v in initial.items():
-                self[k] = v
-
-    def __setitem__(self, key, value):
-        if isinstance(value, list):
-            self._data[key] = [str(x) for x in value]
-        else:
-            self._data[key] = [str(value)]
-
-    def __getitem__(self, key):
-        if key in self._data and self._data[key]:
-            return "; ".join(self._data[key])
-        return ""
-
-    def __contains__(self, key):
-        return key in self._data
-
-    def get(self, key, default=""):
-        val = self[key]
-        return val if val else default
-
-    def getall(self, key):
-        return list(self._data.get(key, []))
+from tests.mocks.mock_picard import MockMetadata
 
 
 class TestMetadataSupplementation(unittest.TestCase):

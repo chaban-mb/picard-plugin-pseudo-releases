@@ -4,17 +4,10 @@ from caa_provider import PseudoReleaseCoverArtProvider
 from constants import TAG_ORIGINAL_RELEASE_ID
 
 
-class MockCoverArt:
-    def __init__(self, album=None, metadata=None, release=None, front_image_found=False):
-        self.album = album
-        self.metadata = metadata if metadata is not None else {
-            "musicbrainz_albumid": "pseudo-release-uuid-9fe",
-        }
-        self.release = release if release is not None else {
-            "id": "pseudo-release-uuid-9fe",
-            "cover-art-archive": {"artwork": True},
-        }
-        self.front_image_found = front_image_found
+from tests.mocks.mock_picard import (
+    MockAlbum,
+    MockCoverArt,
+)
 
 
 class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
@@ -40,16 +33,13 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         )
 
     def test_disabled_when_original_release_has_no_artwork(self):
-        class MockAlbum:
-            def __init__(self):
-                self._pseudo_original_details = {
-                    "original-release-uuid-7a1": {
-                        "id": "original-release-uuid-7a1",
-                        "cover-art-archive": {"artwork": False},
-                    }
-                }
-
         album = MockAlbum()
+        album._pseudo_original_details = {
+            "original-release-uuid-7a1": {
+                "id": "original-release-uuid-7a1",
+                "cover-art-archive": {"artwork": False},
+            }
+        }
         self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album))
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-release-uuid-7a1"
 
@@ -59,16 +49,13 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.assertTrue(PseudoReleaseCoverArtProvider.ignore_json_not_found_error)
 
     def test_album_cache_lookup_with_artwork(self):
-        class MockAlbum:
-            def __init__(self):
-                self._pseudo_original_details = {
-                    "original-release-uuid-7a1": {
-                        "id": "original-release-uuid-7a1",
-                        "cover-art-archive": {"artwork": True, "front": True},
-                    }
-                }
-
         album = MockAlbum()
+        album._pseudo_original_details = {
+            "original-release-uuid-7a1": {
+                "id": "original-release-uuid-7a1",
+                "cover-art-archive": {"artwork": True, "front": True},
+            }
+        }
         release = {
             "id": "pseudo-release-uuid-9fe",
             "cover-art-archive": {"artwork": False},
@@ -81,16 +68,13 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.assertEqual(self.provider._caa_path, "/release/original-release-uuid-7a1/")
 
     def test_album_cache_lookup_without_artwork(self):
-        class MockAlbum:
-            def __init__(self):
-                self._pseudo_original_details = {
-                    "original-no-art": {
-                        "id": "original-no-art",
-                        "cover-art-archive": {"artwork": False},
-                    }
-                }
-
         album = MockAlbum()
+        album._pseudo_original_details = {
+            "original-no-art": {
+                "id": "original-no-art",
+                "cover-art-archive": {"artwork": False},
+            }
+        }
         release = {
             "id": "pseudo-release-uuid-9fe",
             "cover-art-archive": {"artwork": False},
@@ -101,12 +85,11 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.assertFalse(self.provider._has_suitable_artwork)
 
     def test_switching_edition_updates_caa_path(self):
-        class MockAlbum:
-            def __init__(self):
-                self._pseudo_original_details = {
-                    "edition-2001": {"id": "edition-2001", "cover-art-archive": {"artwork": True}},
-                    "edition-2018": {"id": "edition-2018", "cover-art-archive": {"artwork": True}},
-                }
+        album = MockAlbum()
+        album._pseudo_original_details = {
+            "edition-2001": {"id": "edition-2001", "cover-art-archive": {"artwork": True}},
+            "edition-2018": {"id": "edition-2018", "cover-art-archive": {"artwork": True}},
+        }
 
         album = MockAlbum()
         self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album))

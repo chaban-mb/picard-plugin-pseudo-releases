@@ -17,46 +17,7 @@ def ensure_offscreen():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
-class MockMetadata:
-    def __init__(self, initial=None):
-        self._data = {}
-        if initial:
-            for k, v in initial.items():
-                self[k] = v
-
-    def __setitem__(self, key, value):
-        if isinstance(value, list):
-            self._data[key] = [str(x) for x in value]
-        else:
-            self._data[key] = [str(value)]
-
-    def __getitem__(self, key):
-        if key in self._data and self._data[key]:
-            return "; ".join(self._data[key])
-        return ""
-
-    def __contains__(self, key):
-        return key in self._data
-
-    def get(self, key, default=""):
-        val = self[key]
-        return val if val else default
-
-
-class MockAlbum:
-    def __init__(self, album_id, title="", status="Pseudo-Release"):
-        self.id = album_id
-        self.metadata = MockMetadata(
-            {
-                "album": title,
-                "releasestatus": status.lower(),
-            }
-        )
-        self.tracks = []
-        self._pseudo_original_candidates = []
-
-    def iterfiles(self):
-        return iter([])
+from tests.mocks.mock_picard import MockAlbum, MockMetadata
 
 
 

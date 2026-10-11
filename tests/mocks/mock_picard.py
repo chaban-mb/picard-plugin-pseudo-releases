@@ -1,6 +1,9 @@
 """Mock Picard classes for isolated unit testing when Picard core is unavailable."""
 
+from types import SimpleNamespace
 from typing import Any
+import unittest.mock
+from unittest.mock import MagicMock
 import webbrowser
 
 try:
@@ -32,68 +35,191 @@ def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tu
     return key
 
 
-class BaseAction(_BaseObject):
-    api: Any = None
+class MockMetadata(dict):
+    """Mock Picard Metadata object matching internal Picard behavior."""
 
-    def __init__(self, parent: Any = None) -> None:
-        super().__init__(parent)
-        self.tagger = getattr(self.api, "tagger", None)
-        self._menu: Any = None
-        self._enabled = True
-        self.destroyed = _DummySignal()
+    def __init__(self, initial: dict[str, Any] | None = None) -> None:
+        super().__init__()
+        self._data: dict[str, list[str]] = {}
+        if initial:
+            for k, v in initial.items():
+                self[k] = v
 
-    def setMenu(self, menu: Any) -> None:
-        self._menu = menu
+    def __setitem__(self, key: str, value: Any) -> None:
+        if isinstance(value, list):
+            self._data[key] = [str(x) for x in value]
+        else:
+            self._data[key] = [str(value)]
 
-    def menu(self) -> Any:
-        return self._menu
+    def __getitem__(self, key: str) -> str:
+        if key in self._data and self._data[key]:
+            return "; ".join(self._data[key])
+        return ""
 
-    def setEnabled(self, enabled: bool) -> None:
-        self._enabled = bool(enabled)
+    def __contains__(self, key: object) -> bool:
+        return key in self._data
 
-    def isEnabled(self) -> bool:
-        return self._enabled
+    def get(self, key: str, default: Any = "") -> Any:
+        val = self[key]
+        return val if val else default
 
-    def callback(self, objs: Any) -> None:
-        pass
+    def getall(self, key: str) -> list[str]:
+        return list(self._data.get(key, []))
 
-
-class OptionsPage(_BaseWidget):
-    NAME = ""
-    TITLE = ""
-    PARENT = None
-    api: Any = None
-    OPTIONS: dict[str, Any] = {}
-
-
-PageOptionConfigs = dict[str, Any]
-
-
-class PluginApi:
-    pass
+    def copy(self, other: Any = None) -> None:
+        if other is not None:
+            self._data = {k: list(v) for k, v in other._data.items()}
 
 
-class Album:
-    def __init__(self, album_id: str = "album-123", title: str = "", status: str = "Official") -> None:
+Metadata = MockMetadata
+
+
+class MockTrack:
+    def __init__(self, title: str = "Test Track", recording_id: str = "rec-123") -> None:
+        self.metadata = MockMetadata({"title": title, "musicbrainz_recordingid": recording_id})
+
+
+Track = MockTrack
+
+
+class MockAlbum:
+    def __init__(
+        self,
+        album_id: str = "album-123",
+        title: str = "",
+        artist: str = "",
+        status: str = "Official",
+    ) -> None:
         self.id = album_id
-        self.metadata: Any = None
+        self.metadata = MockMetadata(
+            {
+                "album": title,
+                "albumartist": artist,
+                "releasestatus": status.lower(),
+                "musicbrainz_albumid": album_id,
+            }
+        )
         self.tracks: list[Any] = []
         self._finalized = False
-
-    def iterfiles(self):
-        return iter([])
+        self.load_calls: list[dict[str, Any]] = []
+        self._pseudo_original_candidates: list[dict[str, Any]] = []
 
     def _finalize_loading(self, error: Any = None) -> None:
         self._finalized = True
 
+    def load(self, **kwargs: Any) -> None:
+        self.load_calls.append(kwargs)
+
+    def iterfiles(self) -> Any:
+        return iter([])
 
 
-class Track:
-    pass
+Album = MockAlbum
 
 
-class Metadata:
-    pass
+class MockCoverArt:
+    def __init__(
+        self,
+        album: Any = None,
+        metadata: Any = None,
+        release: Any = None,
+        front_image_found: bool = False,
+    ) -> None:
+        self.album = album
+        self.metadata = metadata if metadata is not None else MockMetadata({
+            "musicbrainz_albumid": "pseudo-release-uuid-9fe",
+        })
+        self.release = release if release is not None else {
+            "id": "pseudo-release-uuid-9fe",
+            "cover-art-archive": {"artwork": True},
+        }
+        self.front_image_found = front_image_found
+
+
+class MockFile:
+    def __init__(self, metadata: dict[str, Any] | None = None) -> None:
+        self.metadata = MockMetadata(metadata or {})
+
+
+class MockPluginConfig(dict):
+    def register_option(self, name: str, default: Any, **kwargs: Any) -> None:
+        if name not in self:
+            self[name] = default
+
+
+class MockPluginApi:
+    def __init__(self, initial_config: dict[str, Any] | None = None) -> None:
+        defaults = {}
+        if initial_config:
+            defaults.update(initial_config)
+        self.plugin_config = MockPluginConfig(defaults)
+        self.global_config = SimpleNamespace(
+            setting={
+                'preferred_release_countries': [],
+                'release_ars': False,
+                'use_genres': False,
+                'only_my_genres': False,
+            }
+        )
+        self.tagger = SimpleNamespace(
+            window=SimpleNamespace(selected_objects=[]),
+            config=self.plugin_config,
+        )
+        self.processors: list[Any] = []
+        self.providers: list[Any] = []
+        self.album_actions: list[Any] = []
+        self.options_pages: list[Any] = []
+        self.removal_processors: list[Any] = []
+        self.added_tasks: list[Any] = []
+        self.completed_tasks: list[Any] = []
+        self.logger = MagicMock()
+        self.mb_api = MagicMock()
+
+    def tr(self, key: str, text: str | None = None, **kwargs: Any) -> str:
+        return text or key
+
+    def trn(self, singular: str, plural: str, n: int = 1, **kwargs: Any) -> str:
+        return singular if n == 1 else plural
+
+    def register_album_metadata_processor(self, func: Any, priority: int = 50) -> None:
+        self.processors.append((func, priority))
+
+    def register_album_post_removal_processor(self, func: Any) -> None:
+        self.removal_processors.append(func)
+
+    def register_album_action(self, action_cls: Any) -> None:
+        action_cls.api = self
+        self.album_actions.append(action_cls)
+
+    def register_cover_art_provider(self, provider_cls: Any) -> None:
+        provider_cls.api = self
+        self.providers.append(provider_cls)
+
+    def register_options_page(self, page_cls: Any) -> None:
+        page_cls.api = self
+        self.options_pages.append(page_cls)
+
+    def register_script_variable(self, name: str, documentation: str = "", title: str = "", **kwargs: Any) -> None:
+        pass
+
+    def add_album_task(
+        self,
+        album: Any,
+        task_id: str,
+        description: str,
+        timeout: float | None = None,
+        request_factory: Any = None,
+        blocking: bool = False,
+    ) -> None:
+        self.added_tasks.append((album, task_id, blocking))
+        if request_factory:
+            request_factory()
+
+    def complete_album_task(self, album: Any, task_id: str) -> None:
+        self.completed_tasks.append((album, task_id))
+
+
+PluginApi = MockPluginApi
 
 
 class CoverArtProviderCaa:

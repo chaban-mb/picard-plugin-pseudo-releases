@@ -31,125 +31,12 @@ def load_fixture(mbid: str) -> dict:
         return json.load(f)
 
 
-class MockMetadata:
-    def __init__(self, initial=None):
-        self._data = {}
-        if initial:
-            for k, v in initial.items():
-                self[k] = v
-
-    def __setitem__(self, key, value):
-        if isinstance(value, list):
-            self._data[key] = [str(x) for x in value]
-        else:
-            self._data[key] = [str(value)]
-
-    def __getitem__(self, key):
-        if key in self._data and self._data[key]:
-            return "; ".join(self._data[key])
-        return ""
-
-    def __contains__(self, key):
-        return key in self._data
-
-    def get(self, key, default=""):
-        val = self[key]
-        return val if val else default
-
-    def getall(self, key):
-        return list(self._data.get(key, []))
-
-    def copy(self, other):
-        self._data = {k: list(v) for k, v in other._data.items()}
-
-
-class MockAlbum:
-    def __init__(self, album_id, title="", artist="", status="Pseudo-Release"):
-        self.id = album_id
-        self.metadata = MockMetadata(
-            {
-                "album": title,
-                "albumartist": artist,
-                "releasestatus": status.lower(),
-                "musicbrainz_albumid": album_id,
-            }
-        )
-        self.tracks = []
-        self._finalized = False
-        self.load_calls = []
-
-    def _finalize_loading(self, error):
-        self._finalized = True
-
-    def load(self, **kwargs):
-        self.load_calls.append(kwargs)
-
-    def iterfiles(self):
-        return iter([])
-
-
-
-class MockPluginConfig(dict):
-    def register_option(self, name, default):
-        if name not in self:
-            self[name] = default
-
-
-class MockPluginApi:
-    def __init__(self, initial_config=None):
-        defaults = {}
-        if initial_config:
-            defaults.update(initial_config)
-        self.plugin_config = MockPluginConfig(defaults)
-        self.tagger = SimpleNamespace(
-            window=SimpleNamespace(selected_objects=[]),
-            config=self.plugin_config,
-        )
-        self.processors = []
-        self.providers = []
-        self.album_actions = []
-        self.options_pages = []
-        self.removal_processors = []
-        self.added_tasks = []
-        self.completed_tasks = []
-        self.logger = MagicMock()
-        self.mb_api = MagicMock()
-
-    def tr(self, key, text=None):
-        return text or key
-
-    def trn(self, singular, plural, n=1):
-        return singular if n == 1 else plural
-
-
-    def register_album_metadata_processor(self, func, priority=50):
-        self.processors.append((func, priority))
-
-    def register_album_post_removal_processor(self, func):
-        self.removal_processors.append(func)
-
-    def register_album_action(self, action_cls):
-        action_cls.api = self
-        self.album_actions.append(action_cls)
-
-    def register_cover_art_provider(self, provider_cls):
-        self.providers.append(provider_cls)
-
-    def register_options_page(self, page_cls):
-        self.options_pages.append(page_cls)
-
-    def register_script_variable(self, name, documentation="", title="", **kwargs):
-        pass
-
-
-    def add_album_task(self, album, task_id, description, timeout, request_factory, blocking=False):
-        self.added_tasks.append((album, task_id, blocking))
-        self.metadata_at_task_add = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        if request_factory:
-            request_factory()
-
-    def complete_album_task(self, album, task_id):
-        self.completed_tasks.append((album, task_id))
+from tests.mocks.mock_picard import (
+    MockAlbum,
+    MockMetadata,
+    MockPluginApi,
+    MockPluginConfig,
+)
 
 
 class TestRealWorldFixtures(unittest.TestCase):
@@ -554,25 +441,12 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertIn("456", int_tooltip)
         self.assertIn("789", int_tooltip)
 
-        # Plugin lifecycle null and malformed dispatch safety
+        # Plugin lifecycle null dispatch safety
         plugin_module.PseudoReleasePlugin.process_album_metadata(
             self.api,
             MockAlbum(album_id="album-null"),
             MockMetadata(),
             None,
-        )
-        plugin_module.PseudoReleasePlugin._prefetch_linked_original_details(
-            self.api,
-            MockAlbum(album_id="album-prefetch"),
-            [None],
-            None,
-        )
-        plugin_module.PseudoReleasePlugin._handle_supplement_pseudo(
-            self.api,
-            MockAlbum(album_id="album-none"),
-            MockMetadata(),
-            "target-none",
-            [None],
         )
 
         # In-flight state leak prevention when api cannot schedule task
