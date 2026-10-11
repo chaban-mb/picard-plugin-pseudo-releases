@@ -49,7 +49,7 @@ class _FallbackAction:
     """Mock QAction."""
 
     def __init__(self, text: str = "") -> None:
-        self.text = text
+        self._text = str(text)
         self.checked = False
         self.checkable = False
         self.enabled = True
@@ -57,6 +57,12 @@ class _FallbackAction:
         self._font = _FallbackFont()
         self._data: Any = None
         self.tooltip = ""
+
+    def text(self) -> str:
+        return self._text
+
+    def setText(self, text: str) -> None:
+        self._text = str(text)
 
     def setCheckable(self, value: bool) -> None:
         self.checkable = bool(value)
@@ -92,6 +98,9 @@ class _DummyWidget:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._checked = False
         self._enabled = True
+        self._word_wrap = False
+        self._open_external_links = False
+        self._visible = True
         self._text = args[0] if args and isinstance(args[0], str) else ""
         self.toggled = _DummySignal()
         self.clicked = _DummySignal()
@@ -135,9 +144,27 @@ class _DummyWidget:
         return self._enabled
 
     def setWordWrap(self, enabled: bool) -> None:
-        pass
+        self._word_wrap = bool(enabled)
+
+    def wordWrap(self) -> bool:
+        return self._word_wrap
 
     def setOpenExternalLinks(self, enabled: bool) -> None:
+        self._open_external_links = bool(enabled)
+
+    def openExternalLinks(self) -> bool:
+        return self._open_external_links
+
+    def show(self) -> None:
+        self._visible = True
+
+    def isVisible(self) -> bool:
+        return self._visible
+
+    def close(self) -> bool:
+        return True
+
+    def deleteLater(self) -> None:
         pass
 
     def text(self) -> str:
@@ -160,6 +187,13 @@ class _FallbackMenu(_DummyWidget):
     """Mock QMenu."""
 
     selected_action: Any = None
+
+    class _MockGeometry:
+        def __init__(self, action: Any) -> None:
+            self._action = action
+
+        def center(self) -> Any:
+            return self
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -184,11 +218,17 @@ class _FallbackMenu(_DummyWidget):
     def installEventFilter(self, filter_obj: Any) -> None:
         self.event_filters.append(filter_obj)
 
+    def actionGeometry(self, action: Any) -> Any:
+        return self._MockGeometry(action)
+
     def actionAt(self, pos: Any) -> Any:
+        action = getattr(pos, "_action", None)
+        if action is not None:
+            return action
         return self.selected_action
 
-    def close(self) -> None:
-        pass
+    def close(self) -> bool:
+        return True
 
     def exec(self, *args: Any) -> Any:
         return self.selected_action
@@ -202,7 +242,17 @@ class MockQtCore:
 
     PYQT_VERSION = 0x060B00
     PYQT_VERSION_STR = "6.11.0"
+    QT_VERSION = 0x060B02
+    QT_VERSION_STR = "6.11.2"
     qVersion = staticmethod(lambda: "6.11.2")
+    qDebug = staticmethod(lambda *args: None)
+    qWarning = staticmethod(lambda *args: None)
+    qCritical = staticmethod(lambda *args: None)
+    qFatal = staticmethod(lambda *args: None)
+    qInstallMessageHandler = staticmethod(lambda *args: None)
+    pyqtSignal = _DummySignal
+    pyqtSlot = staticmethod(lambda *args, **kwargs: (lambda f: f))
+    pyqtProperty = staticmethod(lambda *args, **kwargs: (lambda f: f))
 
     class QObject:
         def __init__(self, parent: Any = None) -> None:
@@ -219,9 +269,12 @@ class MockQtCore:
             RightButton = 2
             MiddleButton = 4
 
+        class KeyboardModifier:
+            NoModifier = 0
+
     class QPointF:
         def __init__(self, *args: Any) -> None:
-            pass
+            self._action = getattr(args[0], "_action", None) if args else None
 
 
 class MockQtGui:
@@ -240,11 +293,37 @@ class MockQtGui:
         def addAction(self, action: Any) -> None:
             pass
 
+    class QMouseEvent:
+        def __init__(
+            self,
+            type_: Any = None,
+            localPos: Any = None,
+            scenePos: Any = None,
+            button: Any = None,
+            buttons: Any = None,
+            modifiers: Any = None,
+            *args: Any,
+            **kwargs: Any,
+        ) -> None:
+            self._type = type_
+            self._pos = localPos
+            self._button = button
+
+        def type(self) -> Any:
+            return self._type
+
+        def pos(self) -> Any:
+            return self._pos
+
+        def button(self) -> Any:
+            return self._button
+
 
 class MockQtWidgets:
     """Mock QtWidgets namespace."""
 
     QWidget = _DummyWidget
+    QMainWindow = _DummyWidget
     QVBoxLayout = _DummyWidget
     QHBoxLayout = _DummyWidget
     QLabel = _DummyWidget
@@ -264,6 +343,17 @@ class MockQtWidgets:
         def instance(cls) -> Any:
             return cls._instance
 
+        def processEvents(self, *args: Any) -> None:
+            pass
+
+        @staticmethod
+        def sendEvent(receiver: Any, event: Any) -> bool:
+            if hasattr(receiver, "event_filters"):
+                for filt in receiver.event_filters:
+                    if hasattr(filt, "eventFilter") and filt.eventFilter(receiver, event):
+                        return True
+            return False
+
 
 class MockQtTest:
     """Mock QtTest namespace."""
@@ -271,3 +361,13 @@ class MockQtTest:
     @staticmethod
     def qWaitFor(*args: Any) -> bool:
         return True
+
+    class QTest:
+        @staticmethod
+        def qWaitFor(*args: Any) -> bool:
+            return True
+
+        @staticmethod
+        def mouseClick(widget: Any, button: Any = None, *args: Any, **kwargs: Any) -> None:
+            if hasattr(widget, "clicked"):
+                widget.clicked.emit(False)

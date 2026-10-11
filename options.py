@@ -108,7 +108,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
 
         layout.addStretch()
 
-    def _open_cover_providers_page(self):
+    def _open_cover_providers_page(self, checked: bool = False):
         """Navigate directly to Picard's native Cover Art options page if hosted inside OptionsDialog."""
         dialog = getattr(self, 'dialog', None)
         if not dialog:
