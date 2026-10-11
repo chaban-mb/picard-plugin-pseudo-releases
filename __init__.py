@@ -490,32 +490,57 @@ class PseudoReleasePlugin:
             loading_ids = set()
             album._pseudo_original_details_loading_ids = loading_ids
 
-        for fallback in candidates:
-            release_id = fallback.get('id')
-            if not release_id or release_id == preferred_id:
-                continue
-            if release_id in detail_cache or release_id in stub_cache or release_id in loading_ids:
-                continue
+        # Cap background prefetching to at most 3 fallback candidates to conserve rate limiter
+        unfetched = [
+            c for c in candidates
+            if c.get('id')
+            and c['id'] != preferred_id
+            and c['id'] not in detail_cache
+            and c['id'] not in stub_cache
+            and c['id'] not in loading_ids
+        ][:3]
 
+        for fallback in unfetched:
+            release_id = fallback['id']
             loading_ids.add(release_id)
+            task_id = f"pseudo_prefetch_{release_id}"
 
             def on_loaded(
                 document: dict[str, Any],
                 http: Any,
                 error: Any,
                 fallback: dict[str, Any] = fallback,
+                task_id: str = task_id,
             ) -> None:
-                loading_ids.discard(fallback['id'])
-                if not error and document:
-                    stubs = getattr(album, '_pseudo_candidate_stubs', {})
-                    stubs[fallback['id']] = document
-                    album._pseudo_candidate_stubs = stubs
+                try:
+                    loading_ids.discard(fallback['id'])
+                    if not error and document:
+                        stubs = getattr(album, '_pseudo_candidate_stubs', {})
+                        stubs[fallback['id']] = document
+                        album._pseudo_candidate_stubs = stubs
+                finally:
+                    if hasattr(api, 'complete_album_task'):
+                        api.complete_album_task(album, task_id)
 
-            api.mb_api.get_release_by_id(
-                release_id,
-                on_loaded,
-                inc=['labels', 'media', 'discids'],
-            )
+            if hasattr(api, 'add_album_task'):
+                api.add_album_task(
+                    album=album,
+                    task_id=task_id,
+                    description=f"Prefetching edition data for {release_id}",
+                    timeout=10.0,
+                    request_factory=lambda rel_id=release_id, cb=on_loaded: api.mb_api.get_release_by_id(
+                        rel_id,
+                        cb,
+                        inc=['labels', 'media', 'discids'],
+                    ),
+                    blocking=False,
+                )
+            else:
+                api.mb_api.get_release_by_id(
+                    release_id,
+                    on_loaded,
+                    inc=['labels', 'media', 'discids'],
+                )
 
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
