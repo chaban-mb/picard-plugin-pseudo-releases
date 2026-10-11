@@ -93,14 +93,7 @@ class ChooseLinkedOriginalAction(BaseAction):
 
         heading_text = getattr(getattr(album, 'release_group', None), 'version_headings', None)
         if not heading_text:
-            heading_text = (
-                PseudoReleasePlugin.api.tr(
-                    "action.candidate_columns",
-                    "Tracks / Year / Country / Format / Label / Cat No",
-                )
-                if getattr(PseudoReleasePlugin, 'api', None) and hasattr(PseudoReleasePlugin.api, 'tr')
-                else "Tracks / Year / Country / Format / Label / Cat No"
-            )
+            heading_text = "Tracks / Year / Country / Format / Label / Cat No"
         heading = menu.addAction(heading_text)
         heading_font = heading.font()
         heading_font.setBold(True)
