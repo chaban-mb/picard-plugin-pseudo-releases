@@ -200,7 +200,7 @@ def score_original_candidate(
             idx = pref_upper.index(country.upper())
             score += max(1.0, 10.0 - idx)
 
-    # 8. Cover Art Archive Presence (+5.0)
+    # 9. Cover Art Archive Presence (+5.0)
     caa = candidate.get('cover-art-archive') or {}
     if caa.get('artwork') or caa.get('front'):
         score += 5.0

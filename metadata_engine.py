@@ -22,6 +22,15 @@ except (ImportError, ValueError):
         get_config_value,
     )
 
+try:
+    from picard.mbjson import (
+        _relations_to_metadata,
+        add_genres_from_node,
+    )
+except ImportError:
+    _relations_to_metadata = None  # type: ignore[assignment]
+    add_genres_from_node = None  # type: ignore[assignment]
+
 
 def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, Any]:
     """Extract physical and manufacturing catalog metadata from a release node.
@@ -198,10 +207,8 @@ def supplement_release_relationships_and_genres(
                 existing_signatures.add(sig)
 
     # 2. Release relationships to metadata
-    if get_config_value(setting, 'release_ars', False) and orig_relations:
+    if get_config_value(setting, 'release_ars', False) and orig_relations and _relations_to_metadata:
         try:
-            from picard.mbjson import _relations_to_metadata
-
             if hasattr(album, 'metadata'):
                 _relations_to_metadata(orig_relations, album.metadata, config=target_config, entity='release')
             new_meta = getattr(album, '_new_metadata', None)
@@ -224,11 +231,12 @@ def supplement_release_relationships_and_genres(
                     [g for g in orig_genres if g not in (album._release_node.get('genres') or [])]
                 )
 
-        try:
-            from picard.mbjson import add_genres_from_node
-
-            add_genres_from_node(orig_release_node, album)
-        except Exception:
+        if add_genres_from_node:
+            try:
+                add_genres_from_node(orig_release_node, album)
+            except Exception:
+                pass
+        else:
             if hasattr(album, 'add_folksonomy_tag') and orig_release_node.get('tags'):
                 for tag in orig_release_node['tags']:
                     album.add_folksonomy_tag(tag.get('name'), tag.get('count', 1))

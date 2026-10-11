@@ -86,10 +86,17 @@ class MockPluginApi:
         self.album_actions = []
         self.options_pages = []
         self.removal_processors = []
+        self.script_variables = []
         self.added_tasks = []
         self.completed_tasks = []
         self.logger = MagicMock()
         self.mb_api = MagicMock()
+
+    def tr(self, key, text=None):
+        return text or key
+
+    def register_script_variable(self, name, documentation="", title=""):
+        self.script_variables.append((name, documentation, title))
 
     def register_album_metadata_processor(self, func, priority=50):
         self.processors.append((func, priority))
@@ -128,6 +135,7 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(len(self.api.removal_processors) > 0)
         self.assertTrue(len(self.api.providers) > 0)
         self.assertTrue(len(self.api.options_pages) > 0)
+        self.assertTrue(any(v[0] == "_original_musicbrainz_albumid" for v in self.api.script_variables))
 
     def test_direction_1_supplement_pseudo_release(self):
         # A loaded pseudo-release with backward link to original

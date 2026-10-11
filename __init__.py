@@ -12,6 +12,7 @@ try:
         QtWidgets,
         PluginApi,
         config,
+        t_,
     )
     from .options import PseudoReleaseOptionsPage
     from .plugin import PseudoReleasePlugin
@@ -27,6 +28,7 @@ except (ImportError, ValueError):
         QtWidgets,
         PluginApi,
         config,
+        t_,
     )
     from options import PseudoReleaseOptionsPage
     from plugin import PseudoReleasePlugin
@@ -35,9 +37,10 @@ except (ImportError, ValueError):
 class ManifestTranslations:
     """Translation strings for the plugin manifest."""
 
-    NAME = "Pseudo-Releases"
-    DESC = (
-        "Supplements pseudo-releases with original catalog metadata and cover art."
+    NAME = t_("manifest.name", "Pseudo-Releases")
+    DESC = t_(
+        "manifest.description",
+        "Supplements pseudo-releases with original catalog metadata and cover art.",
     )
 
 
@@ -61,6 +64,27 @@ def enable(api: PluginApi) -> None:
 
     # Register Options page
     api.register_options_page(PseudoReleaseOptionsPage)
+
+    # Register custom script variables
+    if hasattr(api, 'register_script_variable'):
+        title = (
+            api.tr("variable.original_albumid.title", "Original MusicBrainz Album ID")
+            if hasattr(api, 'tr')
+            else "Original MusicBrainz Album ID"
+        )
+        doc = (
+            api.tr(
+                "variable.original_albumid.doc",
+                "MusicBrainz Release ID of the linked original release for pseudo-releases",
+            )
+            if hasattr(api, 'tr')
+            else "MusicBrainz Release ID of the linked original release for pseudo-releases"
+        )
+        api.register_script_variable(
+            "_original_musicbrainz_albumid",
+            documentation=doc,
+            title=title,
+        )
 
 
 def disable(api: PluginApi | None = None) -> None:

@@ -116,7 +116,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
     """Picard Options page for configuring Pseudo-Release features."""
 
     NAME = "pseudo_releases"
-    TITLE = "Pseudo-Releases"
+    TITLE = t_("options.title", "Pseudo-Releases")
     PARENT = "plugins"
 
     OPTIONS: ClassVar[PageOptionConfigs] = {}
