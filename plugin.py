@@ -1,6 +1,7 @@
 """Pseudo-Releases core plugin orchestrator for catalog and cover-art supplementation."""
 
 from typing import Any
+import webbrowser
 
 from picard.i18n import (
     gettext as _,
@@ -363,8 +364,6 @@ class PseudoReleasePlugin:
         try:
             webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
         except Exception:
-            import webbrowser
-
             webbrowser.open(f"https://musicbrainz.org/release/{release_id}")
 
     @staticmethod

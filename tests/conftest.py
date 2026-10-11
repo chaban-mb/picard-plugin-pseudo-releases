@@ -54,10 +54,12 @@ except ImportError:
     qt_mod.QtCore = mock_qt.MockQtCore
     qt_mod.QtGui = mock_qt.MockQtGui
     qt_mod.QtWidgets = mock_qt.MockQtWidgets
+    qt_mod.QtTest = mock_qt.MockQtTest
     sys.modules["PyQt6"] = qt_mod
     sys.modules["PyQt6.QtCore"] = mock_qt.MockQtCore
     sys.modules["PyQt6.QtGui"] = mock_qt.MockQtGui
     sys.modules["PyQt6.QtWidgets"] = mock_qt.MockQtWidgets
+    sys.modules["PyQt6.QtTest"] = mock_qt.MockQtTest
 
 try:
     import picard
@@ -96,7 +98,7 @@ except ImportError:
         mbjson_mod.label_info_from_node = mock_picard.label_info_from_node
         mbjson_mod.media_formats_from_node = mock_picard.media_formats_from_node
         mbjson_mod._relations_to_metadata = unittest.mock.MagicMock()
-        mbjson_mod.add_genres_from_node = unittest.mock.MagicMock()
+        mbjson_mod.add_genres_from_node = mock_picard.add_genres_from_node
         sys.modules["picard.mbjson"] = mbjson_mod
 
     if "picard.releasegroup" not in sys.modules:

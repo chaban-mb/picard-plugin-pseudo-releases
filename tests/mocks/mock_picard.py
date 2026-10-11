@@ -2,8 +2,21 @@
 
 from typing import Any
 import webbrowser
+
+try:
+    from PyQt6 import QtCore, QtWidgets
+
+    _BaseWidget = QtWidgets.QWidget
+    _BaseObject = QtCore.QObject
+except ImportError:
+    from tests.mocks.mock_qt import (
+        MockQtCore,
+        _DummyWidget,
+    )
+
+    _BaseWidget = _DummyWidget
+    _BaseObject = MockQtCore.QObject
 from tests.mocks.mock_qt import (
-    MockQtCore,
     _DummySignal,
     _DummyWidget,
 )
@@ -15,11 +28,11 @@ class DebugOpt:
 
 def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tuple[str, str, str]:
     if plural is not None:
-        return (key, text or "", plural)
-    return text or key
+        return (key, str(text or ""), plural)
+    return key
 
 
-class BaseAction(MockQtCore.QObject):
+class BaseAction(_BaseObject):
     api: Any = None
 
     def __init__(self, parent: Any = None) -> None:
@@ -45,7 +58,7 @@ class BaseAction(MockQtCore.QObject):
         pass
 
 
-class OptionsPage(_DummyWidget):
+class OptionsPage(_BaseWidget):
     NAME = ""
     TITLE = ""
     PARENT = None
@@ -99,8 +112,25 @@ class CoverArtProviderCaa:
         title = getattr(cls, "TITLE", getattr(cls, "NAME", None)) or cls.__name__
         api = getattr(cls, "api", None)
         if api and hasattr(api, "tr"):
+            if isinstance(title, tuple) and hasattr(api, "trn"):
+                return api.trn(*title, n=1)
             return api.tr(title)
-        return title
+        return title[1] if isinstance(title, tuple) else title
+
+
+def add_genres_from_node(node: dict[str, Any], obj: Any) -> None:
+    if obj is None or not isinstance(node, dict):
+        return
+    tags = node.get("tags")
+    if isinstance(tags, list):
+        for tag in tags:
+            if hasattr(obj, "add_folksonomy_tag") and isinstance(tag, dict):
+                obj.add_folksonomy_tag(tag.get("name"), tag.get("count", 1))
+    genres = node.get("genres")
+    if isinstance(genres, list):
+        for genre in genres:
+            if hasattr(obj, "add_genre") and isinstance(genre, dict):
+                obj.add_genre(genre.get("name"), genre.get("count", 1))
 
 
 # Fallbacks for Picard utilities

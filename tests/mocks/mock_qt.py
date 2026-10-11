@@ -200,6 +200,10 @@ class _FallbackMenu(_DummyWidget):
 class MockQtCore:
     """Mock QtCore namespace."""
 
+    PYQT_VERSION = 0x060B00
+    PYQT_VERSION_STR = "6.11.0"
+    qVersion = staticmethod(lambda: "6.11.2")
+
     class QObject:
         def __init__(self, parent: Any = None) -> None:
             self._parent = parent
@@ -259,3 +263,11 @@ class MockQtWidgets:
         @classmethod
         def instance(cls) -> Any:
             return cls._instance
+
+
+class MockQtTest:
+    """Mock QtTest namespace."""
+
+    @staticmethod
+    def qWaitFor(*args: Any) -> bool:
+        return True
