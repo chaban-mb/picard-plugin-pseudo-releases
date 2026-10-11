@@ -392,6 +392,9 @@ class PseudoReleasePlugin:
             album._pseudo_original_release_choice = None
             album._pseudo_original_selection_mode = 'automatic'
             album._pseudo_original_source_id = source_id
+            album._pseudo_original_details = {}
+            album._pseudo_candidate_stubs = {}
+            album._pseudo_original_is_full = {}
 
         candidates = find_related_releases(release_node, direction='backward')
         album._pseudo_original_candidates = candidates
