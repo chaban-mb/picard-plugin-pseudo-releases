@@ -141,11 +141,28 @@ def score_original_candidate(
     # 3. Barcode Match (+30.0)
     candidate_barcode = candidate.get('barcode')
     if candidate_barcode:
-        file_barcodes = _get_tag_from_files_or_metadata('barcode', album_metadata, files)
-        if candidate_barcode.strip().lower() in file_barcodes:
+        clean_candidate_bc = ''.join(c for c in candidate_barcode if c.isalnum()).lower()
+        file_barcodes = {
+            ''.join(c for c in b if c.isalnum()).lower()
+            for b in _get_tag_from_files_or_metadata('barcode', album_metadata, files)
+        }
+        if clean_candidate_bc and clean_candidate_bc in file_barcodes:
             score += 30.0
 
-    # 4. Media / Format Match (+20.0)
+    # 4. Release Date / Year Match (+20.0)
+    candidate_date = candidate.get('date') or ''
+    candidate_year = candidate_date[:4]
+    if candidate_year:
+        file_dates = (
+            _get_tag_from_files_or_metadata('date', album_metadata, files)
+            | _get_tag_from_files_or_metadata('originaldate', album_metadata, files)
+            | _get_tag_from_files_or_metadata('year', album_metadata, files)
+        )
+        file_years = {d[:4] for d in file_dates if len(d) >= 4}
+        if candidate_year in file_years:
+            score += 20.0
+
+    # 5. Media / Format Match (+20.0)
     candidate_formats: set[str] = set()
     for medium in media_list:
         if isinstance(medium, dict):
@@ -157,7 +174,7 @@ def score_original_candidate(
         if candidate_formats.intersection(file_media):
             score += 20.0
 
-    # 5. Catalog Number Match (+15.0)
+    # 6. Catalog Number Match (+15.0)
     candidate_cat_nums: set[str] = set()
     for label_info in candidate.get('label-info') or []:
         if isinstance(label_info, dict):
@@ -169,12 +186,12 @@ def score_original_candidate(
         if candidate_cat_nums.intersection(file_cats):
             score += 15.0
 
-    # 6. Official Status Priority (+15.0)
+    # 7. Official Status Priority (+15.0)
     # Prefer official releases over bootleg/promotional unless specified
     if candidate.get('status') == 'Official':
         score += 15.0
 
-    # 7. Preferred Countries Match (+10.0)
+    # 8. Preferred Countries Match (+10.0)
     country = candidate.get('country')
     if country and preferred_countries:
         pref_upper = [c.upper() for c in preferred_countries]
