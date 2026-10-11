@@ -142,9 +142,9 @@ except ImportError:
         QMenu = _FallbackMenu
 
 try:
-    from picard import config
-    from picard.debug_opts import DebugOpt
-    from picard.plugin3.api import (
+    from picard import config  # type: ignore
+    from picard.debug_opts import DebugOpt  # type: ignore
+    from picard.plugin3.api import (  # type: ignore
         Album,
         BaseAction,
         Metadata,
@@ -152,6 +152,7 @@ try:
         Track,
         t_,
     )
+    from picard.util import webbrowser2  # type: ignore
 except ImportError:
     config = None  # type: ignore[assignment]
 
@@ -162,6 +163,8 @@ except ImportError:
         if plural is not None:
             return (key, text or "", plural)
         return key
+
+    import webbrowser as webbrowser2  # type: ignore[no-redef]
 
     _Base = QtCore.QObject if hasattr(QtCore, 'QObject') else object
 
@@ -213,4 +216,5 @@ __all__ = [
     "Track",
     "config",
     "t_",
+    "webbrowser2",
 ]

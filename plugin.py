@@ -8,6 +8,7 @@ try:
         DebugOpt,
         Metadata,
         PluginApi,
+        webbrowser2,
     )
     from .candidates import (
         find_related_releases,
@@ -29,6 +30,7 @@ except (ImportError, ValueError):
         DebugOpt,
         Metadata,
         PluginApi,
+        webbrowser2,
     )
     from candidates import (
         find_related_releases,
@@ -318,10 +320,10 @@ class PseudoReleasePlugin:
             return
 
         try:
-            from picard.util import webbrowser2
             webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
         except Exception:
             import webbrowser
+
             webbrowser.open(f"https://musicbrainz.org/release/{release_id}")
 
     @staticmethod
