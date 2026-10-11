@@ -406,11 +406,19 @@ class PseudoReleasePlugin:
             else:
                 files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
                 disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
+                tagger = getattr(api, 'tagger', None)
+                config = getattr(tagger, 'config', None) or getattr(api, 'config', None)
+                pref_countries = get_config_value(
+                    getattr(config, 'setting', None) if config else None,
+                    'preferred_release_countries',
+                    [],
+                )
                 preferred = select_best_original_candidate(
                     candidates=candidates,
                     album_metadata=album_metadata,
                     files=list(files),
                     disc_ids=list(disc_ids) if disc_ids else None,
+                    preferred_countries=pref_countries,
                 )
                 preferred_id = preferred.get('id') if preferred else None
 
