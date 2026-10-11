@@ -151,11 +151,15 @@ try:
         Metadata,
         PluginApi,
         Track,
+        t_,
     )
 except ImportError:
     config = None  # type: ignore[assignment]
     class DebugOpt:
         PLUGIN_DEVELOPMENT = "plugin-development"
+
+    def t_(key: str, text: str | None = None, plural: str | None = None) -> str:  # type: ignore[no-redef]
+        return text or key
 
     _Base = QtCore.QObject if hasattr(QtCore, 'QObject') else object
 
@@ -269,9 +273,9 @@ class LinkedEditionsMenuFilter(QtCore.QObject):
 
 
 class ChooseLinkedOriginalAction(BaseAction):
-    """Choose which linked original release supplies catalog metadata."""
+    """Choose which linked original release supplies metadata."""
 
-    TITLE = "Linked original editions"
+    TITLE = t_("action.linked_original_editions", "Linked original editions")
 
     def __init__(self, parent=None):
         super().__init__(parent)

@@ -149,7 +149,7 @@ class PseudoReleaseOptionsPage(OptionsPage):
             "translated titles) linked to an original release via the "
             "<a href=\"https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644\">"
             "transl-tracklisting</a> relationship.<br><br>"
-            "When a pseudo-release is loaded, this plugin automatically supplements missing catalog metadata "
+            "When a pseudo-release is loaded, this plugin automatically supplements missing metadata "
             "(<code>date</code>, <code>releasecountry</code>, <code>barcode</code>, <code>media</code>, "
             "<code>label</code>, and <code>catalognumber</code>) from the best-matched original release.<br><br>"
             "Additionally, the original release ID is made available to tagger scripts and file naming scripts "
