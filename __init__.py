@@ -667,7 +667,7 @@ class PseudoReleasePlugin:
             requires_auth = False
 
         request_kwargs: dict[str, Any] = {'inc': inc}
-        if is_authorized or requires_auth:
+        if requires_auth:
             request_kwargs['mblogin'] = True
 
         def on_loaded(document: dict[str, Any], http: Any, error: Any) -> None:

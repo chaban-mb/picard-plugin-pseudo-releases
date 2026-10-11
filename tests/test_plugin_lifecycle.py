@@ -414,12 +414,22 @@ class TestPluginLifecycle(unittest.TestCase):
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get_release
 
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=self.api,
-            album=pseudo_album,
-            album_metadata=pseudo_album.metadata,
-            release_node=pseudo_node,
+        mock_cfg = SimpleNamespace(
+            setting={
+                "release_ars": False,
+                "use_genres": True,
+                "only_my_genres": True,
+            }
         )
+
+        with unittest.mock.patch("metadata_engine.config", mock_cfg), \
+             unittest.mock.patch.object(plugin_module, "config", mock_cfg):
+            plugin_module.PseudoReleasePlugin.process_album_metadata(
+                api=self.api,
+                album=pseudo_album,
+                album_metadata=pseudo_album.metadata,
+                release_node=pseudo_node,
+            )
 
         self.assertTrue(captured_kwargs.get("mblogin"))
 
