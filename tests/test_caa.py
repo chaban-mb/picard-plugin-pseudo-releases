@@ -4,16 +4,23 @@ from caa_provider import PseudoReleaseCoverArtProvider
 from constants import TAG_ORIGINAL_RELEASE_ID
 
 
-class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
-    def setUp(self):
-        self.provider = PseudoReleaseCoverArtProvider()
-        self.provider.metadata = {
+class MockCoverArt:
+    def __init__(self, album=None, metadata=None, release=None, front_image_found=False):
+        self.album = album
+        self.metadata = metadata if metadata is not None else {
             "musicbrainz_albumid": "pseudo-release-uuid-9fe",
         }
-        self.provider.release = {
+        self.release = release if release is not None else {
             "id": "pseudo-release-uuid-9fe",
             "cover-art-archive": {"artwork": True},
         }
+        self.front_image_found = front_image_found
+
+
+class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
+    def setUp(self):
+        self.coverart = MockCoverArt()
+        self.provider = PseudoReleaseCoverArtProvider(self.coverart)
 
     def test_disabled_without_original_release_id(self):
         # Without TAG_ORIGINAL_RELEASE_ID, provider must stay disabled
@@ -33,11 +40,6 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         )
 
     def test_disabled_when_original_release_has_no_artwork(self):
-        class MockCoverArt:
-            def __init__(self, album):
-                self.album = album
-                self.front_image_found = False
-
         class MockAlbum:
             def __init__(self):
                 self._pseudo_original_details = {
@@ -48,8 +50,7 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
                 }
 
         album = MockAlbum()
-        self.provider.coverart = MockCoverArt(album)
-        self.provider.album = album
+        self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album))
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-release-uuid-7a1"
 
         self.assertFalse(self.provider._has_suitable_artwork)
@@ -58,11 +59,6 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.assertTrue(PseudoReleaseCoverArtProvider.ignore_json_not_found_error)
 
     def test_album_cache_lookup_with_artwork(self):
-        class MockCoverArt:
-            def __init__(self, album):
-                self.album = album
-                self.front_image_found = False
-
         class MockAlbum:
             def __init__(self):
                 self._pseudo_original_details = {
@@ -73,13 +69,11 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
                 }
 
         album = MockAlbum()
-        self.provider.coverart = MockCoverArt(album)
-        self.provider.album = album
-        # The pseudo release itself has NO artwork:
-        self.provider.release = {
+        release = {
             "id": "pseudo-release-uuid-9fe",
             "cover-art-archive": {"artwork": False},
         }
+        self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album, release=release))
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-release-uuid-7a1"
 
         self.assertTrue(self.provider.enabled())
@@ -87,11 +81,6 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.assertEqual(self.provider._caa_path, "/release/original-release-uuid-7a1/")
 
     def test_album_cache_lookup_without_artwork(self):
-        class MockCoverArt:
-            def __init__(self, album):
-                self.album = album
-                self.front_image_found = False
-
         class MockAlbum:
             def __init__(self):
                 self._pseudo_original_details = {
@@ -102,22 +91,16 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
                 }
 
         album = MockAlbum()
-        self.provider.coverart = MockCoverArt(album)
-        self.provider.album = album
-        self.provider.release = {
+        release = {
             "id": "pseudo-release-uuid-9fe",
             "cover-art-archive": {"artwork": False},
         }
+        self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album, release=release))
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-no-art"
 
         self.assertFalse(self.provider._has_suitable_artwork)
 
     def test_switching_edition_updates_caa_path(self):
-        class MockCoverArt:
-            def __init__(self, album):
-                self.album = album
-                self.front_image_found = False
-
         class MockAlbum:
             def __init__(self):
                 self._pseudo_original_details = {
@@ -126,8 +109,7 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
                 }
 
         album = MockAlbum()
-        self.provider.coverart = MockCoverArt(album)
-        self.provider.album = album
+        self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album))
 
         # First edition
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "edition-2001"
@@ -136,6 +118,7 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         # User switches to second edition
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "edition-2018"
         self.assertEqual(self.provider._caa_path, "/release/edition-2018/")
+
 
     def test_queue_images_invokes_super_when_enabled(self):
         # When provider is enabled, queue_images must invoke the CAA retrieval path

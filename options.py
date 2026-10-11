@@ -27,13 +27,8 @@ class PseudoReleaseOptionsPage(OptionsPage):
     def _tr(self, key: str, text: str) -> str:
         """Translate text if Picard API tr is available, otherwise return default text."""
         api = getattr(self, 'api', None)
-        if api and hasattr(api, 'tr'):
-            try:
-                res = api.tr(key, text)
-                if res:
-                    return res
-            except Exception:
-                pass
+        if api:
+            return api.tr(key, text)
         return text
 
     def __init__(self, parent=None):
@@ -121,11 +116,11 @@ class PseudoReleaseOptionsPage(OptionsPage):
                 if hasattr(parent, 'pagename_to_item'):
                     dialog = parent
                     break
-                parent = parent.parent() if hasattr(parent, 'parent') else None
+                parent = parent.parent()
 
-        if dialog and hasattr(dialog, 'pagename_to_item') and hasattr(dialog, 'ui'):
+        if dialog and hasattr(dialog, 'pagename_to_item'):
             item = dialog.pagename_to_item.get('cover')
-            if item and hasattr(dialog.ui, 'pages_tree'):
+            if item:
                 dialog.ui.pages_tree.setCurrentItem(item)
 
     def load(self):

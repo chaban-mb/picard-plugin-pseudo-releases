@@ -74,7 +74,18 @@ class PluginApi:
 
 
 class Album:
-    pass
+    def __init__(self, album_id: str = "album-123", title: str = "", status: str = "Official") -> None:
+        self.id = album_id
+        self.metadata: Any = None
+        self.tracks: list[Any] = []
+        self._finalized = False
+
+    def iterfiles(self):
+        return iter([])
+
+    def _finalize_loading(self, error: Any = None) -> None:
+        self._finalized = True
+
 
 
 class Track:
@@ -92,11 +103,12 @@ class CoverArtProviderCaa:
 
     def __init__(self, coverart: Any = None) -> None:
         self.coverart = coverart
-        self.metadata: dict[str, Any] = {}
-        self.release: dict[str, Any] = {}
+        self.metadata: dict[str, Any] = getattr(coverart, "metadata", {}) if coverart else {}
+        self.release: dict[str, Any] = getattr(coverart, "release", {}) if coverart else {}
+        self.album = getattr(coverart, "album", None) if coverart else None
 
     def enabled(self) -> bool:
-        return True
+        return not (self.coverart and getattr(self.coverart, "front_image_found", False))
 
     @property
     def _caa_path(self) -> str:

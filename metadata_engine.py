@@ -190,8 +190,9 @@ def supplement_release_relationships_and_genres(
     # 1. Merge relationships into album._release_node['relations']
     raw_relations = orig_release_node.get('relations')
     orig_relations = [r for r in raw_relations if isinstance(r, dict)] if isinstance(raw_relations, list) else []
-    if orig_relations and hasattr(album, '_release_node') and isinstance(album._release_node, dict):
-        existing_rels = album._release_node.setdefault('relations', [])
+    release_node = getattr(album, '_release_node', None)
+    if orig_relations and isinstance(release_node, dict):
+        existing_rels = release_node.setdefault('relations', [])
         existing_signatures = set()
         for r in (existing_rels or []):
             if isinstance(r, dict):
@@ -215,8 +216,7 @@ def supplement_release_relationships_and_genres(
     # 2. Release relationships to metadata
     if get_config_value(setting, 'release_ars', False) and orig_relations and _relations_to_metadata:
         try:
-            if hasattr(album, 'metadata'):
-                _relations_to_metadata(orig_relations, album.metadata, config=target_config, entity='release')
+            _relations_to_metadata(orig_relations, album.metadata, config=target_config, entity='release')
             new_meta = getattr(album, '_new_metadata', None)
             if new_meta is not None:
                 _relations_to_metadata(orig_relations, new_meta, config=target_config, entity='release')
@@ -230,14 +230,14 @@ def supplement_release_relationships_and_genres(
         raw_genres = orig_release_node.get('genres')
         orig_genres = [g for g in raw_genres if isinstance(g, dict)] if isinstance(raw_genres, list) else []
 
-        if hasattr(album, '_release_node') and isinstance(album._release_node, dict):
+        if isinstance(release_node, dict):
             if orig_tags:
-                album._release_node.setdefault('tags', []).extend(
-                    [t for t in orig_tags if t not in (album._release_node.get('tags') or [])]
+                release_node.setdefault('tags', []).extend(
+                    [t for t in orig_tags if t not in (release_node.get('tags') or [])]
                 )
             if orig_genres:
-                album._release_node.setdefault('genres', []).extend(
-                    [g for g in orig_genres if g not in (album._release_node.get('genres') or [])]
+                release_node.setdefault('genres', []).extend(
+                    [g for g in orig_genres if g not in (release_node.get('genres') or [])]
                 )
 
         if add_genres_from_node:
@@ -245,13 +245,6 @@ def supplement_release_relationships_and_genres(
                 add_genres_from_node(orig_release_node, album)
             except Exception:
                 pass
-        else:
-            if hasattr(album, 'add_folksonomy_tag') and orig_tags:
-                for tag in orig_tags:
-                    album.add_folksonomy_tag(tag.get('name'), tag.get('count', 1))
-            if hasattr(album, 'add_genre') and orig_genres:
-                for genre in orig_genres:
-                    album.add_genre(genre.get('name'), genre.get('count', 1))
 
         # Update tracks on the album to calculate merged genres / folksonomy tags
         tracks = getattr(album, 'tracks', [])

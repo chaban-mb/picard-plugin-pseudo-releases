@@ -65,15 +65,18 @@ class PseudoReleasePlugin:
     api: PluginApi | None = None
 
     @classmethod
+    def _tr(cls, key: str, text: str) -> str:
+        """Translate text using plugin API if available, else default text."""
+        if cls.api:
+            return cls.api.tr(key, text)
+        return text
+
+    @classmethod
     def _log_debug(cls, api: PluginApi, message: str, *args: Any) -> None:
-        """Helper to log via debug_if when available."""
-        logger = getattr(api, 'logger', None)
-        if not logger:
-            return
-        if hasattr(logger, 'debug_if'):
-            logger.debug_if(DebugOpt.PLUGIN_DEVELOPMENT, message, *args)
-        else:
-            logger.debug(message, *args)
+        """Helper to log via debug_if."""
+        api.logger.debug_if(DebugOpt.PLUGIN_DEVELOPMENT, message, *args)
+
+
 
     @classmethod
     def remove_album(cls, api: PluginApi, album: Album) -> None:
@@ -112,30 +115,28 @@ class PseudoReleasePlugin:
         album._pseudo_original_candidates = candidates
 
         selection_mode = getattr(album, '_pseudo_original_selection_mode', 'automatic')
+        already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
         if selection_mode == 'manual':
             preferred_id = getattr(album, '_pseudo_original_release_choice', None)
+        elif already_enriched_id:
+            preferred_id = already_enriched_id
         else:
-            already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
-            if already_enriched_id:
-                preferred_id = already_enriched_id
-            else:
-                files = getattr(album, 'iterfiles', lambda: [])() if hasattr(album, 'iterfiles') else []
-                disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
-                tagger = getattr(api, 'tagger', None)
-                config = getattr(tagger, 'config', None) or getattr(api, 'config', None)
-                pref_countries = get_config_value(
-                    getattr(config, 'setting', None) if config else None,
-                    'preferred_release_countries',
-                    [],
-                )
-                preferred = select_best_original_candidate(
-                    candidates=candidates,
-                    album_metadata=album_metadata,
-                    files=list(files),
-                    disc_ids=list(disc_ids) if disc_ids else None,
-                    preferred_countries=pref_countries,
-                )
-                preferred_id = preferred.get('id') if preferred else None
+            files = list(album.iterfiles())
+            disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
+            config_setting = getattr(getattr(api, 'global_config', None), 'setting', None)
+            pref_countries = get_config_value(
+                config_setting,
+                'preferred_release_countries',
+                [],
+            )
+            preferred = select_best_original_candidate(
+                candidates=candidates,
+                album_metadata=album_metadata,
+                files=files,
+                disc_ids=list(disc_ids) if disc_ids else None,
+                preferred_countries=pref_countries,
+            )
+            preferred_id = preferred.get('id') if preferred else None
 
         cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
 
@@ -199,9 +200,6 @@ class PseudoReleasePlugin:
         preferred_id: str | None,
     ) -> None:
         """Fetch menu details during album processing, never while opening the menu."""
-        if not hasattr(api, 'mb_api'):
-            return
-
         detail_cache = getattr(album, '_pseudo_original_details', None)
         if detail_cache is None:
             detail_cache = {}
@@ -245,28 +243,20 @@ class PseudoReleasePlugin:
                         stubs[fallback['id']] = document
                         album._pseudo_candidate_stubs = stubs
                 finally:
-                    if hasattr(api, 'complete_album_task'):
-                        api.complete_album_task(album, task_id)
+                    api.complete_album_task(album, task_id)
 
-            if hasattr(api, 'add_album_task'):
-                api.add_album_task(
-                    album=album,
-                    task_id=task_id,
-                    description=f"Prefetching edition data for {release_id}",
-                    timeout=10.0,
-                    request_factory=lambda rel_id=release_id, cb=on_loaded: api.mb_api.get_release_by_id(
-                        rel_id,
-                        cb,
-                        inc=['labels', 'media', 'discids'],
-                    ),
-                    blocking=False,
-                )
-            else:
-                api.mb_api.get_release_by_id(
-                    release_id,
-                    on_loaded,
+            api.add_album_task(
+                album=album,
+                task_id=task_id,
+                description=f"Prefetching edition data for {release_id}",
+                timeout=10.0,
+                request_factory=lambda rel_id=release_id, cb=on_loaded: api.mb_api.get_release_by_id(
+                    rel_id,
+                    cb,
                     inc=['labels', 'media', 'discids'],
-                )
+                ),
+                blocking=False,
+            )
 
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
@@ -290,14 +280,8 @@ class PseudoReleasePlugin:
             tracks = '+'.join(valid_track_counts)
         year = str(candidate.get('date') or '')[:4]
 
-        rel_events = candidate.get('release-events')
-        countries = countries_from_node(candidate) if isinstance(rel_events, list) else []
-        if countries:
-            sanitized_countries = [str(c) for c in countries if c]
-            country = countries_shortlist(sanitized_countries) if sanitized_countries else '??'
-        else:
-            raw_country = candidate.get('country')
-            country = str(raw_country) if raw_country else '??'
+        countries = countries_from_node(candidate) if isinstance(candidate.get('release-events'), list) else []
+        country = countries_shortlist(countries) if countries else str(candidate.get('country') or '??')
 
         sanitized_media = []
         for medium in media:
@@ -349,13 +333,7 @@ class PseudoReleasePlugin:
         if disambiguation:
             disambig_heading = _(VERSIONS_EXTRA_HEADINGS.get('disambiguation', 'Disambiguation'))
             details.append(f"{disambig_heading}: {disambiguation}")
-        api = getattr(cls, 'api', None)
-        hint = (
-            api.tr("action.tooltip_open_browser", "Middle-click or right-click to open in browser.")
-            if api and hasattr(api, 'tr')
-            else "Middle-click or right-click to open in browser."
-        )
-        details.append(hint)
+        details.append(cls._tr("action.tooltip_open_browser", "Middle-click or right-click to open in browser."))
         return '\n'.join(details)
 
     @classmethod
@@ -394,14 +372,9 @@ class PseudoReleasePlugin:
         inc = list(get_enrichment_inc_params())
 
         # Determine authentication state for MusicBrainz web service
-        tagger = getattr(api, 'tagger', None)
-        webservice = getattr(tagger, 'webservice', None)
-        oauth_mgr = getattr(webservice, 'oauth_manager', None)
-        is_authorized = bool(
-            oauth_mgr
-            and hasattr(oauth_mgr, 'is_authorized')
-            and oauth_mgr.is_authorized()
-        )
+        webservice = getattr(api, 'web_service', None) or getattr(getattr(api, 'tagger', None), 'webservice', None)
+        oauth_mgr = getattr(webservice, 'oauth_manager', None) if webservice else None
+        is_authorized = bool(oauth_mgr and oauth_mgr.is_authorized())
         requires_auth = any(
             p in inc for p in ('user-tags', 'user-genres', 'user-ratings', 'user-collections')
         )
@@ -409,10 +382,8 @@ class PseudoReleasePlugin:
         # If user-specific tags were requested but client is not logged in,
         # fallback to public tags/genres so MusicBrainz does not reject with 401.
         if requires_auth and not is_authorized:
-            inc = [
-                'tags' if p == 'user-tags' else ('genres' if p == 'user-genres' else p)
-                for p in inc
-            ]
+            auth_fallbacks = {'user-tags': 'tags', 'user-genres': 'genres'}
+            inc = [auth_fallbacks.get(p, p) for p in inc]
             requires_auth = False
 
         request_kwargs: dict[str, Any] = {'inc': inc}
@@ -453,37 +424,23 @@ class PseudoReleasePlugin:
 
             finally:
                 cls.in_flight_albums.discard(album_id)
-                if hasattr(api, 'complete_album_task'):
-                    api.complete_album_task(album, task_id)
+                api.complete_album_task(album, task_id)
                 if hasattr(album, '_finalize_loading'):
                     album._finalize_loading(None)
 
-        if hasattr(api, 'add_album_task') and hasattr(api, 'mb_api'):
-            try:
-                api.add_album_task(
-                    album=album,
-                    task_id=task_id,
-                    description=f"Loading pseudo-release data for {target_mbid}",
-                    timeout=15.0,
-                    request_factory=lambda: api.mb_api.get_release_by_id(
-                        target_mbid,
-                        on_loaded,
-                        **request_kwargs,
-                    ),
-                    blocking=True,
-                )
-            except Exception:
-                cls.in_flight_albums.discard(album_id)
-                raise
-        elif hasattr(api, 'mb_api'):
-            try:
-                api.mb_api.get_release_by_id(
+        try:
+            api.add_album_task(
+                album=album,
+                task_id=task_id,
+                description=f"Loading pseudo-release data for {target_mbid}",
+                timeout=15.0,
+                request_factory=lambda: api.mb_api.get_release_by_id(
                     target_mbid,
                     on_loaded,
                     **request_kwargs,
-                )
-            except Exception:
-                cls.in_flight_albums.discard(album_id)
-                raise
-        else:
+                ),
+                blocking=True,
+            )
+        except Exception:
             cls.in_flight_albums.discard(album_id)
+            raise

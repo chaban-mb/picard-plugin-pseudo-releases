@@ -39,8 +39,26 @@ for mod_name in [
 try:
     import picard
     picard.tagger_instance = lambda: None
-except ImportError:
+    from picard import config as cfg_mod
+    from types import SimpleNamespace
+    fake_config = SimpleNamespace(
+        setting={
+            'caa_restrict_image_types': False,
+            'caa_image_types': [],
+            'caa_image_types_to_omit': [],
+            'preferred_release_countries': [],
+            'release_ars': False,
+            'use_genres': False,
+            'only_my_genres': False,
+        },
+        persist={},
+        profiles={},
+    )
+    cfg_mod.config = fake_config
+    cfg_mod.get_config = lambda: fake_config
+except (ImportError, Exception):
     pass
+
 
 
 # Setup fallback mocks if PyQt6 or picard are not installed or cannot be imported

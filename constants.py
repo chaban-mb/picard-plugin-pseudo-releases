@@ -26,16 +26,15 @@ TAG_ORIGINAL_RELEASE_ID = '~original_musicbrainz_albumid'
 
 
 def get_config_value(cfg, key, default=None):
-    """Safe lookup for Picard plugin_config, supporting ProfileConfigSection (__getitem__)
-    as well as standard dicts and objects implementing .get()."""
+    """Safe lookup for Picard config.setting, ProfileConfigSection, or dict-like objects."""
+    if cfg is None:
+        return default
     if hasattr(cfg, 'get'):
-        try:
-            return cfg.get(key, default)
-        except Exception:
-            pass
+        return cfg.get(key, default)
     try:
         val = cfg[key]
         return val if val is not None else default
     except (KeyError, TypeError, IndexError):
         return default
+
 

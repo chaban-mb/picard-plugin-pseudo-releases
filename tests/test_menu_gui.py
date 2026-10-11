@@ -55,6 +55,10 @@ class MockAlbum:
         self.tracks = []
         self._pseudo_original_candidates = []
 
+    def iterfiles(self):
+        return iter([])
+
+
 
 def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     """Test that middle-click and right-click on real QMenu actions trigger browser lookup."""
@@ -94,6 +98,7 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
         tagger=mock_tagger,
         plugin_config={},
         logger=MagicMock(),
+        tr=MagicMock(side_effect=lambda key, text=None, **kwargs: text or key),
     )
     plugin_module.PseudoReleasePlugin.api = api
 

@@ -7,9 +7,17 @@ from candidates import (
 )
 
 
+class MockMetadata(dict):
+    def getall(self, key: str) -> list[str]:
+        val = self.get(key)
+        if val is None:
+            return []
+        return val if isinstance(val, list) else [val]
+
+
 class MockFile:
     def __init__(self, metadata=None):
-        self.metadata = metadata or {}
+        self.metadata = MockMetadata(metadata or {})
 
 
 class TestCandidateDiscovery(unittest.TestCase):

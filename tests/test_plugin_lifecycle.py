@@ -71,6 +71,10 @@ class MockAlbum:
         self.load_calls.append(kwargs)
         self.metadata = MockMetadata()
 
+    def iterfiles(self):
+        return iter([])
+
+
 
 class MockPluginConfig(dict):
     def register_option(self, name, default):
@@ -262,28 +266,24 @@ class TestPluginLifecycle(unittest.TestCase):
         self.api.tagger.window.selected_objects = [album]
         action = self.api.album_actions[0]()
         shown_menu = action.menu()
-        tooltips_vis = shown_menu.toolTipsVisible() if hasattr(shown_menu, 'toolTipsVisible') else shown_menu.tooltips_visible
-        self.assertTrue(tooltips_vis)
-        raw_actions = shown_menu.actions() if callable(shown_menu.actions) else shown_menu.actions
+        self.assertTrue(shown_menu.toolTipsVisible())
+        raw_actions = shown_menu.actions()
         real_actions = [entry for entry in raw_actions if entry is not None]
         self.assertEqual(len(real_actions), 3)
-        self.assertEqual(real_actions[0].text() if callable(real_actions[0].text) else real_actions[0].text, "Tracks / Year / Country / Format / Label / Cat No")
-        texts = [entry.text() if callable(entry.text) else entry.text for entry in real_actions]
+        self.assertEqual(real_actions[0].text(), "Tracks / Year / Country / Format / Label / Cat No")
+        texts = [entry.text() for entry in real_actions]
         self.assertNotIn("Automatic best match", texts)
-        is_enabled = real_actions[0].isEnabled() if hasattr(real_actions[0], 'isEnabled') else real_actions[0].enabled
-        self.assertFalse(is_enabled)
+        self.assertFalse(real_actions[0].isEnabled())
         self.assertTrue(real_actions[0].font().bold())
         self.assertFalse(real_actions[0].font().underline())
         self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10130", texts[1])
         self.assertIn("30+25 / 2008 / JP / 2×CD / Square Enix / SQEX-10132", texts[2])
-        tip1 = real_actions[1].toolTip() if hasattr(real_actions[1], 'toolTip') else getattr(real_actions[1], 'tooltip', '')
+        tip1 = real_actions[1].toolTip()
         self.assertIn("Packaging: Jewel Case", tip1)
         self.assertIn("Barcode: 111", tip1)
         self.assertIn("Disambiguation: First pressing", tip1)
-        is_checked1 = real_actions[1].isChecked() if hasattr(real_actions[1], 'isChecked') else real_actions[1].checked
-        is_checked2 = real_actions[2].isChecked() if hasattr(real_actions[2], 'isChecked') else real_actions[2].checked
-        self.assertFalse(is_checked1)
-        self.assertFalse(is_checked2)
+        self.assertFalse(real_actions[1].isChecked())
+        self.assertFalse(real_actions[2].isChecked())
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
         real_actions[2].trigger()
@@ -297,10 +297,9 @@ class TestPluginLifecycle(unittest.TestCase):
             }
         )
         reopened_menu = self.api.album_actions[0]().menu()
-        reopened_raw = reopened_menu.actions() if callable(reopened_menu.actions) else reopened_menu.actions
+        reopened_raw = reopened_menu.actions()
         reopened_real = [entry for entry in reopened_raw if entry is not None]
-        reopened_checked2 = reopened_real[2].isChecked() if hasattr(reopened_real[2], 'isChecked') else reopened_real[2].checked
-        self.assertTrue(reopened_checked2)
+        self.assertTrue(reopened_real[2].isChecked())
         self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 0)
 
     def test_manual_original_choice_overrides_auto_supplement_and_ranking(self):
@@ -493,6 +492,31 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertNotIn("user-genres", inc)
         self.assertIn("tags", inc)
         self.assertIn("genres", inc)
+
+    def test_plugin_tr_helper(self):
+        # When api is None
+        plugin_module.PseudoReleasePlugin.api = None
+        self.assertEqual(
+            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
+            "Fallback Hint",
+        )
+
+        # When api is attached without custom translation
+        plugin_module.PseudoReleasePlugin.api = self.api
+        self.assertEqual(
+            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
+            "Fallback Hint",
+        )
+
+        # When api returns a translated string
+        mock_api = MagicMock()
+        mock_api.tr.return_value = "Translated Tooltip Hint"
+        plugin_module.PseudoReleasePlugin.api = mock_api
+        self.assertEqual(
+            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
+            "Translated Tooltip Hint",
+        )
+        mock_api.tr.assert_called_with("action.tooltip_open_browser", "Fallback Hint")
 
 
 if __name__ == '__main__':

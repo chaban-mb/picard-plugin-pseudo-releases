@@ -28,26 +28,20 @@ class LinkedEditionsMenuFilter(QtCore.QObject):
         self._tagger = tagger
 
     def eventFilter(self, obj, event):
-        try:
-            if (
-                event.type() == QtCore.QEvent.Type.MouseButtonRelease
-                and event.button() in {QtCore.Qt.MouseButton.MiddleButton, QtCore.Qt.MouseButton.RightButton}
-            ):
-                action = self._menu.actionAt(event.pos()) if hasattr(self._menu, 'actionAt') else None
-                release_id = action.data() if (action and hasattr(action, 'data')) else None
-                if release_id:
-                    PseudoReleasePlugin.open_release_in_browser(release_id, self._tagger)
-                    p = self._menu
-                    while p and isinstance(p, QtWidgets.QMenu):
-                        p.close()
-                        p = p.parent()
-                    return True
-        except Exception:
-            pass
-        try:
-            return super().eventFilter(obj, event) if hasattr(super(), 'eventFilter') else False
-        except (TypeError, Exception):
-            return False
+        if (
+            event.type() == QtCore.QEvent.Type.MouseButtonRelease
+            and event.button() in {QtCore.Qt.MouseButton.MiddleButton, QtCore.Qt.MouseButton.RightButton}
+        ):
+            action = self._menu.actionAt(event.pos())
+            release_id = action.data() if action else None
+            if release_id:
+                PseudoReleasePlugin.open_release_in_browser(release_id, self._tagger)
+                p = self._menu
+                while p and isinstance(p, QtWidgets.QMenu):
+                    p.close()
+                    p = p.parent()
+                return True
+        return super().eventFilter(obj, event)
 
 
 class ChooseLinkedOriginalAction(BaseAction):
@@ -57,11 +51,11 @@ class ChooseLinkedOriginalAction(BaseAction):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        if getattr(self, 'tagger', None) is None and getattr(PseudoReleasePlugin, 'api', None):
-            self.tagger = getattr(PseudoReleasePlugin.api, 'tagger', None)
-
-        window = getattr(self.tagger, 'window', None)
-        albums = getattr(window, 'selected_objects', [])
+        api = getattr(self, 'api', None) or PseudoReleasePlugin.api
+        tagger = getattr(self, 'tagger', None) or getattr(api, 'tagger', None) or tagger_instance()
+        self.tagger = tagger
+        window = getattr(tagger, 'window', None) if tagger else None
+        albums = getattr(window, 'selected_objects', []) if window else []
         if len(albums) != 1:
             self.setEnabled(False)
             return
@@ -82,17 +76,14 @@ class ChooseLinkedOriginalAction(BaseAction):
         self.destroyed.connect(lambda *_: menu.deleteLater())
         self.setMenu(menu)
 
-        self._menu_filter = LinkedEditionsMenuFilter(menu, tagger=getattr(self, 'tagger', None), parent=menu)
+        self._menu_filter = LinkedEditionsMenuFilter(menu, tagger=tagger, parent=menu)
         menu.installEventFilter(self._menu_filter)
 
         selection_group = QtGui.QActionGroup(menu)
         selection_group.setExclusive(True)
 
-        heading_text = getattr(
-            getattr(album, 'release_group', None),
-            'version_headings',
-            "Tracks / Year / Country / Format / Label / Cat No",
-        )
+        rg = getattr(album, 'release_group', None)
+        heading_text = getattr(rg, 'version_headings', "Tracks / Year / Country / Format / Label / Cat No")
         heading = menu.addAction(str(heading_text))
         heading_font = heading.font()
         heading_font.setBold(True)
@@ -107,11 +98,7 @@ class ChooseLinkedOriginalAction(BaseAction):
         ):
             current_id = getattr(album, '_pseudo_original_release_choice', None)
         detail_cache = getattr(album, '_pseudo_original_details', {})
-        if not isinstance(detail_cache, dict):
-            detail_cache = {}
         stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
-        if not isinstance(stub_cache, dict):
-            stub_cache = {}
         seen_candidate_ids: set[str] = set()
         for candidate in candidates:
             if not isinstance(candidate, dict):

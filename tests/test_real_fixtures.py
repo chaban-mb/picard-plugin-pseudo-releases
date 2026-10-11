@@ -84,6 +84,10 @@ class MockAlbum:
     def load(self, **kwargs):
         self.load_calls.append(kwargs)
 
+    def iterfiles(self):
+        return iter([])
+
+
 
 class MockPluginConfig(dict):
     def register_option(self, name, default):
@@ -133,6 +137,10 @@ class MockPluginApi:
 
     def register_options_page(self, page_cls):
         self.options_pages.append(page_cls)
+
+    def register_script_variable(self, name, documentation="", title="", **kwargs):
+        pass
+
 
     def add_album_task(self, album, task_id, description, timeout, request_factory, blocking=False):
         self.added_tasks.append((album, task_id, blocking))
@@ -194,10 +202,14 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(meta["album"], "Sen to Chihiro no Kamikakushi")
 
         # 4. Assert CAA provider routes to original release
-        caa_provider = PseudoReleaseCoverArtProvider()
-        caa_provider.metadata = meta
-        caa_provider.album = pseudo_album
-        caa_provider.coverart = SimpleNamespace(album=pseudo_album, tagger=self.api.tagger, front_image_found=False)
+        mock_coverart = SimpleNamespace(
+            album=pseudo_album,
+            metadata=meta,
+            release=pseudo_node,
+            tagger=self.api.tagger,
+            front_image_found=False,
+        )
+        caa_provider = PseudoReleaseCoverArtProvider(mock_coverart)
         self.assertTrue(caa_provider.enabled())
         self.assertEqual(caa_provider._caa_path, "/release/7a16f215-079e-4c55-abda-06f9a4228b6a/")
 
@@ -372,10 +384,14 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(pseudo_album.metadata[TAG_ORIGINAL_RELEASE_ID], "7a16f215-079e-4c55-abda-06f9a4228b6a")
 
         # CAA provider is enabled and resolves original MBID path
-        caa_provider = PseudoReleaseCoverArtProvider()
-        caa_provider.metadata = pseudo_album.metadata
-        caa_provider.release = pseudo_node
-        caa_provider.coverart = SimpleNamespace(album=pseudo_album, tagger=self.api.tagger, front_image_found=False)
+        mock_coverart = SimpleNamespace(
+            album=pseudo_album,
+            metadata=pseudo_album.metadata,
+            release=pseudo_node,
+            tagger=self.api.tagger,
+            front_image_found=False,
+        )
+        caa_provider = PseudoReleaseCoverArtProvider(mock_coverart)
         self.assertTrue(caa_provider.enabled())
         self.assertEqual(caa_provider._caa_path, "/release/7a16f215-079e-4c55-abda-06f9a4228b6a/")
 
@@ -540,33 +556,38 @@ class TestRealWorldFixtures(unittest.TestCase):
 
         # Plugin lifecycle null and malformed dispatch safety
         plugin_module.PseudoReleasePlugin.process_album_metadata(
-            SimpleNamespace(),
-            SimpleNamespace(id="album-null"),
-            {},
+            self.api,
+            MockAlbum(album_id="album-null"),
+            MockMetadata(),
             None,
         )
         plugin_module.PseudoReleasePlugin._prefetch_linked_original_details(
-            SimpleNamespace(mb_api=object()),
-            SimpleNamespace(),
+            self.api,
+            MockAlbum(album_id="album-prefetch"),
             [None],
             None,
         )
         plugin_module.PseudoReleasePlugin._handle_supplement_pseudo(
-            SimpleNamespace(),
-            SimpleNamespace(id="album-none"),
-            {},
+            self.api,
+            MockAlbum(album_id="album-none"),
+            MockMetadata(),
             "target-none",
             [None],
         )
 
         # In-flight state leak prevention when api cannot schedule task
-        test_album = SimpleNamespace(id="album-leak-test")
+        test_album = MockAlbum(album_id="album-leak-test")
         plugin_module.PseudoReleasePlugin.in_flight_albums.clear()
-        plugin_module.PseudoReleasePlugin._queue_enrichment(
-            SimpleNamespace(),
-            test_album,
-            "target-mbid-1",
+        failing_api = MockPluginApi()
+        failing_api.add_album_task = unittest.mock.MagicMock(
+            side_effect=RuntimeError("Scheduler error")
         )
+        with self.assertRaises(RuntimeError):
+            plugin_module.PseudoReleasePlugin._queue_enrichment(
+                failing_api,
+                test_album,
+                "target-mbid-1",
+            )
         self.assertNotIn("album-leak-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
 

@@ -52,6 +52,15 @@ def find_related_releases(
     return candidates
 
 
+def _extract_tag_values(source: Any, tag_name: str) -> set[str]:
+    """Extract non-empty lowercase string values for a tag from a metadata container."""
+    meta = getattr(source, 'metadata', source)
+    raw_vals = meta.getall(tag_name) if hasattr(meta, 'getall') else meta.get(tag_name, [])
+    if isinstance(raw_vals, str):
+        raw_vals = [raw_vals]
+    return {str(v).strip().lower() for v in raw_vals if str(v).strip()}
+
+
 def _get_tag_from_files_or_metadata(
     tag_name: str,
     album_metadata: Any = None,
@@ -59,32 +68,13 @@ def _get_tag_from_files_or_metadata(
 ) -> set[str]:
     """Collect non-empty string values for a tag from files or album metadata."""
     values: set[str] = set()
-
     if files:
         for file in files:
-            meta = getattr(file, 'metadata', file)
-            if hasattr(meta, 'getall'):
-                for value in meta.getall(tag_name):
-                    value = str(value).strip()
-                    if value:
-                        values.add(value.lower())
-            elif hasattr(meta, 'get'):
-                value = meta.get(tag_name)
-                if value:
-                    values.add(str(value).strip().lower())
-
+            values.update(_extract_tag_values(file, tag_name))
     if not values and album_metadata is not None:
-        if hasattr(album_metadata, 'getall'):
-            for value in album_metadata.getall(tag_name):
-                value = str(value).strip()
-                if value:
-                    values.add(value.lower())
-        elif hasattr(album_metadata, 'get'):
-            value = album_metadata.get(tag_name)
-            if value:
-                values.add(str(value).strip().lower())
-
+        values.update(_extract_tag_values(album_metadata, tag_name))
     return values
+
 
 
 def score_original_candidate(

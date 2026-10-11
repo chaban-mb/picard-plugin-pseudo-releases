@@ -42,12 +42,10 @@ def enable(api: PluginApi) -> None:
     api.register_album_metadata_processor(PseudoReleasePlugin.process_album_metadata, priority=50)
 
     # Register a manual chooser for linked original editions
-    if hasattr(api, 'register_album_action'):
-        api.register_album_action(ChooseLinkedOriginalAction)
+    api.register_album_action(ChooseLinkedOriginalAction)
 
     # Register post-removal processor for cleanup
-    if hasattr(api, 'register_album_post_removal_processor'):
-        api.register_album_post_removal_processor(PseudoReleasePlugin.remove_album)
+    api.register_album_post_removal_processor(PseudoReleasePlugin.remove_album)
 
     # Register Cover Art Archive provider
     api.register_cover_art_provider(PseudoReleaseCoverArtProvider)
@@ -56,17 +54,17 @@ def enable(api: PluginApi) -> None:
     api.register_options_page(PseudoReleaseOptionsPage)
 
     # Register custom script variables
-    if hasattr(api, 'register_script_variable'):
-        title = api.tr("variable.original_albumid.title", "Original MusicBrainz Album ID")
-        doc = api.tr(
-            "variable.original_albumid.doc",
-            "MusicBrainz Release ID of the linked original release for pseudo-releases",
-        )
-        api.register_script_variable(
-            "_original_musicbrainz_albumid",
-            documentation=doc,
-            title=title,
-        )
+    title = api.tr("variable.original_albumid.title", "Original MusicBrainz Album ID")
+    doc = api.tr(
+        "variable.original_albumid.doc",
+        "MusicBrainz Release ID of the linked original release for pseudo-releases",
+    )
+    api.register_script_variable(
+        "_original_musicbrainz_albumid",
+        documentation=doc,
+        title=title,
+    )
+
 
 
 def disable(api: PluginApi | None = None) -> None:

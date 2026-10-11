@@ -27,47 +27,24 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
 
     ignore_json_not_found_error = True
 
-    def __init__(self, coverart: Any = None) -> None:
-        if coverart is not None:
-            super().__init__(coverart)
-        else:
-            self.coverart = None
-            self.metadata: dict[str, Any] = {}
-            self.release: dict[str, Any] = {}
-            self.album = None
-            self.restrict_types = False
-            self.included_types: set[str] = set()
-            self.excluded_types: set[str] = set()
-            self.included_types_count = 0
-
-
-
     @property
     def _original_id(self) -> str | None:
         """Resolve the linked original release ID from metadata or album state."""
         orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         if orig_id:
             return orig_id
-        album = getattr(self, 'album', None)
-        if not album and hasattr(self, 'coverart') and self.coverart:
-            album = getattr(self.coverart, 'album', None)
-        if album:
-            return getattr(album, '_pseudo_original_id', getattr(album, '_pseudo_original_release_choice', None))
+        if self.album:
+            return getattr(self.album, '_pseudo_original_id', getattr(self.album, '_pseudo_original_release_choice', None))
         return None
 
     @property
     def original_release(self) -> dict[str, Any] | None:
         """Retrieve original release document from album cache if available."""
         orig_id = self._original_id
-        if not orig_id:
+        if not orig_id or not self.album:
             return None
-        album = getattr(self, 'album', None)
-        if not album and hasattr(self, 'coverart') and self.coverart:
-            album = getattr(self.coverart, 'album', None)
-        if album:
-            details = getattr(album, '_pseudo_original_details', {})
-            return details.get(orig_id)
-        return None
+        details = getattr(self.album, '_pseudo_original_details', {})
+        return details.get(orig_id)
 
     @property
     def _caa_path(self) -> str:
@@ -97,9 +74,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
 
     def enabled(self) -> bool:
         """Activate for pseudo-releases that have resolved an original release candidate."""
-        if not self._original_id:
+        if not self._original_id or not super().enabled():
             return False
-        if hasattr(self, 'coverart') and self.coverart:
-            if getattr(self.coverart, 'front_image_found', False):
-                return False
         return self._has_suitable_artwork
+
