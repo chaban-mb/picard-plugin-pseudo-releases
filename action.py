@@ -75,7 +75,7 @@ class ChooseLinkedOriginalAction(BaseAction):
             return
 
         candidates = getattr(album, '_pseudo_original_candidates', [])
-        if not candidates:
+        if not isinstance(candidates, list) or not candidates:
             self.setEnabled(False)
             return
 
@@ -94,7 +94,7 @@ class ChooseLinkedOriginalAction(BaseAction):
         heading_text = getattr(getattr(album, 'release_group', None), 'version_headings', None)
         if not heading_text:
             heading_text = "Tracks / Year / Country / Format / Label / Cat No"
-        heading = menu.addAction(heading_text)
+        heading = menu.addAction(str(heading_text))
         heading_font = heading.font()
         heading_font.setBold(True)
         heading_font.setUnderline(False)
@@ -108,9 +108,15 @@ class ChooseLinkedOriginalAction(BaseAction):
         ):
             current_id = getattr(album, '_pseudo_original_release_choice', None)
         detail_cache = getattr(album, '_pseudo_original_details', {})
+        if not isinstance(detail_cache, dict):
+            detail_cache = {}
         stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
+        if not isinstance(stub_cache, dict):
+            stub_cache = {}
         seen_candidate_ids: set[str] = set()
         for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
             release_id = candidate.get('id')
             if not release_id or release_id in seen_candidate_ids:
                 continue

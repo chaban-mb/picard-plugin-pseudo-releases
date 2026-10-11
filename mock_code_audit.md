@@ -72,19 +72,19 @@ In actual production deployments (within MusicBrainz Picard 3.0+), Picard is alw
 
 ### 1.3 `plugin.py`
 
-#### Native Picard Utility Fallbacks (Lines 65–135)
+#### Native Picard Utility Fallbacks (Lines 65–144)
 *Triggered when `from picard.mbjson import ...`, `from picard.releasegroup import ...`, or `from picard.util import ...` raise `ImportError`.*
 
 | Component | Lines | Purpose & Fallback Behavior |
 | :--- | :--- | :--- |
 | `countries_from_node` | 66–76 | Extracts ISO country codes from candidate `release-events` dictionaries. |
-| `countries_shortlist` | 78–83 | Joins country codes with `+` and truncates using `…` for >6 countries. |
-| `label_info_from_node` | 85–98 | Deduplicates labels and catalog numbers from `label-info` dictionaries. |
-| `media_formats_from_node` | 100–121 | Deduplicates and counts media formats (e.g. `2×CD`). |
-| `pgettext_attributes` | 123–124 | Identity function returning untranslated packaging name. |
-| `_` | 126–127 | Identity function returning input string. |
-| `VERSIONS_MAX_TRACKS` | 129 | Limit candidate edition track count segment display before `+…` truncation (10). |
-| `VERSIONS_EXTRA_HEADINGS` | 130–134 | English literal mapping: `{'packaging': 'Packaging', 'barcode': 'Barcode', 'disambiguation': 'Disambiguation'}`. |
+| `countries_shortlist` | 78–86 | Joins country codes with `+` and truncates using `…` for >6 countries. |
+| `label_info_from_node` | 88–106 | Deduplicates labels and catalog numbers from `label-info` dictionaries. |
+| `media_formats_from_node` | 108–130 | Deduplicates and counts media formats (e.g. `2×CD`). |
+| `pgettext_attributes` | 132–133 | Identity function returning untranslated packaging name. |
+| `_` | 135–136 | Identity function returning input string. |
+| `VERSIONS_MAX_TRACKS` | 138 | Limit candidate edition track count segment display before `+…` truncation (10). |
+| `VERSIONS_EXTRA_HEADINGS` | 139–143 | English literal mapping: `{'packaging': 'Packaging', 'barcode': 'Barcode', 'disambiguation': 'Disambiguation'}`. |
 
 ---
 

@@ -30,8 +30,10 @@ def find_related_releases(
         list[dict[str, Any]]: List of target release dictionaries.
     """
     candidates: list[dict[str, Any]] = []
-    relations = release_node.get('relations') or []
-    for rel in relations:
+    if not isinstance(release_node, dict):
+        return candidates
+    relations = release_node.get('relations')
+    for rel in (relations if isinstance(relations, list) else []):
         if not isinstance(rel, dict):
             continue
 
@@ -109,39 +111,52 @@ def score_original_candidate(
     Returns:
         float: Match score (higher is better).
     """
+    if not isinstance(candidate, dict):
+        return 0.0
+
     score = 0.0
 
     # 1. Disc ID Match (+100.0) - Exact hardware verification
+    raw_media = candidate.get('media')
+    media_list = [m for m in raw_media if isinstance(m, dict)] if isinstance(raw_media, list) else []
+
     if disc_ids:
         candidate_disc_ids: set[str] = set()
-        for medium in candidate.get('media') or []:
-            if isinstance(medium, dict):
-                for disc in medium.get('discs') or []:
-                    if isinstance(disc, dict):
-                        d_id = disc.get('id')
-                        if d_id:
-                            candidate_disc_ids.add(d_id.lower())
+        for medium in media_list:
+            discs = medium.get('discs')
+            for disc in (discs if isinstance(discs, list) else []):
+                if isinstance(disc, dict):
+                    d_id = disc.get('id')
+                    if d_id:
+                        candidate_disc_ids.add(str(d_id).lower())
         for d in disc_ids:
-            if d.lower() in candidate_disc_ids:
+            if str(d).lower() in candidate_disc_ids:
                 score += 100.0
                 break
 
     # 2. Medium Layout / Track Count Match (+40.0)
     # Checks if candidate media matches the file count or disc layout
-    media_list = candidate.get('media') or []
-    total_tracks = sum(
-        int(m.get('track-count') or len(m.get('tracks') or []))
-        for m in media_list
-        if isinstance(m, dict)
-    )
-    file_count = len(files) if files else 0
+    total_tracks = 0
+    for m in media_list:
+        tc = m.get('track-count')
+        if tc is not None:
+            try:
+                total_tracks += int(tc)
+                continue
+            except (ValueError, TypeError):
+                pass
+        tracks_val = m.get('tracks')
+        if isinstance(tracks_val, list):
+            total_tracks += len(tracks_val)
+
+    file_count = len(files) if (files and isinstance(files, (list, tuple, set))) else 0
     if file_count > 0 and total_tracks == file_count:
         score += 40.0
 
     # 3. Barcode Match (+30.0)
     candidate_barcode = candidate.get('barcode')
     if candidate_barcode:
-        clean_candidate_bc = ''.join(c for c in candidate_barcode if c.isalnum()).lower()
+        clean_candidate_bc = ''.join(c for c in str(candidate_barcode) if c.isalnum()).lower()
         file_barcodes = {
             ''.join(c for c in b if c.isalnum()).lower()
             for b in _get_tag_from_files_or_metadata('barcode', album_metadata, files)
@@ -150,7 +165,7 @@ def score_original_candidate(
             score += 30.0
 
     # 4. Release Date / Year Match (+20.0)
-    candidate_date = candidate.get('date') or ''
+    candidate_date = str(candidate.get('date') or '')
     candidate_year = candidate_date[:4]
     if candidate_year:
         file_dates = (
@@ -165,10 +180,9 @@ def score_original_candidate(
     # 5. Media / Format Match (+20.0)
     candidate_formats: set[str] = set()
     for medium in media_list:
-        if isinstance(medium, dict):
-            fmt = medium.get('format')
-            if fmt:
-                candidate_formats.add(fmt.lower())
+        fmt = medium.get('format')
+        if fmt is not None:
+            candidate_formats.add(str(fmt).lower())
     if candidate_formats:
         file_media = _get_tag_from_files_or_metadata('media', album_metadata, files)
         if candidate_formats.intersection(file_media):
@@ -176,11 +190,12 @@ def score_original_candidate(
 
     # 6. Catalog Number Match (+15.0)
     candidate_cat_nums: set[str] = set()
-    for label_info in candidate.get('label-info') or []:
+    raw_label_info = candidate.get('label-info')
+    for label_info in (raw_label_info if isinstance(raw_label_info, list) else []):
         if isinstance(label_info, dict):
             cat = label_info.get('catalog-number')
-            if cat:
-                candidate_cat_nums.add(cat.strip().lower())
+            if cat is not None:
+                candidate_cat_nums.add(str(cat).strip().lower())
     if candidate_cat_nums:
         file_cats = _get_tag_from_files_or_metadata('catalognumber', album_metadata, files)
         if candidate_cat_nums.intersection(file_cats):
@@ -194,15 +209,16 @@ def score_original_candidate(
     # 8. Preferred Countries Match (+10.0)
     country = candidate.get('country')
     if country and preferred_countries:
-        pref_upper = [c.upper() for c in preferred_countries]
-        if country.upper() in pref_upper:
+        country_str = str(country).upper()
+        pref_upper = [str(c).upper() for c in preferred_countries]
+        if country_str in pref_upper:
             # Earlier in preference list gets a slightly higher priority
-            idx = pref_upper.index(country.upper())
+            idx = pref_upper.index(country_str)
             score += max(1.0, 10.0 - idx)
 
     # 9. Cover Art Archive Presence (+5.0)
-    caa = candidate.get('cover-art-archive') or {}
-    if caa.get('artwork') or caa.get('front'):
+    caa = candidate.get('cover-art-archive')
+    if isinstance(caa, dict) and (caa.get('artwork') or caa.get('front')):
         score += 5.0
 
     return score
@@ -216,11 +232,12 @@ def select_best_original_candidate(
     preferred_countries: Sequence[str] | None = None,
 ) -> dict[str, Any] | None:
     """Rank and select the most promising original release from candidates."""
-    if not candidates:
+    valid_candidates = [c for c in (candidates or []) if isinstance(c, dict)]
+    if not valid_candidates:
         return None
 
     ranked = sorted(
-        candidates,
+        valid_candidates,
         key=lambda candidate: score_original_candidate(
             candidate=candidate,
             album_metadata=album_metadata,

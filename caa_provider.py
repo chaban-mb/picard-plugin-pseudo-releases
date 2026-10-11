@@ -106,7 +106,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
             return False
 
         orig_release = self.original_release
-        if orig_release and 'cover-art-archive' in orig_release:
+        if orig_release and isinstance(orig_release, dict) and 'cover-art-archive' in orig_release:
             orig_node = self.release
             try:
                 self.release = orig_release

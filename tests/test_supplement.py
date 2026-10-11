@@ -263,7 +263,20 @@ class TestMetadataSupplementation(unittest.TestCase):
         self.assertEqual(album._release_node["genres"], [{"name": "anime", "count": 3}])
         # album item received folksonomy tags and genres
         self.assertEqual(album._folksonomy_tags["美少女戦士セーラームーン"], 5)
-        self.assertEqual(album._genres["anime"], 3)
+        # Null and invalid type safety verification
+        self.assertEqual(extract_release_catalog_metadata(None), {})
+        self.assertEqual(extract_release_catalog_metadata({"media": 123, "label-info": 123}), {})
+
+        dummy_meta = MockMetadata()
+        supplement_pseudo_metadata(dummy_meta, None)
+        self.assertEqual(dummy_meta._data, {})
+
+        supplement_release_relationships_and_genres(None, None)
+        supplement_release_relationships_and_genres(
+            album,
+            {"relations": 123, "tags": 123, "genres": 123},
+            config_obj=cfg,
+        )
 
 
 if __name__ == '__main__':

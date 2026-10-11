@@ -185,9 +185,28 @@ class TestOriginalCandidateScoring(unittest.TestCase):
         self.assertIsInstance(score, float)
         self.assertEqual(score, 0.0)
 
-        # find_related_releases with null relations
-        candidates = find_related_releases({"relations": None})
-        self.assertEqual(candidates, [])
+        # None candidate scoring and candidate selection robustness
+        self.assertEqual(score_original_candidate(None), 0.0)
+        best = select_best_original_candidate([None, {"id": "orig-valid", "status": "Official"}])
+        self.assertIsNotNone(best)
+        self.assertEqual(best["id"], "orig-valid")
+
+        # Non-dict and invalid field types robustness
+        for invalid_cand in [
+            {"date": 2021},
+            {"media": 123},
+            {"label-info": 123},
+            {"cover-art-archive": 123},
+            {"media": [{"track-count": None, "tracks": 123}]},
+            {"media": [{"track-count": "invalid"}]},
+        ]:
+            s = score_original_candidate(invalid_cand)
+            self.assertIsInstance(s, float)
+
+        # find_related_releases with null and non-dict inputs
+        self.assertEqual(find_related_releases(None), [])
+        self.assertEqual(find_related_releases({"relations": None}), [])
+        self.assertEqual(find_related_releases({"relations": 123}), [])
 
 
 if __name__ == '__main__':

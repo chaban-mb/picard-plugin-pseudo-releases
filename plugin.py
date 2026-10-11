@@ -78,9 +78,12 @@ except (ImportError, AttributeError):
     def countries_shortlist(countries: list[str]) -> str:
         if not countries or not isinstance(countries, list):
             return ""
-        if len(countries) <= 6:
-            return "+".join(countries)
-        return f"{'+'.join(countries[:3])}+…+{'+'.join(countries[-3:])}"
+        str_countries = [str(c) for c in countries if c]
+        if not str_countries:
+            return ""
+        if len(str_countries) <= 6:
+            return "+".join(str_countries)
+        return f"{'+'.join(str_countries[:3])}+…+{'+'.join(str_countries[-3:])}"
 
     def label_info_from_node(node: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
         labels: list[str] = []
@@ -89,12 +92,17 @@ except (ImportError, AttributeError):
             return (labels, catalog_numbers)
         for label_info in node:
             if isinstance(label_info, dict):
-                label_name = (label_info.get("label") or {}).get("name")
+                label_obj = label_info.get("label")
+                label_name = label_obj.get("name") if isinstance(label_obj, dict) else None
                 catalog_number = label_info.get("catalog-number")
-                if label_name and label_name not in labels:
-                    labels.append(label_name)
-                if catalog_number and catalog_number not in catalog_numbers:
-                    catalog_numbers.append(catalog_number)
+                if label_name:
+                    lbl_str = str(label_name)
+                    if lbl_str not in labels:
+                        labels.append(lbl_str)
+                if catalog_number:
+                    cat_str = str(catalog_number)
+                    if cat_str not in catalog_numbers:
+                        catalog_numbers.append(cat_str)
         return (labels, catalog_numbers)
 
     def media_formats_from_node(node: list[dict[str, Any]]) -> str:
@@ -105,7 +113,8 @@ except (ImportError, AttributeError):
         for medium in node:
             if not isinstance(medium, dict):
                 continue
-            text = medium.get("format", "(unknown)") or "(unknown)"
+            fmt = medium.get("format")
+            text = str(fmt) if fmt else "(unknown)"
             if text in formats_count:
                 formats_count[text] += 1
             else:
@@ -172,7 +181,7 @@ class PseudoReleasePlugin:
         if album_id in cls.in_flight_albums:
             return
 
-        if release_node.get('status') != PSEUDO_RELEASE_STATUS:
+        if not isinstance(release_node, dict) or release_node.get('status') != PSEUDO_RELEASE_STATUS:
             return
 
         source_id = release_node.get('id')
@@ -232,12 +241,13 @@ class PseudoReleasePlugin:
         candidates: list[dict[str, Any]],
     ) -> None:
         """Direction 1: Find best matching original release and queue supplementation."""
-        if not candidates:
-            cls._log_debug(api, "No backward transl-tracklisting relations found for %s", album.id)
+        valid_candidates = [c for c in (candidates or []) if isinstance(c, dict)]
+        if not valid_candidates:
+            cls._log_debug(api, "No backward transl-tracklisting relations found for %s", getattr(album, 'id', ''))
             return
 
         best_original = next(
-            (candidate for candidate in candidates if candidate.get('id') == preferred_id),
+            (candidate for candidate in valid_candidates if candidate.get('id') == preferred_id),
             None,
         )
 
@@ -291,8 +301,9 @@ class PseudoReleasePlugin:
             album._pseudo_original_details_loading_ids = loading_ids
 
         # Cap background prefetching to at most 3 fallback candidates to conserve rate limiter
+        valid_candidates = [c for c in (candidates or []) if isinstance(c, dict)]
         unfetched = [
-            c for c in candidates
+            c for c in valid_candidates
             if c.get('id')
             and c['id'] != preferred_id
             and c['id'] not in detail_cache
@@ -349,25 +360,38 @@ class PseudoReleasePlugin:
             candidate = {}
         raw_media = candidate.get('media')
         media = [medium for medium in raw_media if isinstance(medium, dict)] if isinstance(raw_media, list) else []
-        track_counts = [
-            str(medium.get('track-count') or len(medium.get('tracks') or []))
-            for medium in media
-        ]
+        track_counts = []
+        for medium in media:
+            tc = medium.get('track-count')
+            if tc is not None:
+                track_counts.append(str(tc))
+            else:
+                tracks_val = medium.get('tracks')
+                track_counts.append(str(len(tracks_val) if isinstance(tracks_val, list) else 0))
         valid_track_counts = [count for count in track_counts if count != '0']
         if len(valid_track_counts) > VERSIONS_MAX_TRACKS:
             tracks = '+'.join(valid_track_counts[:VERSIONS_MAX_TRACKS]) + '+…'
         else:
             tracks = '+'.join(valid_track_counts)
-        year = (candidate.get('date') or '')[:4]
+        year = str(candidate.get('date') or '')[:4]
 
         rel_events = candidate.get('release-events')
         countries = countries_from_node(candidate) if isinstance(rel_events, list) else []
         if countries:
-            country = countries_shortlist(countries)
+            sanitized_countries = [str(c) for c in countries if c]
+            country = countries_shortlist(sanitized_countries) if sanitized_countries else '??'
         else:
-            country = candidate.get('country') or '??'
+            raw_country = candidate.get('country')
+            country = str(raw_country) if raw_country else '??'
 
-        formats = media_formats_from_node(media)
+        sanitized_media = []
+        for medium in media:
+            m = dict(medium)
+            if 'format' in m and m['format'] is not None:
+                m['format'] = str(m['format'])
+            sanitized_media.append(m)
+        formats = media_formats_from_node(sanitized_media)
+
         raw_label_infos = candidate.get('label-info')
         label_infos = (
             [item for item in raw_label_infos if isinstance(item, dict)]
@@ -375,14 +399,16 @@ class PseudoReleasePlugin:
             else []
         )
         labels, catalog_numbers = label_info_from_node(label_infos)
+        str_labels = [str(lbl) for lbl in labels if lbl]
+        str_catalogs = [str(cat) for cat in catalog_numbers if cat]
 
         parts = [
             tracks or '??',
             year or '????',
             country,
             formats or '(unknown format)',
-            ', '.join(labels) if labels else '',
-            ', '.join(catalog_numbers) if catalog_numbers else '',
+            ', '.join(str_labels) if str_labels else '',
+            ', '.join(str_catalogs) if str_catalogs else '',
         ]
         return ' / '.join(p for p in parts if p)
 
@@ -391,8 +417,11 @@ class PseudoReleasePlugin:
         """Format additional release details using Picard's Other versions fields."""
         if not isinstance(candidate, dict):
             candidate = {}
-        packaging = pgettext_attributes('release_packaging', candidate.get('packaging', '') or '??')
-        barcode = candidate.get('barcode', '') or _('[no barcode]')
+        raw_packaging = candidate.get('packaging')
+        packaging_str = str(raw_packaging) if raw_packaging else '??'
+        packaging = pgettext_attributes('release_packaging', packaging_str)
+        raw_barcode = candidate.get('barcode')
+        barcode = str(raw_barcode) if raw_barcode else _('[no barcode]')
 
         packaging_heading = _(VERSIONS_EXTRA_HEADINGS.get('packaging', 'Packaging'))
         barcode_heading = _(VERSIONS_EXTRA_HEADINGS.get('barcode', 'Barcode'))
@@ -514,15 +543,31 @@ class PseudoReleasePlugin:
                     album._finalize_loading(None)
 
         if hasattr(api, 'add_album_task') and hasattr(api, 'mb_api'):
-            api.add_album_task(
-                album=album,
-                task_id=task_id,
-                description=f"Loading pseudo-release data for {target_mbid}",
-                timeout=15.0,
-                request_factory=lambda: api.mb_api.get_release_by_id(
+            try:
+                api.add_album_task(
+                    album=album,
+                    task_id=task_id,
+                    description=f"Loading pseudo-release data for {target_mbid}",
+                    timeout=15.0,
+                    request_factory=lambda: api.mb_api.get_release_by_id(
+                        target_mbid,
+                        on_loaded,
+                        **request_kwargs,
+                    ),
+                    blocking=True,
+                )
+            except Exception:
+                cls.in_flight_albums.discard(album_id)
+                raise
+        elif hasattr(api, 'mb_api'):
+            try:
+                api.mb_api.get_release_by_id(
                     target_mbid,
                     on_loaded,
                     **request_kwargs,
-                ),
-                blocking=True,
-            )
+                )
+            except Exception:
+                cls.in_flight_albums.discard(album_id)
+                raise
+        else:
+            cls.in_flight_albums.discard(album_id)

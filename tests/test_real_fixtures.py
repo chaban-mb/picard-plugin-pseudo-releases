@@ -504,6 +504,64 @@ class TestRealWorldFixtures(unittest.TestCase):
         exotic_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(exotic_cand)
         self.assertIn("Exotic 3D Holo-Box", exotic_tooltip)
 
+        # Advanced type robustness: int date, int country, int format, int tracks, int label/catnum
+        int_fields_cand = {
+            "date": 2020,
+            "country": 123,
+            "media": [
+                {"format": 123, "track-count": 5},
+                {"track-count": None, "tracks": 123},
+            ],
+            "label-info": [
+                {"label": {"name": 123}, "catalog-number": 456},
+            ],
+        }
+        int_label = plugin_module.PseudoReleasePlugin._format_original_candidate(int_fields_cand)
+        self.assertIn("2020", int_label)
+        self.assertIn("123", int_label)
+        self.assertIn("456", int_label)
+
+        # Tooltip int field values robustness
+        int_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip({
+            "packaging": 123,
+            "barcode": 456,
+            "disambiguation": 789,
+        })
+        self.assertIn("123", int_tooltip)
+        self.assertIn("456", int_tooltip)
+        self.assertIn("789", int_tooltip)
+
+        # Plugin lifecycle null and malformed dispatch safety
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            SimpleNamespace(),
+            SimpleNamespace(id="album-null"),
+            {},
+            None,
+        )
+        plugin_module.PseudoReleasePlugin._prefetch_linked_original_details(
+            SimpleNamespace(mb_api=object()),
+            SimpleNamespace(),
+            [None],
+            None,
+        )
+        plugin_module.PseudoReleasePlugin._handle_supplement_pseudo(
+            SimpleNamespace(),
+            SimpleNamespace(id="album-none"),
+            {},
+            "target-none",
+            [None],
+        )
+
+        # In-flight state leak prevention when api cannot schedule task
+        test_album = SimpleNamespace(id="album-leak-test")
+        plugin_module.PseudoReleasePlugin.in_flight_albums.clear()
+        plugin_module.PseudoReleasePlugin._queue_enrichment(
+            SimpleNamespace(),
+            test_album,
+            "target-mbid-1",
+        )
+        self.assertNotIn("album-leak-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
+
 
 if __name__ == '__main__':
     unittest.main()
