@@ -33,8 +33,24 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         )
 
     def test_disabled_when_original_release_has_no_artwork(self):
+        class MockCoverArt:
+            def __init__(self, album):
+                self.album = album
+                self.front_image_found = False
+
+        class MockAlbum:
+            def __init__(self):
+                self._pseudo_original_details = {
+                    "original-release-uuid-7a1": {
+                        "id": "original-release-uuid-7a1",
+                        "cover-art-archive": {"artwork": False},
+                    }
+                }
+
+        album = MockAlbum()
+        self.provider.coverart = MockCoverArt(album)
+        self.provider.album = album
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "original-release-uuid-7a1"
-        self.provider.release["cover-art-archive"]["artwork"] = False
 
         self.assertFalse(self.provider._has_suitable_artwork)
 

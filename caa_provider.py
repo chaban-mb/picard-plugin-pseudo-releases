@@ -103,10 +103,7 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
                 return super()._has_suitable_artwork
             finally:
                 self.release = orig_node
-
-        if 'cover-art-archive' in self.release:
-            return super()._has_suitable_artwork
-
+        # If original release details are not yet cached, query CAA using original MBID
         return True
 
     def enabled(self) -> bool:
