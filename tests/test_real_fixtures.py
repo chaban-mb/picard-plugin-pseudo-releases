@@ -449,6 +449,38 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertIn("Special Edition", multi_tooltip)
         self.assertIn("[no barcode]", multi_tooltip)
 
+        # Null-safety test: release-events = None (crashes Picard _release_event_iter if unhandled)
+        null_events_cand = {
+            "id": "null-events-cand",
+            "date": "2021-01-01",
+            "country": "JP",
+            "release-events": None,
+            "media": [{"format": "CD", "track-count": 5}],
+        }
+        null_label = plugin_module.PseudoReleasePlugin._format_original_candidate(null_events_cand)
+        self.assertIn("JP", null_label)
+        self.assertIn("5", null_label)
+
+        # >10 media truncation test: Picard's VERSIONS_MAX_TRACKS truncation with +…
+        boxset_cand = {
+            "id": "boxset-cand",
+            "date": "2022-03-15",
+            "country": "GB",
+            "media": [{"format": "CD", "track-count": 10}] * 12,
+        }
+        boxset_label = plugin_module.PseudoReleasePlugin._format_original_candidate(boxset_cand)
+        self.assertIn("+".join(["10"] * 10) + "+…", boxset_label)
+        self.assertNotIn("+".join(["10"] * 12), boxset_label)
+
+        # Null-safety test: media tracks = None and malformed label-info = [None]
+        malformed_cand = {
+            "id": "malformed-cand",
+            "media": [{"format": "CD", "track-count": None, "tracks": None}],
+            "label-info": [None],
+        }
+        malformed_label = plugin_module.PseudoReleasePlugin._format_original_candidate(malformed_cand)
+        self.assertIn("??", malformed_label)
+
 
 if __name__ == '__main__':
     unittest.main()

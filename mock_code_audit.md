@@ -72,18 +72,19 @@ In actual production deployments (within MusicBrainz Picard 3.0+), Picard is alw
 
 ### 1.3 `plugin.py`
 
-#### Native Picard Utility Fallbacks (Lines 61–125)
+#### Native Picard Utility Fallbacks (Lines 65–129)
 *Triggered when `from picard.mbjson import ...`, `from picard.releasegroup import ...`, or `from picard.util import ...` raise `ImportError`.*
 
 | Component | Lines | Purpose & Fallback Behavior |
 | :--- | :--- | :--- |
-| `countries_from_node` | 62–72 | Extracts ISO country codes from candidate `release-events` dictionaries. |
-| `countries_shortlist` | 74–79 | Joins country codes with `+` and truncates using `…` for >6 countries. |
-| `label_info_from_node` | 81–94 | Deduplicates labels and catalog numbers from `label-info` dictionaries. |
-| `media_formats_from_node` | 96–112 | Deduplicates and counts media formats (e.g. `2×CD`). |
-| `pgettext_attributes` | 114–115 | Identity function returning untranslated packaging name. |
-| `_` | 117–118 | Identity function returning input string. |
-| `VERSIONS_EXTRA_HEADINGS` | 120–124 | English literal mapping: `{'packaging': 'Packaging', 'barcode': 'Barcode', 'disambiguation': 'Disambiguation'}`. |
+| `countries_from_node` | 66–75 | Extracts ISO country codes from candidate `release-events` dictionaries. |
+| `countries_shortlist` | 77–82 | Joins country codes with `+` and truncates using `…` for >6 countries. |
+| `label_info_from_node` | 84–95 | Deduplicates labels and catalog numbers from `label-info` dictionaries. |
+| `media_formats_from_node` | 97–116 | Deduplicates and counts media formats (e.g. `2×CD`). |
+| `pgettext_attributes` | 118–119 | Identity function returning untranslated packaging name. |
+| `_` | 121–122 | Identity function returning input string. |
+| `VERSIONS_MAX_TRACKS` | 124 | Limit candidate edition track count segment display before `+…` truncation (10). |
+| `VERSIONS_EXTRA_HEADINGS` | 125–129 | English literal mapping: `{'packaging': 'Packaging', 'barcode': 'Barcode', 'disambiguation': 'Disambiguation'}`. |
 
 ---
 

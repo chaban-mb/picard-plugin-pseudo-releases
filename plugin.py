@@ -53,7 +53,10 @@ try:
         label_info_from_node,
         media_formats_from_node,
     )
-    from picard.releasegroup import VERSIONS_EXTRA_HEADINGS
+    from picard.releasegroup import (
+        VERSIONS_EXTRA_HEADINGS,
+        VERSIONS_MAX_TRACKS,
+    )
     from picard.util import countries_shortlist
     from picard.i18n import (
         gettext as _,
@@ -95,6 +98,8 @@ except (ImportError, AttributeError):
         formats_count: dict[str, int] = {}
         formats_order: list[str] = []
         for medium in node:
+            if not isinstance(medium, dict):
+                continue
             text = medium.get("format", "(unknown)") or "(unknown)"
             if text in formats_count:
                 formats_count[text] += 1
@@ -116,6 +121,7 @@ except (ImportError, AttributeError):
     def _(text: str) -> str:
         return text
 
+    VERSIONS_MAX_TRACKS = 10
     VERSIONS_EXTRA_HEADINGS = {
         "packaging": "Packaging",
         "barcode": "Barcode",
@@ -334,22 +340,27 @@ class PseudoReleasePlugin:
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
         """Format a compact edition label for the linked-original menu."""
-        media = candidate.get('media') or []
+        media = [medium for medium in (candidate.get('media') or []) if isinstance(medium, dict)]
         track_counts = [
-            str(medium.get('track-count') or len(medium.get('tracks', [])))
+            str(medium.get('track-count') or len(medium.get('tracks') or []))
             for medium in media
         ]
-        tracks = '+'.join(count for count in track_counts if count != '0')
+        valid_track_counts = [count for count in track_counts if count != '0']
+        if len(valid_track_counts) > VERSIONS_MAX_TRACKS:
+            tracks = '+'.join(valid_track_counts[:VERSIONS_MAX_TRACKS]) + '+…'
+        else:
+            tracks = '+'.join(valid_track_counts)
         year = (candidate.get('date') or '')[:4]
 
-        countries = countries_from_node(candidate)
+        countries = countries_from_node(candidate) if candidate.get('release-events') else []
         if countries:
             country = countries_shortlist(countries)
         else:
             country = candidate.get('country') or '??'
 
         formats = media_formats_from_node(media)
-        labels, catalog_numbers = label_info_from_node(candidate.get('label-info') or [])
+        label_infos = [item for item in (candidate.get('label-info') or []) if isinstance(item, dict)]
+        labels, catalog_numbers = label_info_from_node(label_infos)
 
         parts = [
             tracks or '??',
