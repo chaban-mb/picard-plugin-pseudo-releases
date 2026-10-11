@@ -320,11 +320,12 @@ class ChooseLinkedOriginalAction(BaseAction):
         ):
             current_id = getattr(album, '_pseudo_original_release_choice', None)
         detail_cache = getattr(album, '_pseudo_original_details', {})
+        stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
         for candidate in candidates:
             release_id = candidate.get('id')
             if not release_id:
                 continue
-            details = detail_cache.get(release_id, candidate)
+            details = detail_cache.get(release_id) or stub_cache.get(release_id, candidate)
             label = PseudoReleasePlugin._format_original_candidate(details).replace('&', '&&')
             action = menu.addAction(label)
             action.setData(release_id)
@@ -449,7 +450,8 @@ class PseudoReleasePlugin:
         album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
-        if cached_release:
+        is_full = getattr(album, '_pseudo_original_is_full', {}).get(orig_id, False)
+        if cached_release and is_full:
             supplement_pseudo_metadata(
                 album_metadata,
                 cached_release,
@@ -479,6 +481,10 @@ class PseudoReleasePlugin:
         if detail_cache is None:
             detail_cache = {}
             album._pseudo_original_details = detail_cache
+        stub_cache = getattr(album, '_pseudo_candidate_stubs', None)
+        if stub_cache is None:
+            stub_cache = {}
+            album._pseudo_candidate_stubs = stub_cache
         loading_ids = getattr(album, '_pseudo_original_details_loading_ids', None)
         if loading_ids is None:
             loading_ids = set()
@@ -488,7 +494,7 @@ class PseudoReleasePlugin:
             release_id = fallback.get('id')
             if not release_id or release_id == preferred_id:
                 continue
-            if release_id in detail_cache or release_id in loading_ids:
+            if release_id in detail_cache or release_id in stub_cache or release_id in loading_ids:
                 continue
 
             loading_ids.add(release_id)
@@ -501,7 +507,9 @@ class PseudoReleasePlugin:
             ) -> None:
                 loading_ids.discard(fallback['id'])
                 if not error and document:
-                    detail_cache[fallback['id']] = document
+                    stubs = getattr(album, '_pseudo_candidate_stubs', {})
+                    stubs[fallback['id']] = document
+                    album._pseudo_candidate_stubs = stubs
 
             api.mb_api.get_release_by_id(
                 release_id,
@@ -636,6 +644,9 @@ class PseudoReleasePlugin:
 
                 album._pseudo_original_details = getattr(album, '_pseudo_original_details', {})
                 album._pseudo_original_details[target_mbid] = document
+                is_full_map = getattr(album, '_pseudo_original_is_full', {})
+                is_full_map[target_mbid] = True
+                album._pseudo_original_is_full = is_full_map
                 supplement_pseudo_metadata(
                     album.metadata,
                     document,

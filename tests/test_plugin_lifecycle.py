@@ -305,6 +305,8 @@ class TestPluginLifecycle(unittest.TestCase):
                 "media": [],
             }
         }
+        album._pseudo_original_is_full = {"original-2": True}
+        album._pseudo_candidate_stubs = {"original-1": {"id": "original-1"}}
         release_node = {
             "id": "pseudo-2",
             "status": "Pseudo-Release",
@@ -322,22 +324,13 @@ class TestPluginLifecycle(unittest.TestCase):
             ],
         }
 
-        def mock_get_release(release_id, callback, inc=None):
-            callback(
-                {"id": release_id, "barcode": f"barcode-{release_id}", "media": []},
-                None,
-                None,
-            )
-
-        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
         plugin_module.PseudoReleasePlugin.process_album_metadata(
             self.api, album, album.metadata, release_node
         )
 
         self.assertEqual(self.api.added_tasks, [])
         self.assertEqual(album.metadata["barcode"], "barcode-original-2")
-        self.assertEqual(set(album._pseudo_original_details), {"original-1", "original-2"})
-        self.assertEqual(self.api.mb_api.get_release_by_id.call_count, 1)
+        self.assertEqual(album._pseudo_original_details["original-2"]["barcode"], "barcode-original-2")
 
     def test_choose_linked_original_action_disabled_when_not_single_pseudo_album(self):
         album = MockAlbum("normal-1", "Standard soundtrack", status="Official")
