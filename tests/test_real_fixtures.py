@@ -111,6 +111,13 @@ class MockPluginApi:
         self.logger = MagicMock()
         self.mb_api = MagicMock()
 
+    def tr(self, key, text=None):
+        return text or key
+
+    def trn(self, singular, plural, n=1):
+        return singular if n == 1 else plural
+
+
     def register_album_metadata_processor(self, func, priority=50):
         self.processors.append((func, priority))
 

@@ -2,10 +2,11 @@
 
 from typing import Any
 
-try:
-    from picard import config
-except ImportError:
-    config = None  # type: ignore[assignment]
+from picard import config
+from picard.mbjson import (
+    _relations_to_metadata,
+    add_genres_from_node,
+)
 
 try:
     from .constants import (
@@ -22,14 +23,6 @@ except (ImportError, ValueError):
         get_config_value,
     )
 
-try:
-    from picard.mbjson import (
-        _relations_to_metadata,
-        add_genres_from_node,
-    )
-except ImportError:
-    _relations_to_metadata = None  # type: ignore[assignment]
-    add_genres_from_node = None  # type: ignore[assignment]
 
 
 def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, Any]:

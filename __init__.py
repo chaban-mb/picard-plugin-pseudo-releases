@@ -1,19 +1,16 @@
 """Pseudo-Releases Picard plugin for catalog and cover-art supplementation."""
 
+from picard.plugin3.api import (
+    PluginApi,
+    t_,
+)
+
 try:
     from .action import (
         ChooseLinkedOriginalAction,
         LinkedEditionsMenuFilter,
     )
     from .caa_provider import PseudoReleaseCoverArtProvider
-    from .compat import (
-        QtCore,
-        QtGui,
-        QtWidgets,
-        PluginApi,
-        config,
-        t_,
-    )
     from .options import PseudoReleaseOptionsPage
     from .plugin import PseudoReleasePlugin
 except (ImportError, ValueError):
@@ -22,16 +19,9 @@ except (ImportError, ValueError):
         LinkedEditionsMenuFilter,
     )
     from caa_provider import PseudoReleaseCoverArtProvider
-    from compat import (
-        QtCore,
-        QtGui,
-        QtWidgets,
-        PluginApi,
-        config,
-        t_,
-    )
     from options import PseudoReleaseOptionsPage
     from plugin import PseudoReleasePlugin
+
 
 
 class ManifestTranslations:
@@ -100,10 +90,7 @@ __all__ = [
     "PseudoReleaseCoverArtProvider",
     "PseudoReleaseOptionsPage",
     "PseudoReleasePlugin",
-    "QtCore",
-    "QtGui",
-    "QtWidgets",
-    "config",
     "disable",
     "enable",
 ]
+

@@ -2,45 +2,9 @@
 
 from typing import Any
 
-try:
-    from picard.coverart.providers.caa import CoverArtProviderCaa
-    from picard.plugin3.api import t_
-except ImportError:
-    # Fallback base class for isolated unit testing
-    class CoverArtProviderCaa:  # type: ignore[no-redef]
-        NAME = "Cover Art Archive"
-        TITLE = "Cover Art Archive: Release"
-        OPTIONS = None
+from picard.coverart.providers.caa import CoverArtProviderCaa
+from picard.plugin3.api import t_
 
-        def __init__(self, coverart: Any = None) -> None:
-            self.coverart = coverart
-            self.metadata: dict[str, Any] = {}
-            self.release: dict[str, Any] = {}
-
-        def enabled(self) -> bool:
-            return True
-
-        @property
-        def _caa_path(self) -> str:
-            return f"/release/{self.metadata.get('musicbrainz_albumid', '')}/"
-
-        @property
-        def _has_suitable_artwork(self) -> bool:
-            caa = self.release.get('cover-art-archive', {})
-            return bool(caa.get('artwork'))
-
-        @classmethod
-        def display_title(cls) -> str:
-            title = getattr(cls, 'TITLE', getattr(cls, 'NAME', None)) or cls.__name__
-            api = getattr(cls, 'api', None)
-            if api and hasattr(api, 'tr'):
-                return api.tr(title)
-            return title
-
-    def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tuple[str, str, str]:  # type: ignore[no-redef]
-        if plural is not None:
-            return (key, text or "", plural)
-        return key
 
 try:
     from .constants import (
@@ -62,6 +26,21 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     OPTIONS = None
 
     ignore_json_not_found_error = True
+
+    def __init__(self, coverart: Any = None) -> None:
+        if coverart is not None:
+            super().__init__(coverart)
+        else:
+            self.coverart = None
+            self.metadata: dict[str, Any] = {}
+            self.release: dict[str, Any] = {}
+            self.album = None
+            self.restrict_types = False
+            self.included_types: set[str] = set()
+            self.excluded_types: set[str] = set()
+            self.included_types_count = 0
+
+
 
     @property
     def _original_id(self) -> str | None:

@@ -1,115 +1,15 @@
 """Options page for user configuration of pseudo-release features."""
 
 from typing import (
-    Any,
     ClassVar,
 )
 
-try:
-    from PyQt6 import QtWidgets
-except ImportError:
-    # Stubs for headless testing environments without PyQt6
-    class _DummySignal:
-        def __init__(self):
-            self._callbacks = []
-
-        def connect(self, callback):
-            self._callbacks.append(callback)
-
-        def emit(self, *args):
-            for callback in self._callbacks:
-                callback(*args)
-
-    class _DummyWidget:
-        def __init__(self, *args, **kwargs):
-            self._checked = False
-            self._enabled = True
-            self._text = args[0] if args and isinstance(args[0], str) else ""
-            self.toggled = _DummySignal()
-            self.clicked = _DummySignal()
-            self.linkActivated = _DummySignal()
-
-        def setStyleSheet(self, *args):
-            pass
-
-        def setLayout(self, *args):
-            pass
-
-        def addWidget(self, *args):
-            pass
-
-        def addLayout(self, *args):
-            pass
-
-        def addStretch(self, *args):
-            pass
-
-        def setContentsMargins(self, *args):
-            pass
-
-        def setSpacing(self, *args):
-            pass
-
-        def isChecked(self):
-            return self._checked
-
-        def setChecked(self, val):
-            checked = bool(val)
-            if checked != self._checked:
-                self._checked = checked
-                self.toggled.emit(checked)
-
-        def setEnabled(self, enabled):
-            self._enabled = bool(enabled)
-
-        def isEnabled(self):
-            return self._enabled
-
-        def setWordWrap(self, enabled):
-            pass
-
-        def setOpenExternalLinks(self, enabled):
-            pass
-
-        def text(self):
-            return self._text
-
-        def setText(self, text):
-            self._text = str(text)
-
-        def title(self):
-            return self._text
-
-        def addButton(self, *args):
-            pass
-
-    class QtWidgets:  # type: ignore[no-redef]
-        QWidget = _DummyWidget
-        QVBoxLayout = _DummyWidget
-        QHBoxLayout = _DummyWidget
-        QLabel = _DummyWidget
-        QCheckBox = _DummyWidget
-        QPushButton = _DummyWidget
-        QGroupBox = _DummyWidget
-        QFrame = _DummyWidget
-
-try:
-    from picard.plugin3.api import (
-        OptionsPage,
-        PageOptionConfigs,
-        t_,
-    )
-except ImportError:
-    class OptionsPage(QtWidgets.QWidget):  # type: ignore[no-redef]
-        NAME = ""
-        TITLE = ""
-        PARENT = None
-        api: Any = None
-
-    PageOptionConfigs = dict[str, Any]  # type: ignore[misc]
-
-    def t_(key: str, text: str | None = None, plural: str | None = None) -> str:  # type: ignore[no-redef]
-        return text or key
+from PyQt6 import QtWidgets
+from picard.plugin3.api import (
+    OptionsPage,
+    PageOptionConfigs,
+    t_,
+)
 
 
 class PseudoReleaseOptionsPage(OptionsPage):

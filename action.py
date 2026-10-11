@@ -1,25 +1,22 @@
 """UI action for manually selecting linked original editions."""
 
+from PyQt6 import (
+    QtCore,
+    QtGui,
+    QtWidgets,
+)
+from picard.plugin3.api import (
+    BaseAction,
+    t_,
+)
+
 try:
-    from .compat import (
-        BaseAction,
-        QtCore,
-        QtGui,
-        QtWidgets,
-        t_,
-    )
     from .constants import TAG_ORIGINAL_RELEASE_ID
     from .plugin import PseudoReleasePlugin
 except (ImportError, ValueError):
-    from compat import (
-        BaseAction,
-        QtCore,
-        QtGui,
-        QtWidgets,
-        t_,
-    )
     from constants import TAG_ORIGINAL_RELEASE_ID
     from plugin import PseudoReleasePlugin
+
 
 
 class LinkedEditionsMenuFilter(QtCore.QObject):

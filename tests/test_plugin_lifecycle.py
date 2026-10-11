@@ -5,6 +5,8 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 
+from PyQt6 import QtCore
+
 plugin_path = Path(__file__).resolve().parent.parent / '__init__.py'
 spec = importlib.util.spec_from_file_location('pseudo_releases_plugin', str(plugin_path))
 plugin_module = importlib.util.module_from_spec(spec)
@@ -371,8 +373,8 @@ class TestPluginLifecycle(unittest.TestCase):
         menu.actionAt = MagicMock(return_value=target_action)
 
         event_middle = SimpleNamespace(
-            type=lambda: plugin_module.QtCore.QEvent.Type.MouseButtonRelease,
-            button=lambda: plugin_module.QtCore.Qt.MouseButton.MiddleButton,
+            type=lambda: QtCore.QEvent.Type.MouseButtonRelease,
+            button=lambda: QtCore.Qt.MouseButton.MiddleButton,
             pos=lambda: None,
         )
         filt = action_instance._menu_filter
@@ -383,8 +385,8 @@ class TestPluginLifecycle(unittest.TestCase):
         # Simulate event filter receiving RightButton release for the second candidate
         menu.actionAt = MagicMock(return_value=actions[2])
         event_right = SimpleNamespace(
-            type=lambda: plugin_module.QtCore.QEvent.Type.MouseButtonRelease,
-            button=lambda: plugin_module.QtCore.Qt.MouseButton.RightButton,
+            type=lambda: QtCore.QEvent.Type.MouseButtonRelease,
+            button=lambda: QtCore.Qt.MouseButton.RightButton,
             pos=lambda: None,
         )
         handled_right = filt.eventFilter(menu, event_right)
@@ -430,8 +432,7 @@ class TestPluginLifecycle(unittest.TestCase):
             }
         )
 
-        with unittest.mock.patch("metadata_engine.config", mock_cfg), \
-             unittest.mock.patch.object(plugin_module, "config", mock_cfg):
+        with unittest.mock.patch("metadata_engine.config", mock_cfg):
             plugin_module.PseudoReleasePlugin.process_album_metadata(
                 api=self.api,
                 album=pseudo_album,
@@ -479,8 +480,7 @@ class TestPluginLifecycle(unittest.TestCase):
             }
         )
 
-        with unittest.mock.patch("metadata_engine.config", mock_cfg), \
-             unittest.mock.patch.object(plugin_module, "config", mock_cfg):
+        with unittest.mock.patch("metadata_engine.config", mock_cfg):
             plugin_module.PseudoReleasePlugin.process_album_metadata(
                 api=self.api,
                 album=pseudo_album,

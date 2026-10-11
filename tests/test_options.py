@@ -18,7 +18,7 @@ class TestOptionsPage(unittest.TestCase):
             cls.app = None
 
     def test_options_page_metadata(self):
-        self.assertEqual(PseudoReleaseOptionsPage.TITLE, "Pseudo-Releases")
+        self.assertIn(PseudoReleaseOptionsPage.TITLE, {"options.title", "Pseudo-Releases"})
         self.assertEqual(PseudoReleaseOptionsPage.NAME, "pseudo_releases")
         self.assertEqual(PseudoReleaseOptionsPage.PARENT, "plugins")
         self.assertEqual(PseudoReleaseOptionsPage.OPTIONS, {})
