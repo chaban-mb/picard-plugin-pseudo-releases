@@ -708,8 +708,6 @@ class PseudoReleasePlugin:
                     api.complete_album_task(album, task_id)
                 if hasattr(album, '_finalize_loading'):
                     album._finalize_loading(None)
-                if not error:
-                    cls._trigger_cover_art_retrieval(album, api)
 
         if hasattr(api, 'add_album_task') and hasattr(api, 'mb_api'):
             api.add_album_task(
@@ -724,16 +722,6 @@ class PseudoReleasePlugin:
                 ),
                 blocking=True,
             )
-
-    @classmethod
-    def _trigger_cover_art_retrieval(cls, album: Album, api: PluginApi | None = None) -> None:
-        """Trigger cover art retrieval for the album after enrichment if needed."""
-        try:
-            from picard.coverart import _retrieve_coverart
-            release_node = getattr(album, '_release_node_cache', getattr(album, '_release_node', {}))
-            _retrieve_coverart(album, album.metadata, release_node)
-        except Exception:
-            pass
 
 
 def enable(api: PluginApi) -> None:
