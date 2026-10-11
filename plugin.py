@@ -47,6 +47,81 @@ except (ImportError, ValueError):
         supplement_release_relationships_and_genres,
     )
 
+try:
+    from picard.mbjson import (
+        countries_from_node,
+        label_info_from_node,
+        media_formats_from_node,
+    )
+    from picard.releasegroup import VERSIONS_EXTRA_HEADINGS
+    from picard.util import countries_shortlist
+    from picard.i18n import (
+        gettext as _,
+        pgettext_attributes,
+    )
+except (ImportError, AttributeError):
+    def countries_from_node(node: dict[str, Any]) -> list[str]:
+        countries: list[str] = []
+        for event in node.get("release-events") or []:
+            try:
+                code = event["area"]["iso-3166-1-codes"][0]
+                if code:
+                    countries.append(code)
+            except (KeyError, IndexError, TypeError):
+                pass
+        return sorted(countries)
+
+    def countries_shortlist(countries: list[str]) -> str:
+        if not countries:
+            return ""
+        if len(countries) <= 6:
+            return "+".join(countries)
+        return f"{'+'.join(countries[:3])}+…+{'+'.join(countries[-3:])}"
+
+    def label_info_from_node(node: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+        labels: list[str] = []
+        catalog_numbers: list[str] = []
+        for label_info in node:
+            if isinstance(label_info, dict):
+                label_name = (label_info.get("label") or {}).get("name")
+                catalog_number = label_info.get("catalog-number")
+                if label_name and label_name not in labels:
+                    labels.append(label_name)
+                if catalog_number and catalog_number not in catalog_numbers:
+                    catalog_numbers.append(catalog_number)
+        return (labels, catalog_numbers)
+
+    def media_formats_from_node(node: list[dict[str, Any]]) -> str:
+        formats_count: dict[str, int] = {}
+        formats_order: list[str] = []
+        for medium in node:
+            text = medium.get("format", "(unknown)") or "(unknown)"
+            if text in formats_count:
+                formats_count[text] += 1
+            else:
+                formats_count[text] = 1
+                formats_order.append(text)
+        formats: list[str] = []
+        for medium_format in formats_order:
+            count = formats_count[medium_format]
+            if count > 1:
+                formats.append(f"{count}×{medium_format}")
+            else:
+                formats.append(medium_format)
+        return " + ".join(formats)
+
+    def pgettext_attributes(context: str, message: str) -> str:
+        return message
+
+    def _(text: str) -> str:
+        return text
+
+    VERSIONS_EXTRA_HEADINGS = {
+        "packaging": "Packaging",
+        "barcode": "Barcode",
+        "disambiguation": "Disambiguation",
+    }
+
 
 class PseudoReleasePlugin:
     """Plugin logic orchestrator for MusicBrainz Pseudo-Releases."""
@@ -266,27 +341,15 @@ class PseudoReleasePlugin:
         ]
         tracks = '+'.join(count for count in track_counts if count != '0')
         year = (candidate.get('date') or '')[:4]
-        country = candidate.get('country') or '??'
 
-        format_counts: dict[str, int] = {}
-        for medium in media:
-            format_name = medium.get('format') or '(unknown)'
-            format_counts[format_name] = format_counts.get(format_name, 0) + 1
-        formats = ', '.join(
-            f"{count}\u00d7{format_name}"
-            for format_name, count in format_counts.items()
-        )
+        countries = countries_from_node(candidate)
+        if countries:
+            country = countries_shortlist(countries)
+        else:
+            country = candidate.get('country') or '??'
 
-        labels = []
-        catalog_numbers = []
-        for label_info in candidate.get('label-info') or []:
-            if isinstance(label_info, dict):
-                label_name = (label_info.get('label') or {}).get('name')
-                catalog_number = label_info.get('catalog-number')
-                if label_name and label_name not in labels:
-                    labels.append(label_name)
-                if catalog_number and catalog_number not in catalog_numbers:
-                    catalog_numbers.append(catalog_number)
+        formats = media_formats_from_node(media)
+        labels, catalog_numbers = label_info_from_node(candidate.get('label-info') or [])
 
         parts = [
             tracks or '??',
@@ -301,13 +364,20 @@ class PseudoReleasePlugin:
     @staticmethod
     def _format_original_candidate_tooltip(candidate: dict[str, Any]) -> str:
         """Format additional release details using Picard's Other versions fields."""
+        packaging = pgettext_attributes('release_packaging', candidate.get('packaging', '') or '??')
+        barcode = candidate.get('barcode', '') or _('[no barcode]')
+
+        packaging_heading = _(VERSIONS_EXTRA_HEADINGS.get('packaging', 'Packaging'))
+        barcode_heading = _(VERSIONS_EXTRA_HEADINGS.get('barcode', 'Barcode'))
+
         details = [
-            f"Packaging: {candidate.get('packaging') or '??'}",
-            f"Barcode: {candidate.get('barcode') or '[no barcode]'}",
+            f"{packaging_heading}: {packaging}",
+            f"{barcode_heading}: {barcode}",
         ]
         disambiguation = candidate.get('disambiguation')
         if disambiguation:
-            details.append(f"Disambiguation: {disambiguation}")
+            disambig_heading = _(VERSIONS_EXTRA_HEADINGS.get('disambiguation', 'Disambiguation'))
+            details.append(f"{disambig_heading}: {disambiguation}")
         details.append("Middle-click or right-click to open in browser.")
         return '\n'.join(details)
 

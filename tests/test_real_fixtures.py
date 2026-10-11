@@ -407,6 +407,48 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(minimoni_label.count("EPCE-5265"), 1)
         self.assertTrue(minimoni_label.endswith("zetima / EPCE-5265"))
 
+        # ReleaseGroup header reuse verification
+        self.assertEqual(
+            action_enabled.menu().actions()[0].text(),
+            "Tracks / Year / Country / Format / Label / Cat No",
+        )
+        pseudo_album.release_group = SimpleNamespace(
+            version_headings="Titel / Jahr / Land / Format / Label / Kat.-Nr."
+        )
+        action_with_rg = plugin_module.ChooseLinkedOriginalAction()
+        self.assertEqual(
+            action_with_rg.menu().actions()[0].text(),
+            "Titel / Jahr / Land / Format / Label / Kat.-Nr.",
+        )
+
+        # Multi-disc format and tooltip extra fields verification
+        multi_cand = {
+            "id": "multi-cand-1",
+            "date": "2020-05-10",
+            "country": "US",
+            "media": [
+                {"format": "CD", "track-count": 10},
+                {"format": "CD", "track-count": 12},
+            ],
+            "label-info": [
+                {"label": {"name": "MultiLabel"}, "catalog-number": "ML-001"},
+            ],
+            "packaging": "Jewel Case",
+            "disambiguation": "Special Edition",
+        }
+        multi_label = plugin_module.PseudoReleasePlugin._format_original_candidate(multi_cand)
+        self.assertIn("2×CD", multi_label)
+        self.assertIn("10+12", multi_label)
+        self.assertIn("2020", multi_label)
+        self.assertIn("US", multi_label)
+        self.assertIn("MultiLabel", multi_label)
+        self.assertIn("ML-001", multi_label)
+
+        multi_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(multi_cand)
+        self.assertIn("Jewel Case", multi_tooltip)
+        self.assertIn("Special Edition", multi_tooltip)
+        self.assertIn("[no barcode]", multi_tooltip)
+
 
 if __name__ == '__main__':
     unittest.main()
