@@ -35,6 +35,9 @@ class MockMetadata:
             return "; ".join(self._data[key])
         return ""
 
+    def __contains__(self, key):
+        return key in self._data
+
     def get(self, key, default=""):
         val = self[key]
         return val if val else default
