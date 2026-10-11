@@ -30,7 +30,7 @@ def find_related_releases(
         list[dict[str, Any]]: List of target release dictionaries.
     """
     candidates: list[dict[str, Any]] = []
-    relations = release_node.get('relations', [])
+    relations = release_node.get('relations') or []
     for rel in relations:
         if not isinstance(rel, dict):
             continue
@@ -114,11 +114,13 @@ def score_original_candidate(
     # 1. Disc ID Match (+100.0) - Exact hardware verification
     if disc_ids:
         candidate_disc_ids: set[str] = set()
-        for medium in candidate.get('media', []):
-            for disc in medium.get('discs', []):
-                d_id = disc.get('id')
-                if d_id:
-                    candidate_disc_ids.add(d_id.lower())
+        for medium in candidate.get('media') or []:
+            if isinstance(medium, dict):
+                for disc in medium.get('discs') or []:
+                    if isinstance(disc, dict):
+                        d_id = disc.get('id')
+                        if d_id:
+                            candidate_disc_ids.add(d_id.lower())
         for d in disc_ids:
             if d.lower() in candidate_disc_ids:
                 score += 100.0
@@ -126,8 +128,12 @@ def score_original_candidate(
 
     # 2. Medium Layout / Track Count Match (+40.0)
     # Checks if candidate media matches the file count or disc layout
-    media_list = candidate.get('media', [])
-    total_tracks = sum(m.get('track-count', len(m.get('tracks', []))) for m in media_list)
+    media_list = candidate.get('media') or []
+    total_tracks = sum(
+        int(m.get('track-count') or len(m.get('tracks') or []))
+        for m in media_list
+        if isinstance(m, dict)
+    )
     file_count = len(files) if files else 0
     if file_count > 0 and total_tracks == file_count:
         score += 40.0
@@ -142,9 +148,10 @@ def score_original_candidate(
     # 4. Media / Format Match (+20.0)
     candidate_formats: set[str] = set()
     for medium in media_list:
-        fmt = medium.get('format')
-        if fmt:
-            candidate_formats.add(fmt.lower())
+        if isinstance(medium, dict):
+            fmt = medium.get('format')
+            if fmt:
+                candidate_formats.add(fmt.lower())
     if candidate_formats:
         file_media = _get_tag_from_files_or_metadata('media', album_metadata, files)
         if candidate_formats.intersection(file_media):
@@ -152,10 +159,11 @@ def score_original_candidate(
 
     # 5. Catalog Number Match (+15.0)
     candidate_cat_nums: set[str] = set()
-    for label_info in candidate.get('label-info', []):
-        cat = label_info.get('catalog-number')
-        if cat:
-            candidate_cat_nums.add(cat.strip().lower())
+    for label_info in candidate.get('label-info') or []:
+        if isinstance(label_info, dict):
+            cat = label_info.get('catalog-number')
+            if cat:
+                candidate_cat_nums.add(cat.strip().lower())
     if candidate_cat_nums:
         file_cats = _get_tag_from_files_or_metadata('catalognumber', album_metadata, files)
         if candidate_cat_nums.intersection(file_cats):
@@ -176,7 +184,7 @@ def score_original_candidate(
             score += max(1.0, 10.0 - idx)
 
     # 8. Cover Art Archive Presence (+5.0)
-    caa = candidate.get('cover-art-archive', {})
+    caa = candidate.get('cover-art-archive') or {}
     if caa.get('artwork') or caa.get('front'):
         score += 5.0
 

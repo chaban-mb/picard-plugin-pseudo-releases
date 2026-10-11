@@ -47,26 +47,28 @@ def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, 
         extracted['barcode'] = barcode
 
     # Extract media formats from media list
-    media_list = release_node.get('media', [])
+    media_list = release_node.get('media') or []
     formats: list[str] = []
     for medium in media_list:
-        fmt = medium.get('format')
-        if fmt and fmt not in formats:
-            formats.append(fmt)
+        if isinstance(medium, dict):
+            fmt = medium.get('format')
+            if fmt and fmt not in formats:
+                formats.append(fmt)
     if formats:
         extracted['media'] = "; ".join(formats)
 
     # Extract labels and catalog numbers
-    label_info_list = release_node.get('label-info', [])
+    label_info_list = release_node.get('label-info') or []
     labels: list[str] = []
     cat_nums: list[str] = []
     for label_info in label_info_list:
-        lbl = label_info.get('label', {}).get('name') if label_info.get('label') else None
-        if lbl and lbl not in labels:
-            labels.append(lbl)
-        cat = label_info.get('catalog-number')
-        if cat and cat not in cat_nums:
-            cat_nums.append(cat)
+        if isinstance(label_info, dict):
+            lbl = label_info.get('label', {}).get('name') if isinstance(label_info.get('label'), dict) else None
+            if lbl and lbl not in labels:
+                labels.append(lbl)
+            cat = label_info.get('catalog-number')
+            if cat and cat not in cat_nums:
+                cat_nums.append(cat)
 
     if labels:
         extracted['label'] = labels
@@ -170,11 +172,11 @@ def supplement_release_relationships_and_genres(
     setting = getattr(target_config, 'setting', None) if target_config else None
 
     # 1. Merge relationships into album._release_node['relations']
-    orig_relations = orig_release_node.get('relations', [])
+    orig_relations = orig_release_node.get('relations') or []
     if orig_relations and hasattr(album, '_release_node') and isinstance(album._release_node, dict):
         existing_rels = album._release_node.setdefault('relations', [])
         existing_signatures = set()
-        for r in existing_rels:
+        for r in existing_rels or []:
             if isinstance(r, dict):
                 target_type = r.get('target-type', '')
                 target_val = r.get(target_type)
@@ -211,13 +213,15 @@ def supplement_release_relationships_and_genres(
     # 3. Folksonomy tags and genres
     if get_config_value(setting, 'use_genres', False):
         if hasattr(album, '_release_node') and isinstance(album._release_node, dict):
-            if 'tags' in orig_release_node:
+            orig_tags = orig_release_node.get('tags') or []
+            if orig_tags:
                 album._release_node.setdefault('tags', []).extend(
-                    [t for t in orig_release_node['tags'] if t not in album._release_node.get('tags', [])]
+                    [t for t in orig_tags if t not in (album._release_node.get('tags') or [])]
                 )
-            if 'genres' in orig_release_node:
+            orig_genres = orig_release_node.get('genres') or []
+            if orig_genres:
                 album._release_node.setdefault('genres', []).extend(
-                    [g for g in orig_release_node['genres'] if g not in album._release_node.get('genres', [])]
+                    [g for g in orig_genres if g not in (album._release_node.get('genres') or [])]
                 )
 
         try:
@@ -225,10 +229,10 @@ def supplement_release_relationships_and_genres(
 
             add_genres_from_node(orig_release_node, album)
         except Exception:
-            if hasattr(album, 'add_folksonomy_tag') and 'tags' in orig_release_node:
+            if hasattr(album, 'add_folksonomy_tag') and orig_release_node.get('tags'):
                 for tag in orig_release_node['tags']:
                     album.add_folksonomy_tag(tag.get('name'), tag.get('count', 1))
-            if hasattr(album, 'add_genre') and 'genres' in orig_release_node:
+            if hasattr(album, 'add_genre') and orig_release_node.get('genres'):
                 for genre in orig_release_node['genres']:
                     album.add_genre(genre.get('name'), genre.get('count', 1))
 

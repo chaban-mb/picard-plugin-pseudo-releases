@@ -160,6 +160,35 @@ class TestOriginalCandidateScoring(unittest.TestCase):
 
         self.assertGreater(score_16, score_10)
 
+    def test_null_payload_robustness(self):
+        # Candidate containing JSON null (Python None) for all typical collection fields
+        null_candidate = {
+            "id": "null-cand",
+            "relations": None,
+            "media": [
+                {"format": None, "track-count": None, "discs": None},
+                None,
+            ],
+            "label-info": None,
+            "barcode": None,
+            "country": None,
+            "status": None,
+            "cover-art-archive": None,
+        }
+        # Must not raise TypeError
+        score = score_original_candidate(
+            null_candidate,
+            disc_ids=["disc123"],
+            files=[MockFile()],
+            preferred_countries=["JP"],
+        )
+        self.assertIsInstance(score, float)
+        self.assertEqual(score, 0.0)
+
+        # find_related_releases with null relations
+        candidates = find_related_releases({"relations": None})
+        self.assertEqual(candidates, [])
+
 
 if __name__ == '__main__':
     unittest.main()
