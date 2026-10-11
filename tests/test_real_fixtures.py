@@ -481,6 +481,29 @@ class TestRealWorldFixtures(unittest.TestCase):
         malformed_label = plugin_module.PseudoReleasePlugin._format_original_candidate(malformed_cand)
         self.assertIn("??", malformed_label)
 
+        # Robustness test: candidate = None and non-list field types
+        none_label = plugin_module.PseudoReleasePlugin._format_original_candidate(None)
+        self.assertIn("??", none_label)
+        none_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(None)
+        self.assertIn("[no barcode]", none_tooltip)
+
+        for invalid_field_cand in [
+            {"media": 123},
+            {"label-info": 123},
+            {"release-events": 123},
+            {"release-events": "JP"},
+        ]:
+            inv_label = plugin_module.PseudoReleasePlugin._format_original_candidate(invalid_field_cand)
+            self.assertIn("??", inv_label)
+
+        # Exotic packaging attribute test
+        exotic_cand = {
+            "id": "exotic-cand",
+            "packaging": "Exotic 3D Holo-Box",
+        }
+        exotic_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(exotic_cand)
+        self.assertIn("Exotic 3D Holo-Box", exotic_tooltip)
+
 
 if __name__ == '__main__':
     unittest.main()

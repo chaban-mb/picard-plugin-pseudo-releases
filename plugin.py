@@ -65,7 +65,8 @@ try:
 except (ImportError, AttributeError):
     def countries_from_node(node: dict[str, Any]) -> list[str]:
         countries: list[str] = []
-        for event in node.get("release-events") or []:
+        events = node.get("release-events") if isinstance(node, dict) else None
+        for event in (events if isinstance(events, list) else []):
             try:
                 code = event["area"]["iso-3166-1-codes"][0]
                 if code:
@@ -75,7 +76,7 @@ except (ImportError, AttributeError):
         return sorted(countries)
 
     def countries_shortlist(countries: list[str]) -> str:
-        if not countries:
+        if not countries or not isinstance(countries, list):
             return ""
         if len(countries) <= 6:
             return "+".join(countries)
@@ -84,6 +85,8 @@ except (ImportError, AttributeError):
     def label_info_from_node(node: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
         labels: list[str] = []
         catalog_numbers: list[str] = []
+        if not isinstance(node, list):
+            return (labels, catalog_numbers)
         for label_info in node:
             if isinstance(label_info, dict):
                 label_name = (label_info.get("label") or {}).get("name")
@@ -95,6 +98,8 @@ except (ImportError, AttributeError):
         return (labels, catalog_numbers)
 
     def media_formats_from_node(node: list[dict[str, Any]]) -> str:
+        if not isinstance(node, list):
+            return ""
         formats_count: dict[str, int] = {}
         formats_order: list[str] = []
         for medium in node:
@@ -340,7 +345,10 @@ class PseudoReleasePlugin:
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
         """Format a compact edition label for the linked-original menu."""
-        media = [medium for medium in (candidate.get('media') or []) if isinstance(medium, dict)]
+        if not isinstance(candidate, dict):
+            candidate = {}
+        raw_media = candidate.get('media')
+        media = [medium for medium in raw_media if isinstance(medium, dict)] if isinstance(raw_media, list) else []
         track_counts = [
             str(medium.get('track-count') or len(medium.get('tracks') or []))
             for medium in media
@@ -352,14 +360,20 @@ class PseudoReleasePlugin:
             tracks = '+'.join(valid_track_counts)
         year = (candidate.get('date') or '')[:4]
 
-        countries = countries_from_node(candidate) if candidate.get('release-events') else []
+        rel_events = candidate.get('release-events')
+        countries = countries_from_node(candidate) if isinstance(rel_events, list) else []
         if countries:
             country = countries_shortlist(countries)
         else:
             country = candidate.get('country') or '??'
 
         formats = media_formats_from_node(media)
-        label_infos = [item for item in (candidate.get('label-info') or []) if isinstance(item, dict)]
+        raw_label_infos = candidate.get('label-info')
+        label_infos = (
+            [item for item in raw_label_infos if isinstance(item, dict)]
+            if isinstance(raw_label_infos, list)
+            else []
+        )
         labels, catalog_numbers = label_info_from_node(label_infos)
 
         parts = [
@@ -375,6 +389,8 @@ class PseudoReleasePlugin:
     @staticmethod
     def _format_original_candidate_tooltip(candidate: dict[str, Any]) -> str:
         """Format additional release details using Picard's Other versions fields."""
+        if not isinstance(candidate, dict):
+            candidate = {}
         packaging = pgettext_attributes('release_packaging', candidate.get('packaging', '') or '??')
         barcode = candidate.get('barcode', '') or _('[no barcode]')
 
