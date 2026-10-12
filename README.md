@@ -23,10 +23,9 @@ When you load an album into Picard whose status is `pseudo-release`:
 
 1. The plugin checks the `transl-tracklisting` release relationships for
    linked original editions.
-2. It enriches your album with the original release's metadata tags (`date`,
-   `releasecountry`, `barcode`, `label`, `catalognumber`, and media format
-   specifications) while preserving your translated track titles and artist
-   credits.
+2. It enriches the pseudo-release with the original release's catalog metadata
+   (`date`, `releasecountry`, `barcode`, `label`, `catalognumber`, `media`),
+   retaining the pseudo-release's translated tracklist intact.
 3. It sets the hidden Picard variable `%_original_musicbrainz_albumid%` to the
    original release's MBID, allowing your [tagger scripts and file naming scripts](https://picard-docs.musicbrainz.org/en/extending/scripting.html)
    to reference the original release ID.
@@ -44,8 +43,9 @@ original release.
 
 When an album has multiple physical pressings (such as an initial limited
 edition, standard release, or releases for different countries), Picard
-automatically selects the best matching candidate based on track counts,
-Disc ID / TOC matches, barcode, and media format.
+automatically selects the best matching candidate based on Disc ID / TOC matches,
+track counts, barcode, release date, media format, catalog number, official release
+status, preferred countries, and presence of cover art.
 
 To manually choose a different pressing:
 
