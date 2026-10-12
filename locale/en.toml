@@ -1,0 +1,17 @@
+"action.linked_original_editions" = "Linked original editions"
+"action.tooltip_open_browser" = "Middle-click or right-click to open in browser."
+"manifest.name" = "Pseudo-Releases"
+"manifest.description" = "Supplements pseudo-releases with metadata and cover art from linked original releases."
+"options.title" = "Pseudo-Releases"
+"provider.caa.title" = "Cover Art Archive: Pseudo-Release (Original)"
+"ui.info_pseudo_releases" = """MusicBrainz [pseudo-releases](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases) contain alternate tracklists (such as transliterated or translated titles) linked to an original release via the [transl-tracklisting](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644) relationship.
+
+When a pseudo-release is loaded, this plugin automatically supplements catalog metadata (`date`, `releasecountry`, `barcode`, `label`, `catalognumber`, and `media`) from the best-matched original release, retaining the pseudo-release's translated tracklist intact.
+
+Additionally, the original release ID is made available to tagger scripts and file naming scripts via the hidden variable `%_original_musicbrainz_albumid%`."""
+"ui.group_cover_art" = "Cover Art Integration"
+"ui.enable_cover_art_description" = "Pseudo-releases are not supposed to have cover art in MusicBrainz. Artwork is fetched from the Cover Art Archive using the linked original release MBID."
+"ui.cover_art_note" = "Provider order and enablement are configured under **Options > Cover Art > Providers**."
+"ui.open_cover_providers" = "Configure Providers..."
+"variable.original_albumid.title" = "Original MusicBrainz Album ID"
+"variable.original_albumid.doc" = "MusicBrainz Release ID of the linked original release for pseudo-releases"
