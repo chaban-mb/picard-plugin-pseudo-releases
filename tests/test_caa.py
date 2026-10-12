@@ -12,7 +12,8 @@ from tests.mocks.mock_picard import (
 
 class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
     def setUp(self):
-        self.coverart = MockCoverArt()
+        self.album = MockAlbum()
+        self.coverart = MockCoverArt(self.album)
         self.provider = PseudoReleaseCoverArtProvider(self.coverart)
 
     def test_disabled_without_original_release_id(self):
@@ -107,13 +108,10 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         # When provider is enabled, queue_images must invoke the CAA retrieval path
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "edition-2001"
         self.assertTrue(self.provider.enabled())
-        # Base CoverArtProviderCaa in tests/fallback defines standard signature
-        if hasattr(self.provider, 'queue_images'):
-            # Must run without crashing
-            try:
-                self.provider.queue_images()
-            except (AttributeError, TypeError):
-                pass
+        state = self.provider.queue_images()
+        self.assertEqual(state, self.provider.QueueState.WAIT)
+        task_id = f'caa_json_{self.provider.metadata["musicbrainz_albumid"]}'
+        self.assertIn(task_id, self.provider.album._pending_tasks)
 
     def test_provider_display_title_uses_api_tr(self):
         from unittest.mock import MagicMock

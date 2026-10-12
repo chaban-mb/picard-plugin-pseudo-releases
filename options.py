@@ -46,8 +46,9 @@ class PseudoReleaseOptionsPage(OptionsPage):
             "contain alternate tracklists (such as transliterated or translated titles) linked to an original release "
             "via the [transl-tracklisting](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644) "
             "relationship.\n\n"
-            "When a pseudo-release is loaded, this plugin automatically supplements missing metadata "
-            "(`date`, `releasecountry`, `barcode`, `media`, `label`, and `catalognumber`) from the best-matched original release.\n\n"
+            "When a pseudo-release is loaded, this plugin automatically supplements catalog metadata "
+            "(`date`, `releasecountry`, `barcode`, `media`, `label`, and `catalognumber`) from the best-matched original release, "
+            "updating them with canonical catalog values.\n\n"
             "Additionally, the original release ID is made available to tagger scripts and file naming scripts "
             "via the hidden variable `%_original_musicbrainz_albumid%`.",
         )

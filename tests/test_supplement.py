@@ -165,32 +165,8 @@ class TestMetadataSupplementation(unittest.TestCase):
 
     def test_supplement_relationships_and_genres(self):
         from types import SimpleNamespace
-        from collections import Counter
         from metadata_engine import supplement_release_relationships_and_genres
-
-        class DummyAlbum:
-            def __init__(self):
-                self._release_node = {
-                    "id": "pseudo-1",
-                    "relations": [
-                        {
-                            "type": "transl-tracklisting",
-                            "direction": "backward",
-                            "target-type": "release",
-                            "release": {"id": "orig-1"},
-                        }
-                    ],
-                }
-                self.metadata = MockMetadata()
-                self._folksonomy_tags = Counter()
-                self._genres = Counter()
-                self.tracks = []
-
-            def add_folksonomy_tag(self, name, count):
-                self._folksonomy_tags[name] += count
-
-            def add_genre(self, name, count):
-                self._genres[name] += count
+        from tests.mocks.mock_picard import MockAlbum
 
         orig_node = {
             "id": "orig-1",
@@ -216,7 +192,18 @@ class TestMetadataSupplementation(unittest.TestCase):
             "genres": [{"name": "anime", "count": 3}],
         }
 
-        album = DummyAlbum()
+        album = MockAlbum("pseudo-1")
+        album._release_node = {
+            "id": "pseudo-1",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "target-type": "release",
+                    "release": {"id": "orig-1"},
+                }
+            ],
+        }
         cfg = SimpleNamespace(setting={"release_ars": True, "use_genres": True, "only_my_genres": False})
 
         supplement_release_relationships_and_genres(album, orig_node, config_obj=cfg)

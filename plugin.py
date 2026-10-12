@@ -97,7 +97,15 @@ class PseudoReleasePlugin:
         """Supplement loaded pseudo-releases with data from linked original releases."""
         album_id = getattr(album, 'id', '')
         if album_id in cls.in_flight_albums:
-            return
+            pending_tasks = getattr(album, '_pending_tasks', None)
+            if pending_tasks is not None:
+                has_active_enrich_task = any('pseudo_enrich_' in str(tid) for tid in pending_tasks)
+                if has_active_enrich_task:
+                    return
+                # Previous request was aborted or canceled without callback; heal in-flight guard
+                cls.in_flight_albums.discard(album_id)
+            else:
+                return
 
         if not isinstance(release_node, dict) or release_node.get('status') != PSEUDO_RELEASE_STATUS:
             return
@@ -173,7 +181,6 @@ class PseudoReleasePlugin:
         orig_id = best_original['id']
         cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
         album._pseudo_original_id = orig_id
-        album_metadata[TAG_ORIGINAL_RELEASE_ID] = orig_id
 
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
         is_full = getattr(album, '_pseudo_original_is_full', {}).get(orig_id, False)
@@ -212,6 +219,15 @@ class PseudoReleasePlugin:
         if loading_ids is None:
             loading_ids = set()
             album._pseudo_original_details_loading_ids = loading_ids
+        else:
+            pending_tasks = getattr(album, '_pending_tasks', None)
+            if pending_tasks is not None:
+                active_prefetch_ids = {
+                    str(tid).split('pseudo_prefetch_')[-1]
+                    for tid in pending_tasks
+                    if 'pseudo_prefetch_' in str(tid)
+                }
+                loading_ids.intersection_update(active_prefetch_ids)
 
         # Cap background prefetching to at most 3 fallback candidates to conserve rate limiter
         valid_candidates = [c for c in (candidates or []) if isinstance(c, dict)]
@@ -245,18 +261,22 @@ class PseudoReleasePlugin:
                 finally:
                     api.complete_album_task(album, task_id)
 
-            api.add_album_task(
-                album=album,
-                task_id=task_id,
-                description=f"Prefetching edition data for {release_id}",
-                timeout=10.0,
-                request_factory=lambda rel_id=release_id, cb=on_loaded: api.mb_api.get_release_by_id(
-                    rel_id,
-                    cb,
-                    inc=['labels', 'media', 'discids'],
-                ),
-                blocking=False,
-            )
+            try:
+                api.add_album_task(
+                    album=album,
+                    task_id=task_id,
+                    description=f"Prefetching edition data for {release_id}",
+                    timeout=10.0,
+                    request_factory=lambda rel_id=release_id, cb=on_loaded: api.mb_api.get_release_by_id(
+                        rel_id,
+                        cb,
+                        inc=['labels', 'media', 'discids'],
+                    ),
+                    blocking=False,
+                )
+            except Exception:
+                loading_ids.discard(release_id)
+                raise
 
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
@@ -425,7 +445,7 @@ class PseudoReleasePlugin:
             finally:
                 cls.in_flight_albums.discard(album_id)
                 api.complete_album_task(album, task_id)
-                if hasattr(album, '_finalize_loading'):
+                if hasattr(album, '_finalize_loading') and not getattr(album, 'loaded', False):
                     album._finalize_loading(None)
 
         try:

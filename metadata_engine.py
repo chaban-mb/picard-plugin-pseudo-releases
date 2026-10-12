@@ -2,7 +2,10 @@
 
 from typing import Any
 
-from picard import config
+from picard import (
+    config,
+    log,
+)
 from picard.mbjson import (
     _relations_to_metadata,
     add_genres_from_node,
@@ -220,8 +223,8 @@ def supplement_release_relationships_and_genres(
             new_meta = getattr(album, '_new_metadata', None)
             if new_meta is not None:
                 _relations_to_metadata(orig_relations, new_meta, config=target_config, entity='release')
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Failed to process release relationships for pseudo-release: %s", exc)
 
     # 3. Folksonomy tags and genres
     if get_config_value(setting, 'use_genres', False):

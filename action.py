@@ -92,11 +92,10 @@ class ChooseLinkedOriginalAction(BaseAction):
         heading.setEnabled(False)
 
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        if (
-            not current_id
-            and getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'manual'
-        ):
-            current_id = getattr(album, '_pseudo_original_release_choice', None)
+        if not current_id:
+            current_id = getattr(album, '_pseudo_original_id', None) or getattr(
+                album, '_pseudo_original_release_choice', None
+            )
         detail_cache = getattr(album, '_pseudo_original_details', {})
         stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
         seen_candidate_ids: set[str] = set()

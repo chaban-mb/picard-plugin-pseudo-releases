@@ -18,116 +18,12 @@ from constants import (
 )
 
 
-class MockMetadata:
-    def __init__(self, initial=None):
-        self._data = {}
-        if initial:
-            for k, v in initial.items():
-                self[k] = v
-
-    def __setitem__(self, key, value):
-        if isinstance(value, list):
-            self._data[key] = [str(x) for x in value]
-        else:
-            self._data[key] = [str(value)]
-
-    def __getitem__(self, key):
-        if key in self._data and self._data[key]:
-            return "; ".join(self._data[key])
-        return ""
-
-    def __contains__(self, key):
-        return key in self._data
-
-    def get(self, key, default=""):
-        val = self[key]
-        return val if val else default
-
-    def getall(self, key):
-        return list(self._data.get(key, []))
-
-    def copy(self, other):
-        self._data = {k: list(v) for k, v in other._data.items()}
-
-
-class MockAlbum:
-    def __init__(self, album_id, title="", artist="", status="Official"):
-        self.id = album_id
-        self.metadata = MockMetadata(
-            {
-                "album": title,
-                "albumartist": artist,
-                "releasestatus": status.lower(),
-            }
-        )
-        self.tracks = []
-        self._finalized = False
-        self.load_calls = []
-
-    def _finalize_loading(self, error):
-        self._finalized = True
-
-    def load(self, **kwargs):
-        self.load_calls.append(kwargs)
-        self.metadata = MockMetadata()
-
-    def iterfiles(self):
-        return iter([])
-
-
-
-class MockPluginConfig(dict):
-    def register_option(self, name, default):
-        if name not in self:
-            self[name] = default
-
-
-class MockPluginApi:
-    def __init__(self):
-        self.plugin_config = MockPluginConfig({})
-        self.tagger = SimpleNamespace(window=SimpleNamespace(selected_objects=[]))
-        self.processors = []
-
-        self.providers = []
-        self.album_actions = []
-        self.options_pages = []
-        self.removal_processors = []
-        self.script_variables = []
-        self.added_tasks = []
-        self.completed_tasks = []
-        self.logger = MagicMock()
-        self.mb_api = MagicMock()
-
-    def tr(self, key, text=None):
-        return text or key
-
-    def register_script_variable(self, name, documentation="", title=""):
-        self.script_variables.append((name, documentation, title))
-
-    def register_album_metadata_processor(self, func, priority=50):
-        self.processors.append((func, priority))
-
-    def register_album_post_removal_processor(self, func):
-        self.removal_processors.append(func)
-
-    def register_album_action(self, action_cls):
-        action_cls.api = self
-        self.album_actions.append(action_cls)
-
-    def register_cover_art_provider(self, provider_cls):
-        self.providers.append(provider_cls)
-
-    def register_options_page(self, page_cls):
-        self.options_pages.append(page_cls)
-
-    def add_album_task(self, album, task_id, description, timeout, request_factory, blocking=False):
-        self.added_tasks.append((album, task_id, blocking))
-        self.metadata_at_task_add = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
-        if request_factory:
-            request_factory()
-
-    def complete_album_task(self, album, task_id):
-        self.completed_tasks.append((album, task_id))
+from tests.mocks.mock_picard import (
+    MockAlbum,
+    MockMetadata,
+    MockPluginApi,
+    MockPluginConfig,
+)
 
 
 class TestPluginLifecycle(unittest.TestCase):
@@ -192,7 +88,8 @@ class TestPluginLifecycle(unittest.TestCase):
         # Assert album task was added with blocking=True and completed
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" and task[2] is True for task in self.api.added_tasks))
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" for task in self.api.completed_tasks))
-        self.assertEqual(self.api.metadata_at_task_add, "orig-1")
+        self.assertEqual(self.api.metadata_at_task_add, "")
+        self.assertEqual(pseudo_album._pseudo_original_id, "orig-1")
 
         # Assert metadata supplementation succeeded
         self.assertEqual(pseudo_album.metadata["barcode"], "4988008610134")
@@ -517,6 +414,84 @@ class TestPluginLifecycle(unittest.TestCase):
             "Translated Tooltip Hint",
         )
         mock_api.tr.assert_called_with("action.tooltip_open_browser", "Fallback Hint")
+
+    def test_cancellation_recovery(self):
+        """Regression Test [P1]: If Picard aborts an enrichment request without running its callback,
+        re-processing the same album heals in_flight_albums and retries enrichment.
+        """
+        pseudo_album = MockAlbum("pseudo-cancellation-test", "Transliterated Album")
+        pseudo_node = {
+            "id": "pseudo-cancellation-test",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "target-type": "release",
+                    "release": {"id": "orig-cancel-1", "title": "Original Album"},
+                }
+            ],
+        }
+
+        # Step 1: Simulate starting enrichment, but aborted/canceled by Picard
+        plugin_module.PseudoReleasePlugin.in_flight_albums.add("pseudo-cancellation-test")
+        # Ensure album._pending_tasks has no active pseudo_enrich_ task (aborted externally)
+        pseudo_album._pending_tasks.clear()
+
+        # Step 2: User refreshes metadata on the same album without removing it
+        retried = False
+
+        def mock_get_release(release_id, callback, **kwargs):
+            nonlocal retried
+            retried = True
+            callback({"id": release_id, "barcode": "1234567890"}, None, None)
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_get_release
+
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            api=self.api,
+            album=pseudo_album,
+            album_metadata=pseudo_album.metadata,
+            release_node=pseudo_node,
+        )
+
+        self.assertTrue(retried, "Enrichment must be retried after request cancellation without removing album")
+        self.assertEqual(pseudo_album.metadata["barcode"], "1234567890")
+
+    def test_failed_enrichment_does_not_tag(self):
+        """Regression Test [P2]: A failed network request must not write TAG_ORIGINAL_RELEASE_ID,
+        preventing future automatic retries from being blocked.
+        """
+        pseudo_album = MockAlbum("pseudo-error-test", "Transliterated Album")
+        pseudo_node = {
+            "id": "pseudo-error-test",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "target-type": "release",
+                    "release": {"id": "orig-err-1", "title": "Original Album"},
+                }
+            ],
+        }
+
+        # Simulate network error in MB API
+        def mock_error_get(release_id, callback, **kwargs):
+            callback({}, None, "Network 500 Internal Server Error")
+
+        self.api.mb_api.get_release_by_id.side_effect = mock_error_get
+
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            api=self.api,
+            album=pseudo_album,
+            album_metadata=pseudo_album.metadata,
+            release_node=pseudo_node,
+        )
+
+        # TAG_ORIGINAL_RELEASE_ID must NOT be set on error
+        self.assertEqual(pseudo_album.metadata.get(TAG_ORIGINAL_RELEASE_ID), "")
+        self.assertNotIn("pseudo-error-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
 
 if __name__ == '__main__':

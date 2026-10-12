@@ -43,17 +43,17 @@ All test doubles are strictly isolated within the `tests/` tree and cannot leak 
 
 ### 3.1 `tests/mocks/mock_picard.py`
 Provides canonical mocks matching Picard 3.0+ internal behavior:
-- `MockMetadata`: Mirrors `picard.metadata.Metadata` with internal `_data: dict[str, list[str]]`, joined string `__getitem__`, `.get()`, `.getall()`, and `.copy()`.
+- `MockMetadata`: Mirrors `picard.metadata.Metadata` with internal `_data: dict[str, list[str]]`, full mapping methods (`keys()`, `values()`, `items()`, `__iter__()`, `__len__()`, `__delitem__()`), joined string `__getitem__`, `.get()`, `.getall()`, and `.copy()`.
 - `MockTrack`: Mirrors `picard.track.Track` with `.metadata` containing `title` and `musicbrainz_recordingid`.
-- `MockAlbum`: Mirrors `picard.album.Album` with `.id`, `.metadata`, `.tracks`, `.load()`, `._finalize_loading()`, and `.iterfiles()`.
+- `MockAlbum`: Mirrors `picard.album.Album` with `.id`, `.metadata`, `.tracks`, `.load()`, `._finalize_loading()`, `._pending_tasks`, `.add_task()`, `.complete_task()`, `.add_folksonomy_tag()`, `.add_genre()`, and `.iterfiles()`.
 - `MockCoverArt`: Mirrors `picard.coverart.CoverArt` with `.album`, `.metadata`, `.release`, `.front_image_found`, and `.tagger`.
 - `MockPluginConfig`: Dictionary subclass with `.register_option(name, default)` matching `picard.plugin3.config.PluginConfig`.
 - `MockPluginApi`: Complete mock implementing the full `PluginApi` specification:
   - `add_album_task()`, `complete_album_task()`
   - `register_album_metadata_processor()`, `register_album_post_removal_processor()`
-  - `register_album_action()`, `register_cover_art_provider()`, `register_options_page()`
+  - `register_album_action()`, `register_cover_art_provider()`, `register_options_page()`, `register_script_variable()`
   - `tr()`, `trn()`
-  - `.logger`, `.mb_api`, `.tagger`, `.global_config`, `.plugin_config`
+  - `.logger`, `.mb_api`, `.tagger`, `.global_config`, `.plugin_config`, `.script_variables`
 
 ### 3.2 `tests/mocks/mock_qt.py`
 Provides headless Qt stubs (`_DummyWidget`, `_DummySignal`, `_FallbackAction`, `_FallbackMenu`) used exclusively when running in headless environments where PyQt6 is not present.
@@ -62,20 +62,20 @@ Provides headless Qt stubs (`_DummyWidget`, `_DummySignal`, `_FallbackAction`, `
 
 ## 4. Consolidated Test Suite Mapping
 
-All test files now import standard test doubles from `tests.mocks.mock_picard` instead of declaring duplicate local classes:
+All test files now import standard test doubles from `tests.mocks.mock_picard` without any duplicate local classes:
 
 | Test File | Previous State | Current Consolidated State |
 | :--- | :--- | :--- |
 | `tests/test_candidates.py` | Local `MockMetadata` & `MockFile` | Imports `MockMetadata`, `MockFile` from `tests.mocks.mock_picard` |
-| `tests/test_caa.py` | Local `MockCoverArt` & 4 local `MockAlbum` classes | Imports `MockAlbum`, `MockCoverArt`, `MockMetadata` from `tests.mocks.mock_picard` |
-| `tests/test_supplement.py` | Local `MockMetadata` | Imports `MockMetadata` from `tests.mocks.mock_picard` |
+| `tests/test_caa.py` | Swallowed `(AttributeError, TypeError)` in queue test | Fully consolidated doubles; asserts `QueueState.WAIT` and task registration |
+| `tests/test_supplement.py` | Local `MockMetadata` & local `DummyAlbum` | Imports `MockMetadata` and `MockAlbum` from `tests.mocks.mock_picard` |
 | `tests/test_menu_gui.py` | Local `MockMetadata` & `MockAlbum` | Imports `MockAlbum`, `MockMetadata` from `tests.mocks.mock_picard` |
-| `tests/test_real_fixtures.py` | Local `MockMetadata`, `MockAlbum`, `MockPluginConfig`, `MockPluginApi` | Imports canonical mocks from `tests.mocks.mock_picard`; pruned artificial `[None]` probes |
-| `tests/test_plugin_lifecycle.py` | Uses `tests.mocks.mock_picard` | Validates registration, task scheduling, and error isolation |
-| `tests/test_options.py` | Uses `tests.mocks.mock_picard` | Validates option defaults and persistence |
-| `tests/test_options_gui.py` | Headless Qt validation | Validates UI layout and event handlers |
+| `tests/test_real_fixtures.py` | Local `MockMetadata`, `MockAlbum`, `MockPluginConfig`, `MockPluginApi` | Imports canonical mocks from `tests.mocks.mock_picard` |
+| `tests/test_plugin_lifecycle.py` | Local `MockMetadata`, `MockAlbum`, `MockPluginConfig`, `MockPluginApi` | Imports canonical mocks from `tests.mocks.mock_picard`; includes cancellation and error recovery tests |
+| `tests/test_options.py` | Local `MockPluginApi` | Imports `MockPluginApi` from `tests.mocks.mock_picard` |
+| `tests/test_options_gui.py` | Local `MockPluginApi` | Imports `MockPluginApi` from `tests.mocks.mock_picard` |
 
-**Suite Result:** 51 tests passing in ~0.12s across both headless and desktop environments.
+**Suite Result:** 53 tests passing in ~0.10s across both headless and desktop environments.
 
 ---
 

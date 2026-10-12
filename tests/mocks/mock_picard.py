@@ -35,6 +35,15 @@ def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tu
     return key
 
 
+from enum import Enum
+
+
+class QueueState(Enum):
+    _STARTED = 0
+    FINISHED = 1
+    WAIT = 2
+
+
 class MockMetadata(dict):
     """Mock Picard Metadata object matching internal Picard behavior."""
 
@@ -47,9 +56,11 @@ class MockMetadata(dict):
 
     def __setitem__(self, key: str, value: Any) -> None:
         if isinstance(value, list):
-            self._data[key] = [str(x) for x in value]
+            vals = [str(x) for x in value]
         else:
-            self._data[key] = [str(value)]
+            vals = [str(value)]
+        self._data[key] = vals
+        super().__setitem__(key, "; ".join(vals))
 
     def __getitem__(self, key: str) -> str:
         if key in self._data and self._data[key]:
@@ -59,6 +70,26 @@ class MockMetadata(dict):
     def __contains__(self, key: object) -> bool:
         return key in self._data
 
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __delitem__(self, key: str) -> None:
+        self._data.pop(key, None)
+        if super().__contains__(key):
+            super().__delitem__(key)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return [self[k] for k in self._data.keys()]
+
+    def items(self):
+        return [(k, self[k]) for k in self._data.keys()]
+
     def get(self, key: str, default: Any = "") -> Any:
         val = self[key]
         return val if val else default
@@ -66,9 +97,16 @@ class MockMetadata(dict):
     def getall(self, key: str) -> list[str]:
         return list(self._data.get(key, []))
 
-    def copy(self, other: Any = None) -> None:
+    def copy(self, other: Any = None) -> Any:
         if other is not None:
             self._data = {k: list(v) for k, v in other._data.items()}
+            self.clear()
+            for k, v in self._data.items():
+                super().__setitem__(k, "; ".join(v))
+            return self
+        cp = MockMetadata()
+        cp.copy(self)
+        return cp
 
 
 Metadata = MockMetadata
@@ -103,6 +141,11 @@ class MockAlbum:
         self._finalized = False
         self.load_calls: list[dict[str, Any]] = []
         self._pseudo_original_candidates: list[dict[str, Any]] = []
+        self._pending_tasks: dict[str, Any] = {}
+        self._folksonomy_tags: dict[str, int] = {}
+        self._genres: dict[str, int] = {}
+        self.tagger = MagicMock()
+        self._release_node: dict[str, Any] | None = None
 
     def _finalize_loading(self, error: Any = None) -> None:
         self._finalized = True
@@ -112,6 +155,18 @@ class MockAlbum:
 
     def iterfiles(self) -> Any:
         return iter([])
+
+    def add_task(self, task_id: str, *args: Any, **kwargs: Any) -> None:
+        self._pending_tasks[task_id] = kwargs
+
+    def complete_task(self, task_id: str) -> None:
+        self._pending_tasks.pop(task_id, None)
+
+    def add_folksonomy_tag(self, name: str, count: int = 1) -> None:
+        self._folksonomy_tags[name] = self._folksonomy_tags.get(name, 0) + count
+
+    def add_genre(self, name: str, count: int = 1) -> None:
+        self._genres[name] = self._genres.get(name, 0) + count
 
 
 Album = MockAlbum
@@ -170,6 +225,7 @@ class MockPluginApi:
         self.album_actions: list[Any] = []
         self.options_pages: list[Any] = []
         self.removal_processors: list[Any] = []
+        self.script_variables: list[tuple[str, str, str]] = []
         self.added_tasks: list[Any] = []
         self.completed_tasks: list[Any] = []
         self.logger = MagicMock()
@@ -200,7 +256,7 @@ class MockPluginApi:
         self.options_pages.append(page_cls)
 
     def register_script_variable(self, name: str, documentation: str = "", title: str = "", **kwargs: Any) -> None:
-        pass
+        self.script_variables.append((name, documentation, title))
 
     def add_album_task(
         self,
@@ -212,11 +268,20 @@ class MockPluginApi:
         blocking: bool = False,
     ) -> None:
         self.added_tasks.append((album, task_id, blocking))
+        meta = getattr(album, 'metadata', None)
+        if meta and hasattr(meta, 'get'):
+            self.metadata_at_task_add = meta.get('~original_musicbrainz_albumid', '')
+        else:
+            self.metadata_at_task_add = ''
+        if hasattr(album, '_pending_tasks'):
+            album._pending_tasks[task_id] = description
         if request_factory:
             request_factory()
 
     def complete_album_task(self, album: Any, task_id: str) -> None:
         self.completed_tasks.append((album, task_id))
+        if hasattr(album, '_pending_tasks'):
+            album._pending_tasks.pop(task_id, None)
 
 
 PluginApi = MockPluginApi
@@ -226,6 +291,7 @@ class CoverArtProviderCaa:
     NAME = "Cover Art Archive"
     TITLE = "Cover Art Archive: Release"
     OPTIONS = None
+    QueueState = QueueState
 
     def __init__(self, coverart: Any = None) -> None:
         self.coverart = coverart
@@ -235,6 +301,14 @@ class CoverArtProviderCaa:
 
     def enabled(self) -> bool:
         return not (self.coverart and getattr(self.coverart, "front_image_found", False))
+
+    def queue_images(self) -> Any:
+        album = getattr(self, "album", None)
+        album_id = self.metadata.get("musicbrainz_albumid", "")
+        task_id = f"caa_json_{album_id}"
+        if album and hasattr(album, "add_task"):
+            album.add_task(task_id, description=f"CAA JSON metadata for {album_id}")
+        return self.QueueState.WAIT
 
     @property
     def _caa_path(self) -> str:

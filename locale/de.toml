@@ -6,7 +6,7 @@
 "provider.caa.title" = "Cover-Art Archiv: Pseudo-Veröffentlichung (Original)"
 "ui.info_pseudo_releases" = """MusicBrainz-[Pseudo-Releases](https://musicbrainz.org/doc/Style/Specific_types_of_releases/Pseudo-Releases) enthalten alternative Titellisten (wie transliterierte oder übersetzte Titel), die über die Beziehung [transl-tracklisting](https://musicbrainz.org/relationship/fc399d47-23a7-4c28-bfcf-0607a562b644) mit einer Originalveröffentlichung verknüpft sind.
 
-Beim Laden eines Pseudo-Releases ergänzt dieses Plugin fehlende Metadaten (`date`, `releasecountry`, `barcode`, `media`, `label` und `catalognumber`) automatisch anhand der am besten passenden Originalveröffentlichung.
+Beim Laden eines Pseudo-Releases ergänzt dieses Plugin Katalog-Metadaten (`date`, `releasecountry`, `barcode`, `media`, `label` und `catalognumber`) automatisch anhand der am besten passenden Originalveröffentlichung und aktualisiert sie mit kanonischen Werten.
 
 Zusätzlich steht die ID der Originalveröffentlichung in Tagger- und Dateibenennungsskripten über die versteckte Variable `%_original_musicbrainz_albumid%` zur Verfügung."""
 "ui.group_cover_art" = "Cover-Art-Integration"

@@ -9,9 +9,7 @@ from PyQt6.QtTest import QTest
 from options import PseudoReleaseOptionsPage
 
 
-class MockPluginApi:
-    def __init__(self, initial_config=None):
-        self.plugin_config = initial_config or {}
+from tests.mocks.mock_picard import MockPluginApi
 
 
 @pytest.fixture(autouse=True)
