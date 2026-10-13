@@ -65,6 +65,7 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
         tr=MagicMock(side_effect=lambda key, text=None, **kwargs: text or key),
     )
     plugin_module.PseudoReleasePlugin.api = api
+    plugin_module.ChooseLinkedOriginalAction.api = api
 
     action = plugin_module.ChooseLinkedOriginalAction()
     action.tagger = mock_tagger
