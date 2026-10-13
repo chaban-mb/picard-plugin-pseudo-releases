@@ -30,7 +30,7 @@ class ManifestTranslations:
     NAME = t_("manifest.name", "Pseudo-Releases")
     DESC = t_(
         "manifest.description",
-        "Supplements pseudo-releases with original catalog metadata and cover art.",
+        "Supplements pseudo-releases with metadata and cover art from linked original releases.",
     )
 
 
@@ -83,4 +83,3 @@ __all__ = [
     "disable",
     "enable",
 ]
-
