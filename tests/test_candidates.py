@@ -82,6 +82,26 @@ class TestCandidateDiscovery(unittest.TestCase):
         self.assertEqual(len(backward_related), 1)
         self.assertEqual(backward_related[0]["id"], "original-release-id")
 
+    def test_find_related_releases_matches_custom_type_name(self):
+        releases = find_related_releases(
+            {
+                "relations": [
+                    {
+                        "type": "custom-release-link",
+                        "type-id": "custom-type-uuid",
+                        "release": {"id": "custom-release"},
+                    },
+                    {
+                        "type": "transl-tracklisting",
+                        "release": {"id": "default-release"},
+                    },
+                ]
+            },
+            rel_type="custom-release-link",
+        )
+
+        self.assertEqual([release["id"] for release in releases], ["custom-release"])
+
 
 class TestOriginalCandidateScoring(unittest.TestCase):
     def test_file_scoring_uses_original_multivalued_metadata(self):

@@ -39,7 +39,11 @@ def find_related_releases(
 
         r_type = rel.get('type')
         r_type_id = rel.get('type-id')
-        if r_type != 'transl-tracklisting' and r_type_id != rel_type:
+        is_default_type_name = (
+            rel_type == RELATIONSHIP_TYPE_TRANSL_TRACKLISTING
+            and r_type == 'transl-tracklisting'
+        )
+        if r_type != rel_type and r_type_id != rel_type and not is_default_type_name:
             continue
 
         if direction and rel.get('direction') != direction:
