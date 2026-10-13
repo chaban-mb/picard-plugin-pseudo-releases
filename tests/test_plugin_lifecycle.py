@@ -125,6 +125,35 @@ class TestPluginLifecycle(unittest.TestCase):
         self.api.complete_album_task(album, "blocking")
         self.assertTrue(album.loaded)
 
+    def test_cached_candidate_details_can_improve_automatic_match(self):
+        album = MockAlbum("pseudo-with-local-disc")
+        album._pseudo_original_selection_mode = "automatic"
+        album._pseudo_original_id = "initial"
+        album._pseudo_original_candidates = [
+            {"id": "initial"},
+            {"id": "disc-match"},
+        ]
+        album._pseudo_original_details = {
+            "initial": {"id": "initial", "media": [{"discs": []}]}
+        }
+        album._pseudo_candidate_stubs = {
+            "disc-match": {
+                "id": "disc-match",
+                "media": [{"discs": [{"id": "local-disc"}]}],
+            }
+        }
+        album._discids = ["local-disc"]
+
+        plugin_module.PseudoReleasePlugin._maybe_reselect_automatic_candidate(
+            self.api,
+            album,
+            album._pseudo_original_candidates,
+        )
+
+        self.assertEqual(album._pseudo_original_id, "disc-match")
+        self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
+        self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, album.metadata)
+
     def test_official_release_is_not_modified(self):
         album = MockAlbum("official-1", "Original release")
         album._pseudo_original_id = "stale-original"

@@ -116,6 +116,12 @@ class TestOriginalCandidateScoring(unittest.TestCase):
 
         self.assertEqual(score, 15.0)
 
+    def test_placeholder_catalog_number_does_not_match(self):
+        candidate = {"label-info": [{"catalog-number": "[none]"}]}
+        file = MockFile({"catalognumber": "[none]"})
+
+        self.assertEqual(score_original_candidate(candidate, files=[file]), 0.0)
+
     def test_disc_id_match_priority(self):
         candidate_cd = {
             "id": "cd-cand-id",

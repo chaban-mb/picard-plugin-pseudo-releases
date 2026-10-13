@@ -29,6 +29,7 @@ from picard.util import (
 try:
     from .candidates import (
         find_related_releases,
+        score_original_candidate,
         select_best_original_candidate,
     )
     from .constants import (
@@ -45,6 +46,7 @@ try:
 except (ImportError, ValueError):
     from candidates import (
         find_related_releases,
+        score_original_candidate,
         select_best_original_candidate,
     )
     from constants import (
@@ -153,7 +155,7 @@ class PseudoReleasePlugin:
                 [],
             )
             preferred = select_best_original_candidate(
-                candidates=candidates,
+                candidates=cls._candidates_with_cached_details(album, candidates),
                 album_metadata=album_metadata,
                 files=files,
                 disc_ids=list(disc_ids) if disc_ids else None,
@@ -278,6 +280,7 @@ class PseudoReleasePlugin:
                         album._pseudo_candidate_stubs = stubs
                 finally:
                     api.complete_album_task(album, task_id)
+                    cls._maybe_reselect_automatic_candidate(api, album, candidates)
 
             try:
                 api.add_album_task(
@@ -295,6 +298,104 @@ class PseudoReleasePlugin:
             except Exception:
                 loading_ids.discard(release_id)
                 raise
+
+    @staticmethod
+    def _candidates_with_cached_details(
+        album: Album,
+        candidates: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        detail_cache = getattr(album, '_pseudo_original_details', {})
+        stub_cache = getattr(album, '_pseudo_candidate_stubs', {})
+        scored_candidates = []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            enriched = dict(candidate)
+            release_id = candidate.get('id')
+            for cached in (stub_cache.get(release_id), detail_cache.get(release_id)):
+                if not isinstance(cached, dict):
+                    continue
+                enriched.update(
+                    {key: value for key, value in cached.items() if value is not None}
+                )
+            scored_candidates.append(enriched)
+        return scored_candidates
+
+    @classmethod
+    def _maybe_reselect_automatic_candidate(
+        cls,
+        api: PluginApi,
+        album: Album,
+        candidates: list[dict[str, Any]],
+    ) -> None:
+        if getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'manual':
+            return
+        valid_candidates = [candidate for candidate in candidates if isinstance(candidate, dict)]
+        if len(valid_candidates) < 2:
+            return
+
+        current_id = (
+            album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
+            or getattr(album, '_pseudo_original_id', None)
+        )
+        if not current_id:
+            return
+
+        pending_tasks = getattr(album, '_pending_tasks', None)
+        if pending_tasks and any('pseudo_enrich_' in str(task_id) for task_id in pending_tasks):
+            return
+
+        files = list(album.iterfiles())
+        disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
+        if not files and not disc_ids:
+            return
+        config_setting = getattr(getattr(api, 'global_config', None), 'setting', None)
+        preferred_countries = get_config_value(
+            config_setting,
+            'preferred_release_countries',
+            [],
+        )
+        enriched_candidates = cls._candidates_with_cached_details(album, valid_candidates)
+        best = select_best_original_candidate(
+            candidates=enriched_candidates,
+            album_metadata=album.metadata,
+            files=files,
+            disc_ids=list(disc_ids) if disc_ids else None,
+            preferred_countries=preferred_countries,
+        )
+        if not best or best.get('id') == current_id:
+            return
+
+        best_score = score_original_candidate(
+            best,
+            album_metadata=album.metadata,
+            files=files,
+            disc_ids=list(disc_ids) if disc_ids else None,
+            preferred_countries=preferred_countries,
+        )
+        current = next(
+            (candidate for candidate in enriched_candidates if candidate.get('id') == current_id),
+            None,
+        )
+        current_score = score_original_candidate(
+            current,
+            album_metadata=album.metadata,
+            files=files,
+            disc_ids=list(disc_ids) if disc_ids else None,
+            preferred_countries=preferred_countries,
+        )
+        if best_score <= current_score:
+            return
+
+        album._pseudo_original_id = best['id']
+        for metadata in (album.metadata, getattr(album, '_new_metadata', None)):
+            if metadata is not None:
+                try:
+                    del metadata[TAG_ORIGINAL_RELEASE_ID]
+                except KeyError:
+                    pass
+        cls._log_debug(api, "Reloading pseudo-release with better-matched original %s", best['id'])
+        album.load(priority=True, refresh=True)
 
     @staticmethod
     def _format_original_candidate(candidate: dict[str, Any]) -> str:
@@ -467,6 +568,11 @@ class PseudoReleasePlugin:
             finally:
                 cls.in_flight_albums.discard(album_id)
                 api.complete_album_task(album, task_id)
+                cls._maybe_reselect_automatic_candidate(
+                    api,
+                    album,
+                    getattr(album, '_pseudo_original_candidates', []),
+                )
 
         try:
             api.add_album_task(

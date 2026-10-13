@@ -193,7 +193,9 @@ def score_original_candidate(
         if isinstance(label_info, dict):
             cat = label_info.get('catalog-number')
             if cat is not None:
-                candidate_cat_nums.add(str(cat).strip().lower())
+                catalog_number = str(cat).strip().lower()
+                if catalog_number and catalog_number != '[none]':
+                    candidate_cat_nums.add(catalog_number)
     if candidate_cat_nums:
         file_cats = _get_tag_from_files_or_metadata('catalognumber', album_metadata, files)
         if candidate_cat_nums.intersection(file_cats):
