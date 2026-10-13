@@ -54,10 +54,14 @@ def find_related_releases(
 
 def _extract_tag_values(source: Any, tag_name: str) -> set[str]:
     """Extract non-empty lowercase string values for a tag from a metadata container."""
-    meta = getattr(source, 'metadata', source)
+    meta = getattr(source, 'orig_metadata', None)
+    if meta is None:
+        meta = getattr(source, 'metadata', source)
     raw_vals = meta.getall(tag_name) if hasattr(meta, 'getall') else meta.get(tag_name, [])
     if isinstance(raw_vals, str):
         raw_vals = [raw_vals]
+    if raw_vals is None:
+        return set()
     return {str(v).strip().lower() for v in raw_vals if str(v).strip()}
 
 

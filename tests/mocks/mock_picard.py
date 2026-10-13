@@ -194,6 +194,7 @@ class MockCoverArt:
 class MockFile:
     def __init__(self, metadata: dict[str, Any] | None = None) -> None:
         self.metadata = MockMetadata(metadata or {})
+        self.orig_metadata = self.metadata.copy()
 
 
 class MockPluginConfig(dict):

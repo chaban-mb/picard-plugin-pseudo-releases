@@ -84,6 +84,18 @@ class TestCandidateDiscovery(unittest.TestCase):
 
 
 class TestOriginalCandidateScoring(unittest.TestCase):
+    def test_file_scoring_uses_original_multivalued_metadata(self):
+        file = MockFile({"catalognumber": "supplemented value"})
+        file.orig_metadata = MockMetadata({"catalognumber": ["CAT-1", "CAT-2"]})
+        candidate = {
+            "id": "original",
+            "label-info": [{"catalog-number": "CAT-2"}],
+        }
+
+        score = score_original_candidate(candidate, files=[file])
+
+        self.assertEqual(score, 15.0)
+
     def test_disc_id_match_priority(self):
         candidate_cd = {
             "id": "cd-cand-id",
