@@ -241,7 +241,21 @@ def supplement_release_relationships_and_genres(
     # 2. Release relationships to metadata
     if get_config_value(setting, 'release_ars', False) and orig_relations and _relations_to_metadata:
         try:
-            _relations_to_metadata(orig_relations, album.metadata, config=target_config, entity='release')
+            context = _relations_to_metadata(
+                orig_relations,
+                album.metadata,
+                config=target_config,
+                entity='release',
+            )
+            source_per_medium = getattr(context, 'per_medium_metadata', None)
+            target_per_medium = getattr(album, 'per_medium_metadata', None)
+            if source_per_medium and target_per_medium is not None:
+                for medium_no, medium_metadata in source_per_medium.items():
+                    target_metadata = target_per_medium.setdefault(medium_no, type(medium_metadata)())
+                    for key, values in medium_metadata.rawitems():
+                        for value in values:
+                            target_metadata.add_unique(key, value)
+
             new_meta = getattr(album, '_new_metadata', None)
             if new_meta is not None:
                 _relations_to_metadata(orig_relations, new_meta, config=target_config, entity='release')
@@ -288,7 +302,5 @@ __all__ = (
     'supplement_pseudo_metadata',
     'supplement_release_relationships_and_genres',
 )
-
-
 
 

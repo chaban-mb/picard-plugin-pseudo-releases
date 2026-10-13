@@ -1,5 +1,6 @@
 # Tests for pseudo-release metadata supplementation
 import unittest
+from unittest.mock import patch
 from metadata_engine import (
     extract_release_catalog_metadata,
     supplement_pseudo_media,
@@ -101,6 +102,31 @@ class TestMetadataSupplementation(unittest.TestCase):
             [medium["format"] for medium in album._release_node["media"]],
             ["CD", "Vinyl"],
         )
+
+    def test_supplement_merges_per_medium_release_relationships(self):
+        from types import SimpleNamespace
+
+        from metadata_engine import supplement_release_relationships_and_genres
+        from tests.mocks.mock_picard import MockAlbum
+
+        album = MockAlbum()
+        context = SimpleNamespace(
+            per_medium_metadata={
+                1: MockMetadata({"mix-DJ": ["DJ One", "DJ Two"]}),
+                2: MockMetadata({"mix-DJ": ["DJ Three"]}),
+            }
+        )
+        config_obj = SimpleNamespace(setting={"release_ars": True, "use_genres": False})
+
+        with patch("metadata_engine._relations_to_metadata", return_value=context):
+            supplement_release_relationships_and_genres(
+                album,
+                {"relations": [{"type": "mix-DJ"}]},
+                config_obj=config_obj,
+            )
+
+        self.assertEqual(album.per_medium_metadata[1].getall("mix-DJ"), ["DJ One", "DJ Two"])
+        self.assertEqual(album.per_medium_metadata[2].getall("mix-DJ"), ["DJ Three"])
 
     def test_supplement_overwrites_by_default(self):
         # Default behavior: preserve_existing is False, so existing tags get overwritten

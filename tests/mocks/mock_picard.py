@@ -97,6 +97,15 @@ class MockMetadata(dict):
     def getall(self, key: str) -> list[str]:
         return list(self._data.get(key, []))
 
+    def rawitems(self):
+        return ((key, list(values)) for key, values in self._data.items())
+
+    def add_unique(self, key: str, value: Any) -> None:
+        value_str = str(value)
+        if value_str not in self._data.get(key, []):
+            self._data.setdefault(key, []).append(value_str)
+            super().__setitem__(key, "; ".join(self._data[key]))
+
     def copy(self, other: Any = None) -> Any:
         if other is not None:
             self._data = {k: list(v) for k, v in other._data.items()}
@@ -146,6 +155,7 @@ class MockAlbum:
         self._critical_tasks: set[str] = set()
         self._folksonomy_tags: dict[str, int] = {}
         self._genres: dict[str, int] = {}
+        self.per_medium_metadata: dict[int, MockMetadata] = {}
         self.tagger = MagicMock()
         self._release_node: dict[str, Any] | None = None
 
