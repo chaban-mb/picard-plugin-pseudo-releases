@@ -47,6 +47,9 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     real_main_window = QtWidgets.QMainWindow()
     qtbot.addWidget(real_main_window)
     real_main_window.show()
+    outer_menu = QtWidgets.QMenu(real_main_window)
+    outer_menu.addAction("Parent context")
+    qtbot.addWidget(outer_menu)
 
     mock_tagger = SimpleNamespace(
         window=real_main_window,
@@ -68,6 +71,7 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     menu = action.menu()
     assert isinstance(menu, QtWidgets.QMenu)
     qtbot.addWidget(menu)
+    outer_menu.show()
     menu.show()
 
     # Menu actions: heading, candidate 1, candidate 2
@@ -91,11 +95,14 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     handled = QtWidgets.QApplication.sendEvent(menu, event_middle)
     assert handled is True
     mock_file_lookup.album_lookup.assert_called_once_with("rel-orig-1")
+    assert outer_menu.isVisible() is False
     # Verify main window is still open and was NOT closed
     assert real_main_window.isVisible() is True
 
     # Post MouseButtonRelease with RightButton over action2
     mock_file_lookup.reset_mock()
+    outer_menu.show()
+    menu.show()
     pos2 = menu.actionGeometry(action2).center()
     event_right = QtGui.QMouseEvent(
         QtCore.QEvent.Type.MouseButtonRelease,
@@ -108,4 +115,5 @@ def test_qmenu_middle_click_and_right_click_event_filter(qtbot):
     handled_right = QtWidgets.QApplication.sendEvent(menu, event_right)
     assert handled_right is True
     mock_file_lookup.album_lookup.assert_called_once_with("rel-orig-2")
+    assert outer_menu.isVisible() is False
     assert real_main_window.isVisible() is True

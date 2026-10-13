@@ -40,6 +40,12 @@ class LinkedEditionsMenuFilter(QtCore.QObject):
                 while p and isinstance(p, QtWidgets.QMenu):
                     p.close()
                     p = p.parent()
+                popup = QtWidgets.QApplication.activePopupWidget()
+                seen_popups = set()
+                while isinstance(popup, QtWidgets.QMenu) and id(popup) not in seen_popups:
+                    seen_popups.add(id(popup))
+                    popup.close()
+                    popup = QtWidgets.QApplication.activePopupWidget()
                 return True
         return super().eventFilter(obj, event)
 
