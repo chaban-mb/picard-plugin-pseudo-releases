@@ -8,10 +8,12 @@ from picard.plugin3.api import t_
 
 try:
     from .constants import (
+        PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
     )
 except (ImportError, ValueError):
     from constants import (
+        PSEUDO_RELEASE_STATUS,
         TAG_ORIGINAL_RELEASE_ID,
     )
 
@@ -30,11 +32,22 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
     @property
     def _original_id(self) -> str | None:
         """Resolve the linked original release ID from metadata or album state."""
+        release_status = self.release.get('status') if isinstance(self.release, dict) else None
+        metadata_status = self.metadata.get('releasestatus')
+        if (
+            release_status != PSEUDO_RELEASE_STATUS
+            and str(metadata_status or '').lower() != PSEUDO_RELEASE_STATUS.lower()
+        ):
+            return None
         orig_id = self.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         if orig_id:
             return orig_id
         if self.album:
-            return getattr(self.album, '_pseudo_original_id', getattr(self.album, '_pseudo_original_release_choice', None))
+            return getattr(self.album, '_pseudo_original_id', None) or getattr(
+                self.album,
+                '_pseudo_original_release_choice',
+                None,
+            )
         return None
 
     @property
@@ -77,4 +90,3 @@ class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):
         if not self._original_id or not super().enabled():
             return False
         return self._has_suitable_artwork
-

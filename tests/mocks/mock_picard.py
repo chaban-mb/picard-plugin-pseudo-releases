@@ -183,6 +183,7 @@ class MockCoverArt:
         self.album = album
         self.metadata = metadata if metadata is not None else MockMetadata({
             "musicbrainz_albumid": "pseudo-release-uuid-9fe",
+            "releasestatus": "pseudo-release",
         })
         self.release = release if release is not None else {
             "id": "pseudo-release-uuid-9fe",

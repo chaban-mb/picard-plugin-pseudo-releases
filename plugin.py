@@ -110,6 +110,19 @@ class PseudoReleasePlugin:
                 return
 
         if not isinstance(release_node, dict) or release_node.get('status') != PSEUDO_RELEASE_STATUS:
+            for attr in (
+                '_pseudo_original_id',
+                '_pseudo_original_release_choice',
+                '_pseudo_original_selection_mode',
+                '_pseudo_original_source_id',
+                '_pseudo_original_candidates',
+                '_pseudo_original_details',
+                '_pseudo_candidate_stubs',
+                '_pseudo_original_is_full',
+                '_pseudo_original_details_loading_ids',
+            ):
+                if hasattr(album, attr):
+                    delattr(album, attr)
             return
 
         source_id = release_node.get('id')
@@ -375,6 +388,7 @@ class PseudoReleasePlugin:
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         album._pseudo_original_selection_mode = 'manual'
         album._pseudo_original_release_choice = selected_id
+        album._pseudo_original_id = selected_id
         if selected_id == current_id:
             return
 

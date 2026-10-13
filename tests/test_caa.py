@@ -103,6 +103,16 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
         self.provider.metadata[TAG_ORIGINAL_RELEASE_ID] = "edition-2018"
         self.assertEqual(self.provider._caa_path, "/release/edition-2018/")
 
+    def test_official_release_ignores_stale_album_selection(self):
+        album = MockAlbum()
+        album._pseudo_original_id = "stale-original"
+        album._pseudo_original_release_choice = "chosen-original"
+        coverart = MockCoverArt(album)
+        coverart.metadata["releasestatus"] = "official"
+        self.provider = PseudoReleaseCoverArtProvider(coverart)
+
+        self.assertIsNone(self.provider._original_id)
+        self.assertFalse(self.provider.enabled())
 
     def test_queue_images_invokes_super_when_enabled(self):
         # When provider is enabled, queue_images must invoke the CAA retrieval path
@@ -131,4 +141,3 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

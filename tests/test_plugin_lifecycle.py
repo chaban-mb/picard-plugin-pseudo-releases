@@ -110,6 +110,8 @@ class TestPluginLifecycle(unittest.TestCase):
 
     def test_official_release_is_not_modified(self):
         album = MockAlbum("official-1", "Original release")
+        album._pseudo_original_id = "stale-original"
+        album._pseudo_original_candidates = [{"id": "stale-original"}]
         release_node = {
             "id": "official-1",
             "status": "Official",
@@ -122,6 +124,8 @@ class TestPluginLifecycle(unittest.TestCase):
 
         self.assertEqual(album.metadata["album"], "Original release")
         self.assertEqual(self.api.added_tasks, [])
+        self.assertFalse(hasattr(album, "_pseudo_original_id"))
+        self.assertFalse(hasattr(album, "_pseudo_original_candidates"))
 
     def test_choose_linked_original_fetches_details_and_reloads_selected_source(self):
         album = MockAlbum("pseudo-1", "Translated soundtrack", status="Pseudo-Release")
@@ -185,6 +189,7 @@ class TestPluginLifecycle(unittest.TestCase):
 
         real_actions[2].trigger()
         self.assertEqual(album._pseudo_original_release_choice, "original-2")
+        self.assertEqual(album._pseudo_original_id, "original-2")
         self.assertEqual(album._pseudo_original_selection_mode, "manual")
         self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
         album.metadata = MockMetadata(
@@ -496,4 +501,3 @@ class TestPluginLifecycle(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
