@@ -41,6 +41,8 @@ try:
     picard.tagger_instance = lambda: None
     from picard.extension_points import item_actions
     item_actions.tagger_instance = lambda: None
+    from picard.ui import options as options_module
+    options_module.tagger_instance = lambda: None
     from picard import config as cfg_mod
     from types import SimpleNamespace
     fake_config = SimpleNamespace(
