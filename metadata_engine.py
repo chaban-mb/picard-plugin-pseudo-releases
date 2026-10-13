@@ -199,6 +199,7 @@ def supplement_release_relationships_and_genres(
     album: Any,
     orig_release_node: dict[str, Any],
     config_obj: Any = None,
+    logger_obj: Any = None,
 ) -> None:
     """Supplement release-level relationships and folksonomy tags/genres onto an album.
 
@@ -260,7 +261,8 @@ def supplement_release_relationships_and_genres(
             if new_meta is not None:
                 _relations_to_metadata(orig_relations, new_meta, config=target_config, entity='release')
         except Exception as exc:
-            log.warning("Failed to process release relationships for pseudo-release: %s", exc)
+            logger = logger_obj if logger_obj is not None else log
+            logger.warning("Failed to process release relationships for pseudo-release: %s", exc)
 
     # 3. Folksonomy tags and genres
     if get_config_value(setting, 'use_genres', False):
@@ -302,5 +304,4 @@ __all__ = (
     'supplement_pseudo_metadata',
     'supplement_release_relationships_and_genres',
 )
-
 

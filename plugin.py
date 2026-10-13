@@ -209,6 +209,8 @@ class PseudoReleasePlugin:
             supplement_release_relationships_and_genres(
                 album,
                 cached_release,
+                config_obj=getattr(api, 'global_config', None),
+                logger_obj=api.logger,
             )
             cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
             return
@@ -406,7 +408,7 @@ class PseudoReleasePlugin:
         cls.in_flight_albums.add(album_id)
 
         task_id = f"pseudo_enrich_{target_mbid}"
-        inc = list(get_enrichment_inc_params())
+        inc = list(get_enrichment_inc_params(config_obj=getattr(api, 'global_config', None)))
 
         # Determine authentication state for MusicBrainz web service
         webservice = getattr(api, 'web_service', None) or getattr(getattr(api, 'tagger', None), 'webservice', None)
@@ -454,6 +456,8 @@ class PseudoReleasePlugin:
                 supplement_release_relationships_and_genres(
                     album,
                     document,
+                    config_obj=getattr(api, 'global_config', None),
+                    logger_obj=api.logger,
                 )
                 cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
 

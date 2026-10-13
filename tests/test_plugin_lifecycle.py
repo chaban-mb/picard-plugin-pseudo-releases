@@ -40,6 +40,9 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(any(v[0] == "_original_musicbrainz_albumid" for v in self.api.script_variables))
 
     def test_direction_1_supplement_pseudo_release(self):
+        self.api.global_config.setting.update(
+            {"release_ars": True, "use_genres": True, "only_my_genres": False}
+        )
         # A loaded pseudo-release with backward link to original
         pseudo_album = MockAlbum("pseudo-1", title="Spirited Away", artist="Joe Hisaishi", status="Pseudo-Release")
 
@@ -97,6 +100,9 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(pseudo_album.metadata["releasecountry"], "JP")
         self.assertEqual(pseudo_album.metadata["label"], "Tokuma")
         self.assertEqual(pseudo_album.metadata[TAG_ORIGINAL_RELEASE_ID], "orig-1")
+        requested_inc = self.api.mb_api.get_release_by_id.call_args.kwargs["inc"]
+        self.assertIn("artist-rels", requested_inc)
+        self.assertIn("genres", requested_inc)
 
         # Assert finalization kick was triggered
         self.assertTrue(pseudo_album._finalized)
