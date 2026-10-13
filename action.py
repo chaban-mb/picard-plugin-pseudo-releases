@@ -52,7 +52,7 @@ class ChooseLinkedOriginalAction(BaseAction):
     def __init__(self, parent=None):
         super().__init__(parent)
         api = getattr(self, 'api', None) or PseudoReleasePlugin.api
-        tagger = getattr(self, 'tagger', None) or getattr(api, 'tagger', None) or tagger_instance()
+        tagger = getattr(self, 'tagger', None) or getattr(api, 'tagger', None)
         self.tagger = tagger
         window = getattr(tagger, 'window', None) if tagger else None
         albums = getattr(window, 'selected_objects', []) if window else []

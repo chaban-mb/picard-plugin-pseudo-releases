@@ -127,6 +127,13 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertFalse(hasattr(album, "_pseudo_original_id"))
         self.assertFalse(hasattr(album, "_pseudo_original_candidates"))
 
+    def test_action_without_tagger_disables_cleanly(self):
+        self.api.tagger = None
+
+        action = self.api.album_actions[0]()
+
+        self.assertFalse(action.isEnabled())
+
     def test_choose_linked_original_fetches_details_and_reloads_selected_source(self):
         album = MockAlbum("pseudo-1", "Translated soundtrack", status="Pseudo-Release")
         album.metadata["musicbrainz_albumid"] = "pseudo-1"
