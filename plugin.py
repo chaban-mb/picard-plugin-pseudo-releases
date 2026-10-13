@@ -389,11 +389,8 @@ class PseudoReleasePlugin:
 
         album._pseudo_original_id = best['id']
         for metadata in (album.metadata, getattr(album, '_new_metadata', None)):
-            if metadata is not None:
-                try:
-                    del metadata[TAG_ORIGINAL_RELEASE_ID]
-                except KeyError:
-                    pass
+            if metadata is not None and TAG_ORIGINAL_RELEASE_ID in metadata:
+                del metadata[TAG_ORIGINAL_RELEASE_ID]
         cls._log_debug(api, "Reloading pseudo-release with better-matched original %s", best['id'])
         album.load(priority=True, refresh=True)
 
