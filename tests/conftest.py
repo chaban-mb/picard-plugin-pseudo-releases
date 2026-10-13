@@ -39,6 +39,8 @@ for mod_name in [
 try:
     import picard
     picard.tagger_instance = lambda: None
+    from picard.extension_points import item_actions
+    item_actions.tagger_instance = lambda: None
     from picard import config as cfg_mod
     from types import SimpleNamespace
     fake_config = SimpleNamespace(
