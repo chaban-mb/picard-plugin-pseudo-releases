@@ -385,14 +385,14 @@ class TestPluginLifecycle(unittest.TestCase):
                 "only_my_genres": True,
             }
         )
+        self.api.global_config = mock_cfg
 
-        with unittest.mock.patch("metadata_engine.config", mock_cfg):
-            plugin_module.PseudoReleasePlugin.process_album_metadata(
-                api=self.api,
-                album=pseudo_album,
-                album_metadata=pseudo_album.metadata,
-                release_node=pseudo_node,
-            )
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            api=self.api,
+            album=pseudo_album,
+            album_metadata=pseudo_album.metadata,
+            release_node=pseudo_node,
+        )
 
         self.assertTrue(captured_kwargs.get("mblogin"))
 
@@ -433,14 +433,14 @@ class TestPluginLifecycle(unittest.TestCase):
                 "only_my_genres": True,
             }
         )
+        self.api.global_config = mock_cfg
 
-        with unittest.mock.patch("metadata_engine.config", mock_cfg):
-            plugin_module.PseudoReleasePlugin.process_album_metadata(
-                api=self.api,
-                album=pseudo_album,
-                album_metadata=pseudo_album.metadata,
-                release_node=pseudo_node,
-            )
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            api=self.api,
+            album=pseudo_album,
+            album_metadata=pseudo_album.metadata,
+            release_node=pseudo_node,
+        )
 
         inc = captured_kwargs.get("inc", [])
         self.assertNotIn("user-tags", inc)
