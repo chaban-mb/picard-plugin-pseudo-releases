@@ -135,6 +135,28 @@ def supplement_pseudo_metadata(
         album_metadata[TAG_ORIGINAL_RELEASE_ID] = str(orig_id)
 
 
+def supplement_pseudo_media(album: Any, orig_release_node: dict[str, Any]) -> None:
+    """Keep Picard's later media parsing aligned with the linked original release."""
+    if album is None or not isinstance(orig_release_node, dict):
+        return
+
+    release_node = getattr(album, '_release_node', None)
+    pseudo_media = release_node.get('media') if isinstance(release_node, dict) else None
+    original_media = orig_release_node.get('media')
+    if not isinstance(pseudo_media, list) or not isinstance(original_media, list):
+        return
+
+    for index, pseudo_medium in enumerate(pseudo_media):
+        if index >= len(original_media) or not isinstance(pseudo_medium, dict):
+            continue
+        original_medium = original_media[index]
+        if not isinstance(original_medium, dict):
+            continue
+        original_format = original_medium.get('format')
+        if original_format:
+            pseudo_medium['format'] = original_format
+
+
 def get_enrichment_inc_params(config_obj: Any = None) -> list[str]:
     """Determine the inc parameters to fetch for original release enrichment.
 
@@ -266,7 +288,6 @@ __all__ = (
     'supplement_pseudo_metadata',
     'supplement_release_relationships_and_genres',
 )
-
 
 
 

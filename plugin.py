@@ -38,6 +38,7 @@ try:
     )
     from .metadata_engine import (
         get_enrichment_inc_params,
+        supplement_pseudo_media,
         supplement_pseudo_metadata,
         supplement_release_relationships_and_genres,
     )
@@ -53,6 +54,7 @@ except (ImportError, ValueError):
     )
     from metadata_engine import (
         get_enrichment_inc_params,
+        supplement_pseudo_media,
         supplement_pseudo_metadata,
         supplement_release_relationships_and_genres,
     )
@@ -185,6 +187,7 @@ class PseudoReleasePlugin:
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
         is_full = getattr(album, '_pseudo_original_is_full', {}).get(orig_id, False)
         if cached_release and is_full:
+            supplement_pseudo_media(album, cached_release)
             supplement_pseudo_metadata(
                 album_metadata,
                 cached_release,
@@ -421,6 +424,7 @@ class PseudoReleasePlugin:
                 is_full_map = getattr(album, '_pseudo_original_is_full', {})
                 is_full_map[target_mbid] = True
                 album._pseudo_original_is_full = is_full_map
+                supplement_pseudo_media(album, document)
                 supplement_pseudo_metadata(
                     album.metadata,
                     document,

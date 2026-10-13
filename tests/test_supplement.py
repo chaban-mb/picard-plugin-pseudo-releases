@@ -2,12 +2,14 @@
 import unittest
 from metadata_engine import (
     extract_release_catalog_metadata,
+    supplement_pseudo_media,
     supplement_pseudo_metadata,
 )
 from constants import (
     TAG_ORIGINAL_RELEASE_ID,
 )
 from tests.mocks.mock_picard import MockMetadata
+from tests.mocks.mock_picard import MockAlbum
 
 
 class TestMetadataSupplementation(unittest.TestCase):
@@ -75,6 +77,30 @@ class TestMetadataSupplementation(unittest.TestCase):
         # Titles must remain unchanged
         self.assertEqual(pseudo_meta["album"], "Spirited Away: Original Soundtrack")
         self.assertEqual(pseudo_meta["albumartist"], "Joe Hisaishi")
+
+    def test_supplement_updates_media_nodes_before_picard_loads_tracks(self):
+        album = MockAlbum()
+        album._release_node = {
+            "media": [
+                {"position": 1, "format": "Digital Media"},
+                {"position": 2, "format": None},
+            ]
+        }
+
+        supplement_pseudo_media(
+            album,
+            {
+                "media": [
+                    {"position": 1, "format": "CD"},
+                    {"position": 2, "format": "Vinyl"},
+                ]
+            },
+        )
+
+        self.assertEqual(
+            [medium["format"] for medium in album._release_node["media"]],
+            ["CD", "Vinyl"],
+        )
 
     def test_supplement_overwrites_by_default(self):
         # Default behavior: preserve_existing is False, so existing tags get overwritten
