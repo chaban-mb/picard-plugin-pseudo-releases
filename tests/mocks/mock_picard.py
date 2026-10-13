@@ -139,9 +139,11 @@ class MockAlbum:
         )
         self.tracks: list[Any] = []
         self._finalized = False
+        self.loaded = False
         self.load_calls: list[dict[str, Any]] = []
         self._pseudo_original_candidates: list[dict[str, Any]] = []
         self._pending_tasks: dict[str, Any] = {}
+        self._critical_tasks: set[str] = set()
         self._folksonomy_tags: dict[str, int] = {}
         self._genres: dict[str, int] = {}
         self.tagger = MagicMock()
@@ -149,6 +151,10 @@ class MockAlbum:
 
     def _finalize_loading(self, error: Any = None) -> None:
         self._finalized = True
+        self.loaded = True
+
+    def has_critical_tasks(self) -> bool:
+        return bool(self._critical_tasks)
 
     def load(self, **kwargs: Any) -> None:
         self.load_calls.append(kwargs)
@@ -277,6 +283,8 @@ class MockPluginApi:
             self.metadata_at_task_add = ''
         if hasattr(album, '_pending_tasks'):
             album._pending_tasks[task_id] = description
+        if blocking and hasattr(album, '_critical_tasks'):
+            album._critical_tasks.add(task_id)
         if request_factory:
             request_factory()
 
@@ -284,6 +292,16 @@ class MockPluginApi:
         self.completed_tasks.append((album, task_id))
         if hasattr(album, '_pending_tasks'):
             album._pending_tasks.pop(task_id, None)
+        if hasattr(album, '_critical_tasks'):
+            album._critical_tasks.discard(task_id)
+        finalize_loading = getattr(album, '_finalize_loading', None)
+        if (
+            hasattr(album, 'has_critical_tasks')
+            and not album.has_critical_tasks()
+            and not getattr(album, 'loaded', False)
+            and callable(finalize_loading)
+        ):
+            finalize_loading(None)
 
 
 PluginApi = MockPluginApi

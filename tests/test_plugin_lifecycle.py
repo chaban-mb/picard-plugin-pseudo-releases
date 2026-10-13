@@ -108,6 +108,17 @@ class TestPluginLifecycle(unittest.TestCase):
         plugin_module.PseudoReleasePlugin.remove_album(self.api, dummy_album)
         self.assertNotIn("album-to-remove", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
+    def test_mock_task_completion_finalizes_after_last_critical_task(self):
+        album = MockAlbum("critical-task-test")
+        self.api.add_album_task(album, "blocking", "Blocking", blocking=True)
+        self.api.add_album_task(album, "background", "Background", blocking=False)
+
+        self.api.complete_album_task(album, "background")
+        self.assertFalse(album.loaded)
+
+        self.api.complete_album_task(album, "blocking")
+        self.assertTrue(album.loaded)
+
     def test_official_release_is_not_modified(self):
         album = MockAlbum("official-1", "Original release")
         album._pseudo_original_id = "stale-original"

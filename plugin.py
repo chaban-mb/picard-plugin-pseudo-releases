@@ -463,8 +463,6 @@ class PseudoReleasePlugin:
             finally:
                 cls.in_flight_albums.discard(album_id)
                 api.complete_album_task(album, task_id)
-                if hasattr(album, '_finalize_loading') and not getattr(album, 'loaded', False):
-                    album._finalize_loading(None)
 
         try:
             api.add_album_task(
