@@ -302,11 +302,13 @@ class MockPluginApi:
         self.completed_tasks.append((album, task_id))
         if hasattr(album, '_pending_tasks'):
             album._pending_tasks.pop(task_id, None)
+        was_critical = task_id in getattr(album, '_critical_tasks', set())
         if hasattr(album, '_critical_tasks'):
             album._critical_tasks.discard(task_id)
         finalize_loading = getattr(album, '_finalize_loading', None)
         if (
-            hasattr(album, 'has_critical_tasks')
+            was_critical
+            and hasattr(album, 'has_critical_tasks')
             and not album.has_critical_tasks()
             and not getattr(album, 'loaded', False)
             and callable(finalize_loading)
