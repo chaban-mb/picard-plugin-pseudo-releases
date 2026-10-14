@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from picard import log as picard_log
 from picard.i18n import (
     gettext as _,
     pgettext_attributes,
@@ -13,7 +14,6 @@ from picard.mbjson import (
 )
 from picard.plugin3.api import (
     Album,
-    DebugOpt,
     Metadata,
     PluginApi,
 )
@@ -75,10 +75,13 @@ class PseudoReleasePlugin:
             return cls.api.tr(key, text)
         return text
 
-    @classmethod
-    def _log_debug(cls, api: PluginApi, message: str, *args: Any) -> None:
-        """Helper to log via debug_if."""
-        api.logger.debug_if(DebugOpt.PLUGIN_DEVELOPMENT, message, *args)
+    @staticmethod
+    def _log_supplementation(api: PluginApi, album: Album, original_id: str) -> None:
+        """Record successful supplementation in the debug log and activity history."""
+        message = "Supplemented pseudo-release %s with original release %s"
+        album_id = getattr(album, 'id', '')
+        api.logger.info(message, album_id, original_id)
+        picard_log.history_info(message, album_id, original_id)
 
     @classmethod
     def remove_album(cls, api: PluginApi, album: Album) -> None:
@@ -87,7 +90,7 @@ class PseudoReleasePlugin:
         album_id = getattr(album, 'id', None)
         if album_id and album_id in cls.in_flight_albums:
             cls.in_flight_albums.discard(album_id)
-            cls._log_debug(api, "Cleaned up in-flight state for album %s", album_id)
+            api.logger.debug("Cleaned up in-flight state for album %s", album_id)
 
     @classmethod
     def process_album_metadata(
@@ -108,6 +111,7 @@ class PseudoReleasePlugin:
                     return
                 # Previous request was aborted or canceled without callback; heal in-flight guard
                 cls.in_flight_albums.discard(album_id)
+                api.logger.debug("Recovered stale in-flight state for album %s", album_id)
             else:
                 return
 
@@ -161,8 +165,27 @@ class PseudoReleasePlugin:
                 'preferred_release_countries',
                 [],
             )
+            scored_candidates = cls._candidates_with_cached_details(album, candidates)
+            if len(scored_candidates) > 1:
+                api.logger.debug(
+                    "Candidate scores for pseudo-release %s: %s",
+                    album_id,
+                    [
+                        (
+                            candidate.get('id'),
+                            score_original_candidate(
+                                candidate,
+                                album_metadata=album_metadata,
+                                files=files,
+                                disc_ids=list(disc_ids) if disc_ids else None,
+                                preferred_countries=pref_countries,
+                            ),
+                        )
+                        for candidate in scored_candidates
+                    ],
+                )
             preferred = select_best_original_candidate(
-                candidates=cls._candidates_with_cached_details(album, candidates),
+                candidates=scored_candidates,
                 album_metadata=album_metadata,
                 files=files,
                 disc_ids=list(disc_ids) if disc_ids else None,
@@ -190,7 +213,10 @@ class PseudoReleasePlugin:
         """Direction 1: Find best matching original release and queue supplementation."""
         valid_candidates = [c for c in (candidates or []) if isinstance(c, dict)]
         if not valid_candidates:
-            cls._log_debug(api, "No backward transl-tracklisting relations found for %s", getattr(album, 'id', ''))
+            api.logger.debug(
+                "No backward transl-tracklisting relations found for %s",
+                getattr(album, 'id', ''),
+            )
             return
 
         best_original = next(
@@ -202,7 +228,7 @@ class PseudoReleasePlugin:
             return
 
         orig_id = best_original['id']
-        cls._log_debug(api, "Selected original candidate %s for pseudo-release %s", orig_id, album.id)
+        api.logger.debug("Selected original candidate %s for pseudo-release %s", orig_id, album.id)
         album._pseudo_original_id = orig_id
 
         cached_release = getattr(album, '_pseudo_original_details', {}).get(orig_id)
@@ -220,7 +246,7 @@ class PseudoReleasePlugin:
                 config_obj=getattr(api, 'global_config', None),
                 logger_obj=api.logger,
             )
-            cls._log_debug(api, "Supplemented pseudo-release %s from cached original %s", album.id, orig_id)
+            cls._log_supplementation(api, album, orig_id)
             return
         cls._queue_enrichment(api, album, orig_id)
 
@@ -284,6 +310,13 @@ class PseudoReleasePlugin:
                         stubs = getattr(album, '_pseudo_candidate_stubs', {})
                         stubs[fallback['id']] = document
                         album._pseudo_candidate_stubs = stubs
+                    elif error:
+                        api.logger.debug(
+                            "Failed to prefetch candidate release %s for pseudo-release %s: %s",
+                            fallback['id'],
+                            getattr(album, 'id', ''),
+                            error,
+                        )
                 finally:
                     api.complete_album_task(album, task_id)
                     cls._maybe_reselect_automatic_candidate(api, album, candidates)
@@ -404,7 +437,11 @@ class PseudoReleasePlugin:
         for metadata in (album.metadata, getattr(album, '_new_metadata', None)):
             if metadata is not None and TAG_ORIGINAL_RELEASE_ID in metadata:
                 del metadata[TAG_ORIGINAL_RELEASE_ID]
-        cls._log_debug(api, "Reloading pseudo-release with better-matched original %s", best['id'])
+        api.logger.info(
+            "Reloading pseudo-release %s with better-matched original release %s",
+            getattr(album, 'id', ''),
+            best['id'],
+        )
         album.load(priority=True, refresh=True)
 
     @staticmethod
@@ -495,8 +532,8 @@ class PseudoReleasePlugin:
 
         webbrowser2.open(f"https://musicbrainz.org/release/{release_id}")
 
-    @staticmethod
-    def select_linked_original(album: Album, selected_id: str) -> None:
+    @classmethod
+    def select_linked_original(cls, album: Album, selected_id: str) -> None:
         """Set the manually selected edition and reload the album."""
         current_id = album.metadata.get(TAG_ORIGINAL_RELEASE_ID)
         album._pseudo_original_selection_mode = 'manual'
@@ -505,6 +542,12 @@ class PseudoReleasePlugin:
         if selected_id == current_id:
             return
 
+        if cls.api:
+            cls.api.logger.info(
+                "Manually selected original release %s for pseudo-release %s",
+                selected_id,
+                getattr(album, 'id', ''),
+            )
         album.load(priority=True, refresh=True)
 
     @classmethod
@@ -535,6 +578,11 @@ class PseudoReleasePlugin:
             auth_fallbacks = {'user-tags': 'tags', 'user-genres': 'genres'}
             inc = [auth_fallbacks.get(p, p) for p in inc]
             requires_auth = False
+            api.logger.debug(
+                "MusicBrainz account is not authorized; requesting public tags and genres "
+                "for pseudo-release %s",
+                album_id,
+            )
 
         request_kwargs: dict[str, Any] = {'inc': inc}
         if requires_auth:
@@ -570,7 +618,7 @@ class PseudoReleasePlugin:
                     config_obj=getattr(api, 'global_config', None),
                     logger_obj=api.logger,
                 )
-                cls._log_debug(api, "Supplemented pseudo-release %s with original %s", album_id, target_mbid)
+                cls._log_supplementation(api, album, target_mbid)
 
             except Exception as exc:
                 api.logger.error("Error processing pseudo-release enrichment: %s", exc)

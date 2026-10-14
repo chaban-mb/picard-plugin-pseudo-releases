@@ -141,11 +141,22 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertFalse(album.loaded)
         self.assertTrue(album.has_critical_tasks())
 
-        callbacks[0]({"id": "original-1", "barcode": "123"}, None, None)
+        with patch("picard.log.history_info") as history_info:
+            callbacks[0]({"id": "original-1", "barcode": "123"}, None, None)
 
         self.assertFalse(album.has_critical_tasks())
         self.assertTrue(album.loaded)
         self.assertTrue(album._finalized)
+        self.api.logger.info.assert_any_call(
+            "Supplemented pseudo-release %s with original release %s",
+            album.id,
+            "original-1",
+        )
+        history_info.assert_called_once_with(
+            "Supplemented pseudo-release %s with original release %s",
+            album.id,
+            "original-1",
+        )
 
     def test_enrichment_does_not_finalize_removed_album(self):
         album = MockAlbum("removed-during-enrichment", status="Pseudo-Release")
