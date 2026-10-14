@@ -85,6 +85,7 @@ class PseudoReleasePlugin:
     @classmethod
     def remove_album(cls, api: PluginApi, album: Album) -> None:
         """Clean up per-album state when an album is removed from Picard."""
+        album._pseudo_aborted = True
         album_id = getattr(album, 'id', None)
         if album_id and album_id in cls.in_flight_albums:
             cls.in_flight_albums.discard(album_id)
@@ -99,6 +100,7 @@ class PseudoReleasePlugin:
         release_node: dict[str, Any],
     ) -> None:
         """Supplement loaded pseudo-releases with data from linked original releases."""
+        album._pseudo_aborted = False
         album_id = getattr(album, 'id', '')
         if album_id in cls.in_flight_albums:
             pending_tasks = getattr(album, '_pending_tasks', None)
@@ -122,6 +124,7 @@ class PseudoReleasePlugin:
                 '_pseudo_candidate_stubs',
                 '_pseudo_original_is_full',
                 '_pseudo_original_details_loading_ids',
+                '_pseudo_auto_reselected',
             ):
                 if hasattr(album, attr):
                     delattr(album, attr)
@@ -135,6 +138,7 @@ class PseudoReleasePlugin:
             album._pseudo_original_details = {}
             album._pseudo_candidate_stubs = {}
             album._pseudo_original_is_full = {}
+            album._pseudo_auto_reselected = False
 
         candidates = find_related_releases(release_node, direction='backward')
         album._pseudo_original_candidates = candidates
@@ -163,14 +167,13 @@ class PseudoReleasePlugin:
             )
             preferred_id = preferred.get('id') if preferred else None
 
-        cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
-
-        already_enriched_id = album_metadata.get(TAG_ORIGINAL_RELEASE_ID)
         # Avoid re-processing already enriched albums after preserving chooser state.
         if already_enriched_id and selection_mode != 'manual':
+            cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
             return
 
         cls._handle_supplement_pseudo(api, album, album_metadata, preferred_id, candidates)
+        cls._prefetch_linked_original_details(api, album, candidates, preferred_id)
 
     @classmethod
     def _handle_supplement_pseudo(
@@ -328,7 +331,13 @@ class PseudoReleasePlugin:
         album: Album,
         candidates: list[dict[str, Any]],
     ) -> None:
+        if getattr(album, '_pseudo_aborted', False):
+            return
         if getattr(album, '_pseudo_original_selection_mode', 'automatic') == 'manual':
+            return
+        if getattr(album, '_pseudo_auto_reselected', False):
+            return
+        if getattr(album, '_pseudo_original_details_loading_ids', None):
             return
         valid_candidates = [candidate for candidate in candidates if isinstance(candidate, dict)]
         if len(valid_candidates) < 2:
@@ -358,7 +367,7 @@ class PseudoReleasePlugin:
         enriched_candidates = cls._candidates_with_cached_details(album, valid_candidates)
         best = select_best_original_candidate(
             candidates=enriched_candidates,
-            album_metadata=album.metadata,
+            album_metadata=None,
             files=files,
             disc_ids=list(disc_ids) if disc_ids else None,
             preferred_countries=preferred_countries,
@@ -368,7 +377,7 @@ class PseudoReleasePlugin:
 
         best_score = score_original_candidate(
             best,
-            album_metadata=album.metadata,
+            album_metadata=None,
             files=files,
             disc_ids=list(disc_ids) if disc_ids else None,
             preferred_countries=preferred_countries,
@@ -379,7 +388,7 @@ class PseudoReleasePlugin:
         )
         current_score = score_original_candidate(
             current,
-            album_metadata=album.metadata,
+            album_metadata=None,
             files=files,
             disc_ids=list(disc_ids) if disc_ids else None,
             preferred_countries=preferred_countries,
@@ -387,6 +396,7 @@ class PseudoReleasePlugin:
         if best_score <= current_score:
             return
 
+        album._pseudo_auto_reselected = True
         album._pseudo_original_id = best['id']
         for metadata in (album.metadata, getattr(album, '_new_metadata', None)):
             if metadata is not None and TAG_ORIGINAL_RELEASE_ID in metadata:
@@ -565,6 +575,16 @@ class PseudoReleasePlugin:
             finally:
                 cls.in_flight_albums.discard(album_id)
                 api.complete_album_task(album, task_id)
+                if (
+                    not getattr(album, '_pseudo_aborted', False)
+                    and hasattr(album, '_finalize_loading')
+                    and not getattr(album, 'loaded', False)
+                    and (
+                        not hasattr(album, 'has_critical_tasks')
+                        or not album.has_critical_tasks()
+                    )
+                ):
+                    album._finalize_loading(None)
                 cls._maybe_reselect_automatic_candidate(
                     api,
                     album,

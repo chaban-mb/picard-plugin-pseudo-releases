@@ -114,7 +114,7 @@ class TestPluginLifecycle(unittest.TestCase):
         plugin_module.PseudoReleasePlugin.remove_album(self.api, dummy_album)
         self.assertNotIn("album-to-remove", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
-    def test_mock_task_completion_finalizes_after_last_critical_task(self):
+    def test_mock_task_completion_does_not_finalize_album_implicitly(self):
         album = MockAlbum("critical-task-test")
         self.api.add_album_task(album, "blocking", "Blocking", blocking=True)
         self.api.add_album_task(album, "background", "Background", blocking=False)
@@ -123,7 +123,93 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertFalse(album.loaded)
 
         self.api.complete_album_task(album, "blocking")
+        self.assertFalse(album.loaded)
+        album._finalize_loading(None)
         self.assertTrue(album.loaded)
+
+    def test_enrichment_completion_resumes_album_loading(self):
+        album = MockAlbum("enrichment-resumes-load", status="Pseudo-Release")
+        callbacks = []
+
+        def defer_release_response(_release_id, callback, **kwargs):
+            callbacks.append(callback)
+
+        self.api.mb_api.get_release_by_id.side_effect = defer_release_response
+        plugin_module.PseudoReleasePlugin._queue_enrichment(self.api, album, "original-1")
+
+        album._finalize_loading(None)
+        self.assertFalse(album.loaded)
+        self.assertTrue(album.has_critical_tasks())
+
+        callbacks[0]({"id": "original-1", "barcode": "123"}, None, None)
+
+        self.assertFalse(album.has_critical_tasks())
+        self.assertTrue(album.loaded)
+        self.assertTrue(album._finalized)
+
+    def test_enrichment_does_not_finalize_removed_album(self):
+        album = MockAlbum("removed-during-enrichment", status="Pseudo-Release")
+        callbacks = []
+        self.api.mb_api.get_release_by_id.side_effect = (
+            lambda _release_id, callback, **kwargs: callbacks.append(callback)
+        )
+        plugin_module.PseudoReleasePlugin._queue_enrichment(self.api, album, "original-1")
+        plugin_module.PseudoReleasePlugin.remove_album(self.api, album)
+
+        callbacks[0]({"id": "original-1", "barcode": "123"}, None, None)
+
+        self.assertFalse(album.loaded)
+        self.assertTrue(album._pseudo_aborted)
+
+    def test_enrichment_waits_for_other_critical_task_before_finalizing(self):
+        album = MockAlbum("multiple-critical-tasks", status="Pseudo-Release")
+        callbacks = []
+        self.api.add_album_task(album, "other-critical", "Other critical task", blocking=True)
+        self.api.mb_api.get_release_by_id.side_effect = (
+            lambda _release_id, callback, **kwargs: callbacks.append(callback)
+        )
+        plugin_module.PseudoReleasePlugin._queue_enrichment(self.api, album, "original-1")
+
+        callbacks[0]({"id": "original-1", "barcode": "123"}, None, None)
+
+        self.assertFalse(album.loaded)
+        self.assertTrue(album.has_critical_tasks())
+        self.api.complete_album_task(album, "other-critical")
+        album._finalize_loading(None)
+        self.assertTrue(album.loaded)
+
+    def test_critical_enrichment_is_queued_before_candidate_prefetches(self):
+        album = MockAlbum("prefetch-order", status="Pseudo-Release")
+        release_node = {
+            "id": "prefetch-order",
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "original-1"},
+                },
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "original-2"},
+                },
+            ],
+        }
+        self.api.mb_api.get_release_by_id.side_effect = (
+            lambda release_id, callback, **kwargs: callback({"id": release_id}, None, None)
+        )
+
+        plugin_module.PseudoReleasePlugin.process_album_metadata(
+            self.api,
+            album,
+            album.metadata,
+            release_node,
+        )
+
+        task_ids = [task_id for _, task_id, _ in self.api.added_tasks]
+        self.assertEqual(task_ids[0], "pseudo_enrich_original-1")
+        self.assertEqual(task_ids[1], "pseudo_prefetch_original-2")
 
     def test_cached_candidate_details_can_improve_automatic_match(self):
         album = MockAlbum("pseudo-with-local-disc")
@@ -153,6 +239,30 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(album._pseudo_original_id, "disc-match")
         self.assertEqual(album.load_calls, [{"priority": True, "refresh": True}])
         self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, album.metadata)
+        plugin_module.PseudoReleasePlugin._maybe_reselect_automatic_candidate(
+            self.api,
+            album,
+            album._pseudo_original_candidates,
+        )
+        self.assertEqual(len(album.load_calls), 1)
+
+    def test_automatic_reselection_waits_for_prefetches(self):
+        album = MockAlbum("wait-for-prefetch")
+        album._pseudo_original_id = "initial"
+        album._pseudo_original_candidates = [{"id": "initial"}, {"id": "disc-match"}]
+        album._pseudo_candidate_stubs = {
+            "disc-match": {"id": "disc-match", "media": [{"discs": [{"id": "local-disc"}]}]}
+        }
+        album._pseudo_original_details_loading_ids = {"disc-match"}
+        album._discids = ["local-disc"]
+
+        plugin_module.PseudoReleasePlugin._maybe_reselect_automatic_candidate(
+            self.api,
+            album,
+            album._pseudo_original_candidates,
+        )
+
+        self.assertEqual(album.load_calls, [])
 
     def test_official_release_is_not_modified(self):
         album = MockAlbum("official-1", "Original release")

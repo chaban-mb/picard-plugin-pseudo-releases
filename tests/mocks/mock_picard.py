@@ -160,6 +160,8 @@ class MockAlbum:
         self._release_node: dict[str, Any] | None = None
 
     def _finalize_loading(self, error: Any = None) -> None:
+        if self.has_critical_tasks():
+            return
         self._finalized = True
         self.loaded = True
 
@@ -302,18 +304,8 @@ class MockPluginApi:
         self.completed_tasks.append((album, task_id))
         if hasattr(album, '_pending_tasks'):
             album._pending_tasks.pop(task_id, None)
-        was_critical = task_id in getattr(album, '_critical_tasks', set())
         if hasattr(album, '_critical_tasks'):
             album._critical_tasks.discard(task_id)
-        finalize_loading = getattr(album, '_finalize_loading', None)
-        if (
-            was_critical
-            and hasattr(album, 'has_critical_tasks')
-            and not album.has_critical_tasks()
-            and not getattr(album, 'loaded', False)
-            and callable(finalize_loading)
-        ):
-            finalize_loading(None)
 
 
 PluginApi = MockPluginApi
