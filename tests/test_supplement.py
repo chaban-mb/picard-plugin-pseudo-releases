@@ -1,6 +1,6 @@
 # Tests for pseudo-release metadata supplementation
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from metadata_engine import (
     extract_release_catalog_metadata,
     supplement_pseudo_media,
@@ -14,6 +14,33 @@ from tests.mocks.mock_picard import MockAlbum
 
 
 class TestMetadataSupplementation(unittest.TestCase):
+    def test_genre_supplementation_failure_is_logged(self):
+        from types import SimpleNamespace
+        import metadata_engine
+
+        album = MockAlbum("genre-failure")
+        logger = MagicMock()
+        config = SimpleNamespace(
+            setting={"release_ars": False, "use_genres": True, "only_my_genres": False}
+        )
+
+        with patch.object(
+            metadata_engine,
+            "add_genres_from_node",
+            side_effect=RuntimeError("genre conversion failed"),
+        ):
+            metadata_engine.supplement_release_relationships_and_genres(
+                album,
+                {"genres": [{"name": "rock"}]},
+                config_obj=config,
+                logger_obj=logger,
+            )
+
+        logger.warning.assert_called_once_with(
+            "Failed to process genres for pseudo-release: %s",
+            unittest.mock.ANY,
+        )
+
     def test_extract_catalog_metadata(self):
         orig_node = {
             "id": "7a16f215-079e-4c55-abda-06f9a4228b6a",

@@ -284,8 +284,12 @@ def supplement_release_relationships_and_genres(
         if add_genres_from_node:
             try:
                 add_genres_from_node(orig_release_node, album)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger = logger_obj if logger_obj is not None else log
+                logger.warning(
+                    "Failed to process genres for pseudo-release: %s",
+                    exc,
+                )
 
         # Update tracks on the album to calculate merged genres / folksonomy tags
         tracks = getattr(album, 'tracks', [])
@@ -304,4 +308,3 @@ __all__ = (
     'supplement_pseudo_metadata',
     'supplement_release_relationships_and_genres',
 )
-
