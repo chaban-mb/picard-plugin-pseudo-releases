@@ -7,12 +7,8 @@ from types import SimpleNamespace
 
 from PyQt6 import QtCore
 
-plugin_path = Path(__file__).resolve().parent.parent / '__init__.py'
-spec = importlib.util.spec_from_file_location('pseudo_releases_plugin', str(plugin_path))
-plugin_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(plugin_module)
-
-from constants import (
+import pseudo_releases as plugin_module
+from pseudo_releases.constants import (
     PSEUDO_RELEASE_STATUS,
     TAG_ORIGINAL_RELEASE_ID,
 )

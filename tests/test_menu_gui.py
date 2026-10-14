@@ -8,7 +8,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtTest import QTest
 
-import __init__ as plugin_module
+import pseudo_releases as plugin_module
 
 
 @pytest.fixture(autouse=True)

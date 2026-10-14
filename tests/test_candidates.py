@@ -1,6 +1,6 @@
 # Tests for candidate discovery, scoring, and ranking
 import unittest
-from candidates import (
+from pseudo_releases.candidates import (
     find_related_releases,
     score_original_candidate,
     select_best_original_candidate,

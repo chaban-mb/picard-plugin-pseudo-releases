@@ -11,20 +11,12 @@ from picard.mbjson import (
     add_genres_from_node,
 )
 
-try:
-    from .constants import (
-        SUPPLEMENTARY_ALBUM_TAGS,
-        SUPPLEMENTARY_MULTI_TAGS,
-        TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
-    )
-except (ImportError, ValueError):
-    from constants import (
-        SUPPLEMENTARY_ALBUM_TAGS,
-        SUPPLEMENTARY_MULTI_TAGS,
-        TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
-    )
+from .constants import (
+    SUPPLEMENTARY_ALBUM_TAGS,
+    SUPPLEMENTARY_MULTI_TAGS,
+    TAG_ORIGINAL_RELEASE_ID,
+    get_config_value,
+)
 
 
 
@@ -240,7 +232,7 @@ def supplement_release_relationships_and_genres(
                 existing_signatures.add(sig)
 
     # 2. Release relationships to metadata
-    if get_config_value(setting, 'release_ars', False) and orig_relations and _relations_to_metadata:
+    if get_config_value(setting, 'release_ars', False) and orig_relations:
         try:
             context = _relations_to_metadata(
                 orig_relations,
@@ -281,10 +273,9 @@ def supplement_release_relationships_and_genres(
                     [g for g in orig_genres if g not in (release_node.get('genres') or [])]
                 )
 
-        if add_genres_from_node:
-            try:
-                add_genres_from_node(orig_release_node, album)
-            except Exception as exc:
+        try:
+            add_genres_from_node(orig_release_node, album)
+        except Exception as exc:
                 logger = logger_obj if logger_obj is not None else log
                 logger.warning(
                     "Failed to process genres for pseudo-release: %s",

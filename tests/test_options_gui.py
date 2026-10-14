@@ -6,7 +6,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtTest import QTest
 
-from options import PseudoReleaseOptionsPage
+from pseudo_releases.options import PseudoReleaseOptionsPage
 
 
 from tests.mocks.mock_picard import MockPluginApi

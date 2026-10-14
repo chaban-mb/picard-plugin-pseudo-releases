@@ -1,6 +1,6 @@
 # Tests for plugin options page load/save logic
 import unittest
-from options import PseudoReleaseOptionsPage
+from pseudo_releases.options import PseudoReleaseOptionsPage
 
 
 from tests.mocks.mock_picard import MockPluginApi

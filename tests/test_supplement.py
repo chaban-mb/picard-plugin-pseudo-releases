@@ -1,12 +1,12 @@
 # Tests for pseudo-release metadata supplementation
 import unittest
 from unittest.mock import MagicMock, patch
-from metadata_engine import (
+from pseudo_releases.metadata_engine import (
     extract_release_catalog_metadata,
     supplement_pseudo_media,
     supplement_pseudo_metadata,
 )
-from constants import (
+from pseudo_releases.constants import (
     TAG_ORIGINAL_RELEASE_ID,
 )
 from tests.mocks.mock_picard import MockMetadata
@@ -16,7 +16,7 @@ from tests.mocks.mock_picard import MockAlbum
 class TestMetadataSupplementation(unittest.TestCase):
     def test_genre_supplementation_failure_is_logged(self):
         from types import SimpleNamespace
-        import metadata_engine
+        from pseudo_releases import metadata_engine
 
         album = MockAlbum("genre-failure")
         logger = MagicMock()
@@ -133,7 +133,7 @@ class TestMetadataSupplementation(unittest.TestCase):
     def test_supplement_merges_per_medium_release_relationships(self):
         from types import SimpleNamespace
 
-        from metadata_engine import supplement_release_relationships_and_genres
+        from pseudo_releases.metadata_engine import supplement_release_relationships_and_genres
         from tests.mocks.mock_picard import MockAlbum
 
         album = MockAlbum()
@@ -145,7 +145,7 @@ class TestMetadataSupplementation(unittest.TestCase):
         )
         config_obj = SimpleNamespace(setting={"release_ars": True, "use_genres": False})
 
-        with patch("metadata_engine._relations_to_metadata", return_value=context):
+        with patch("pseudo_releases.metadata_engine._relations_to_metadata", return_value=context):
             supplement_release_relationships_and_genres(
                 album,
                 {"relations": [{"type": "mix-DJ"}]},
@@ -210,7 +210,7 @@ class TestMetadataSupplementation(unittest.TestCase):
 
     def test_get_enrichment_inc_params(self):
         from types import SimpleNamespace
-        from metadata_engine import get_enrichment_inc_params
+        from pseudo_releases.metadata_engine import get_enrichment_inc_params
 
         # Default: no ARs, no genres
         cfg_default = SimpleNamespace(setting={"release_ars": False, "use_genres": False})
@@ -244,7 +244,7 @@ class TestMetadataSupplementation(unittest.TestCase):
 
     def test_supplement_relationships_and_genres(self):
         from types import SimpleNamespace
-        from metadata_engine import supplement_release_relationships_and_genres
+        from pseudo_releases.metadata_engine import supplement_release_relationships_and_genres
         from tests.mocks.mock_picard import MockAlbum
 
         orig_node = {

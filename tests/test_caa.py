@@ -1,7 +1,7 @@
 # Tests for PseudoReleaseCoverArtProvider
 import unittest
-from caa_provider import PseudoReleaseCoverArtProvider
-from constants import TAG_ORIGINAL_RELEASE_ID
+from pseudo_releases.caa_provider import PseudoReleaseCoverArtProvider
+from pseudo_releases.constants import TAG_ORIGINAL_RELEASE_ID
 
 
 from tests.mocks.mock_picard import (

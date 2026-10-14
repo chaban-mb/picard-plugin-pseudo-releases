@@ -3,14 +3,9 @@ from typing import Any
 
 from picard.util import strip_non_alnum
 
-try:
-    from .constants import (
-        RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
-    )
-except (ImportError, ValueError):
-    from constants import (
-        RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
-    )
+from .constants import (
+    RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
+)
 
 
 def find_related_releases(

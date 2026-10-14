@@ -6,21 +6,16 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock
 
-# Dynamically import plugin module
-plugin_path = Path(__file__).resolve().parent.parent / '__init__.py'
-spec = importlib.util.spec_from_file_location('pseudo_releases_plugin', str(plugin_path))
-plugin_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(plugin_module)
-
-from caa_provider import PseudoReleaseCoverArtProvider
-from candidates import (
+import pseudo_releases as plugin_module
+from pseudo_releases.caa_provider import PseudoReleaseCoverArtProvider
+from pseudo_releases.candidates import (
     find_related_releases,
     select_best_original_candidate,
 )
-from constants import (
+from pseudo_releases.constants import (
     TAG_ORIGINAL_RELEASE_ID,
 )
-from metadata_engine import supplement_pseudo_metadata
+from pseudo_releases.metadata_engine import supplement_pseudo_metadata
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 

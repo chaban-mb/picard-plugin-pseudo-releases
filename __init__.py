@@ -5,22 +5,13 @@ from picard.plugin3.api import (
     t_,
 )
 
-try:
-    from .action import (
-        ChooseLinkedOriginalAction,
-        LinkedEditionsMenuFilter,
-    )
-    from .caa_provider import PseudoReleaseCoverArtProvider
-    from .options import PseudoReleaseOptionsPage
-    from .plugin import PseudoReleasePlugin
-except (ImportError, ValueError):
-    from action import (
-        ChooseLinkedOriginalAction,
-        LinkedEditionsMenuFilter,
-    )
-    from caa_provider import PseudoReleaseCoverArtProvider
-    from options import PseudoReleaseOptionsPage
-    from plugin import PseudoReleasePlugin
+from .action import (
+    ChooseLinkedOriginalAction,
+    LinkedEditionsMenuFilter,
+)
+from .caa_provider import PseudoReleaseCoverArtProvider
+from .options import PseudoReleaseOptionsPage
+from .plugin import PseudoReleasePlugin
 
 
 

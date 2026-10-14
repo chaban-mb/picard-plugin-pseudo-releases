@@ -6,16 +6,10 @@ from picard.coverart.providers.caa import CoverArtProviderCaa
 from picard.plugin3.api import t_
 
 
-try:
-    from .constants import (
-        PSEUDO_RELEASE_STATUS,
-        TAG_ORIGINAL_RELEASE_ID,
-    )
-except (ImportError, ValueError):
-    from constants import (
-        PSEUDO_RELEASE_STATUS,
-        TAG_ORIGINAL_RELEASE_ID,
-    )
+from .constants import (
+    PSEUDO_RELEASE_STATUS,
+    TAG_ORIGINAL_RELEASE_ID,
+)
 
 
 class PseudoReleaseCoverArtProvider(CoverArtProviderCaa):

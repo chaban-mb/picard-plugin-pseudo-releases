@@ -26,40 +26,22 @@ from picard.util import (
     webbrowser2,
 )
 
-try:
-    from .candidates import (
-        find_related_releases,
-        score_original_candidate,
-        select_best_original_candidate,
-    )
-    from .constants import (
-        PSEUDO_RELEASE_STATUS,
-        TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
-    )
-    from .metadata_engine import (
-        get_enrichment_inc_params,
-        supplement_pseudo_media,
-        supplement_pseudo_metadata,
-        supplement_release_relationships_and_genres,
-    )
-except (ImportError, ValueError):
-    from candidates import (
-        find_related_releases,
-        score_original_candidate,
-        select_best_original_candidate,
-    )
-    from constants import (
-        PSEUDO_RELEASE_STATUS,
-        TAG_ORIGINAL_RELEASE_ID,
-        get_config_value,
-    )
-    from metadata_engine import (
-        get_enrichment_inc_params,
-        supplement_pseudo_media,
-        supplement_pseudo_metadata,
-        supplement_release_relationships_and_genres,
-    )
+from .candidates import (
+    find_related_releases,
+    score_original_candidate,
+    select_best_original_candidate,
+)
+from .constants import (
+    PSEUDO_RELEASE_STATUS,
+    TAG_ORIGINAL_RELEASE_ID,
+    get_config_value,
+)
+from .metadata_engine import (
+    get_enrichment_inc_params,
+    supplement_pseudo_media,
+    supplement_pseudo_metadata,
+    supplement_release_relationships_and_genres,
+)
 
 
 class PseudoReleasePlugin:

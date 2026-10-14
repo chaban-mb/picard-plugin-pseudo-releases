@@ -10,12 +10,8 @@ from picard.plugin3.api import (
     t_,
 )
 
-try:
-    from .constants import TAG_ORIGINAL_RELEASE_ID
-    from .plugin import PseudoReleasePlugin
-except (ImportError, ValueError):
-    from constants import TAG_ORIGINAL_RELEASE_ID
-    from plugin import PseudoReleasePlugin
+from .constants import TAG_ORIGINAL_RELEASE_ID
+from .plugin import PseudoReleasePlugin
 
 
 
