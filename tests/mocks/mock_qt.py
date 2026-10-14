@@ -48,15 +48,30 @@ class _FallbackFont:
 class _FallbackAction:
     """Mock QAction."""
 
-    def __init__(self, text: str = "") -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        text = args[0] if args and isinstance(args[0], str) else kwargs.get("text", "")
         self._text = str(text)
         self.checked = False
         self.checkable = False
         self.enabled = True
         self.triggered = _DummySignal()
+        self.destroyed = _DummySignal()
         self._font = _FallbackFont()
         self._data: Any = None
         self.tooltip = ""
+        self._menu: Any = None
+
+    def setMenu(self, menu: Any) -> None:
+        self._menu = menu
+
+    def menu(self) -> Any:
+        return self._menu
+
+    def isChecked(self) -> bool:
+        return self.checked
+
+    def isEnabled(self) -> bool:
+        return self.enabled
 
     def text(self) -> str:
         return self._text

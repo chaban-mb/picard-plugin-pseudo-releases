@@ -67,6 +67,7 @@ class TestPluginLifecycle(unittest.TestCase):
 
         # Mock the mb_api.get_release_by_id to simulate network return
         def mock_get_release(rel_id, callback, inc=None, **kwargs):
+            self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, pseudo_album.metadata)
             orig_doc = {
                 "id": "orig-1",
                 "title": "千と千尋の神隠し",
@@ -91,7 +92,6 @@ class TestPluginLifecycle(unittest.TestCase):
         # Assert album task was added with blocking=True and completed
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" and task[2] is True for task in self.api.added_tasks))
         self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" for task in self.api.completed_tasks))
-        self.assertEqual(self.api.metadata_at_task_add, "")
         self.assertEqual(pseudo_album._pseudo_original_id, "orig-1")
 
         # Assert metadata supplementation succeeded
@@ -483,7 +483,7 @@ class TestPluginLifecycle(unittest.TestCase):
         menu = action_instance.menu()
         self.assertIsNotNone(menu)
 
-        raw_actions = menu.actions() if callable(menu.actions) else menu.actions
+        raw_actions = menu.actions()
         actions = [a for a in raw_actions if a is not None]
         target_action = actions[1]  # first edition candidate
         self.assertEqual(target_action.data(), "orig-mbid-1")

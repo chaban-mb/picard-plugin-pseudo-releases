@@ -7,18 +7,19 @@ from unittest.mock import MagicMock
 import webbrowser
 
 try:
-    from PyQt6 import QtCore, QtWidgets
+    from PyQt6 import QtCore, QtGui, QtWidgets
 
     _BaseWidget = QtWidgets.QWidget
-    _BaseObject = QtCore.QObject
+    _BaseAction = QtGui.QAction
 except ImportError:
     from tests.mocks.mock_qt import (
         MockQtCore,
+        MockQtGui,
         _DummyWidget,
     )
 
     _BaseWidget = _DummyWidget
-    _BaseObject = MockQtCore.QObject
+    _BaseAction = MockQtGui.QAction
 from tests.mocks.mock_qt import (
     _DummySignal,
     _DummyWidget,
@@ -33,6 +34,51 @@ def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tu
     if plural is not None:
         return (key, str(text or ""), plural)
     return key
+
+
+class BaseAction(_BaseAction):
+    NAME = "Action"
+    TITLE = "Action"
+    api: Any = None
+
+    def __init__(self, parent: Any = None) -> None:
+        super().__init__(parent)
+
+    def callback(self, objs: list[Any]) -> None:
+        pass
+
+
+class OptionsPage(_BaseWidget):
+    NAME = "options"
+    TITLE = "Options"
+    PARENT = None
+    api: Any = None
+
+    def __init__(self, parent: Any = None) -> None:
+        super().__init__(parent)
+
+    def load(self) -> None:
+        pass
+
+    def save(self) -> None:
+        pass
+
+    def restore_defaults(self) -> None:
+        pass
+
+
+class PageOptionConfigs:
+    def __init__(self, *configs: Any) -> None:
+        self.configs = configs
+
+
+import re
+
+_non_alnum_re = re.compile(r"\W+", re.UNICODE)
+
+
+def strip_non_alnum(text: str) -> str:
+    return _non_alnum_re.sub("", text)
 
 
 from enum import Enum
@@ -288,11 +334,6 @@ class MockPluginApi:
         blocking: bool = False,
     ) -> None:
         self.added_tasks.append((album, task_id, blocking))
-        meta = getattr(album, 'metadata', None)
-        if meta and hasattr(meta, 'get'):
-            self.metadata_at_task_add = meta.get('~original_musicbrainz_albumid', '')
-        else:
-            self.metadata_at_task_add = ''
         if hasattr(album, '_pending_tasks'):
             album._pending_tasks[task_id] = description
         if blocking and hasattr(album, '_critical_tasks'):

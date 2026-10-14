@@ -93,8 +93,10 @@ except ImportError:
     if "picard" not in sys.modules:
         p_mod = types.ModuleType("picard")
         p_mod.config = unittest.mock.MagicMock()
+        p_mod.log = unittest.mock.MagicMock()
         sys.modules["picard"] = p_mod
         sys.modules["picard.config"] = p_mod.config
+        sys.modules["picard.log"] = p_mod.log
 
     if "picard.plugin3.api" not in sys.modules:
         api_mod = types.ModuleType("picard.plugin3.api")
@@ -133,6 +135,7 @@ except ImportError:
         util_mod = types.ModuleType("picard.util")
         util_mod.countries_shortlist = mock_picard.countries_shortlist
         util_mod.webbrowser2 = mock_picard.webbrowser2
+        util_mod.strip_non_alnum = mock_picard.strip_non_alnum
         sys.modules["picard.util"] = util_mod
 
     if "picard.i18n" not in sys.modules:

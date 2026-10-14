@@ -92,7 +92,6 @@ class TestPseudoReleaseCoverArtProvider(unittest.TestCase):
             "edition-2018": {"id": "edition-2018", "cover-art-archive": {"artwork": True}},
         }
 
-        album = MockAlbum()
         self.provider = PseudoReleaseCoverArtProvider(MockCoverArt(album))
 
         # First edition
