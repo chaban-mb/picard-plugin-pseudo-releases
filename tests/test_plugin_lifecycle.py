@@ -1,6 +1,6 @@
 # Integration tests for plugin lifecycle, task queues, and processor integration
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
@@ -177,6 +177,115 @@ class TestPluginLifecycle(unittest.TestCase):
         self.api.complete_album_task(album, "other-critical")
         album._finalize_loading(None)
         self.assertTrue(album.loaded)
+
+    def test_in_flight_guard_reads_alternate_task_registry_name(self):
+        album = MockAlbum("alternate-task-registry", status="Pseudo-Release")
+        album._pending_tasks = None
+        album._tasks = {"plugin_pseudo_enrich_original": object()}
+        plugin_module.PseudoReleasePlugin.in_flight_albums.add(album.id)
+        release_node = {
+            "id": album.id,
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "original"},
+                }
+            ],
+        }
+
+        try:
+            plugin_module.PseudoReleasePlugin.process_album_metadata(
+                self.api,
+                album,
+                album.metadata,
+                release_node,
+            )
+            self.assertEqual(self.api.added_tasks, [])
+            self.assertIn(album.id, plugin_module.PseudoReleasePlugin.in_flight_albums)
+        finally:
+            plugin_module.PseudoReleasePlugin.in_flight_albums.discard(album.id)
+
+    def test_prefetch_cleanup_reads_alternate_task_registry_name(self):
+        album = MockAlbum("alternate-prefetch-registry")
+        album._pending_tasks = None
+        album._tasks = {"plugin_pseudo_prefetch_fallback": object()}
+        album._pseudo_original_details_loading_ids = {"fallback", "stale"}
+
+        plugin_module.PseudoReleasePlugin._prefetch_linked_original_details(
+            self.api,
+            album,
+            [{"id": "fallback"}],
+            preferred_id=None,
+        )
+
+        self.assertEqual(album._pseudo_original_details_loading_ids, {"fallback"})
+        self.assertEqual(self.api.added_tasks, [])
+
+    def test_reselection_waits_for_enrichment_in_alternate_task_registry(self):
+        album = MockAlbum("alternate-enrichment-registry")
+        album._pseudo_original_id = "initial"
+        album._pseudo_original_candidates = [{"id": "initial"}, {"id": "disc-match"}]
+        album._pseudo_candidate_stubs = {
+            "disc-match": {"id": "disc-match", "media": [{"discs": [{"id": "local-disc"}]}]}
+        }
+        album._pseudo_original_details_loading_ids = set()
+        album._pending_tasks = None
+        album._tasks = {"plugin_pseudo_enrich_initial": object()}
+        album._discids = ["local-disc"]
+
+        plugin_module.PseudoReleasePlugin._maybe_reselect_automatic_candidate(
+            self.api,
+            album,
+            album._pseudo_original_candidates,
+        )
+
+        self.assertEqual(album.load_calls, [])
+
+    def test_automatic_reselection_uses_selected_id_on_reload(self):
+        album = MockAlbum("deterministic-auto-reselection", status="Pseudo-Release")
+        album._pseudo_original_source_id = album.id
+        album._pseudo_auto_reselected = True
+        album._pseudo_original_id = "selected-original"
+        album.metadata["barcode"] = "barcode-from-other-candidate"
+        release_node = {
+            "id": album.id,
+            "status": "Pseudo-Release",
+            "relations": [
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {"id": "selected-original"},
+                },
+                {
+                    "type": "transl-tracklisting",
+                    "direction": "backward",
+                    "release": {
+                        "id": "other-candidate",
+                        "barcode": "barcode-from-other-candidate",
+                    },
+                },
+            ],
+        }
+        selected_ids = []
+
+        with (
+            patch.object(
+                plugin_module.PseudoReleasePlugin,
+                "_handle_supplement_pseudo",
+                side_effect=lambda *args: selected_ids.append(args[3]),
+            ),
+            patch.object(plugin_module.PseudoReleasePlugin, "_prefetch_linked_original_details"),
+        ):
+            plugin_module.PseudoReleasePlugin.process_album_metadata(
+                self.api,
+                album,
+                album.metadata,
+                release_node,
+            )
+
+        self.assertEqual(selected_ids, ["selected-original"])
 
     def test_critical_enrichment_is_queued_before_candidate_prefetches(self):
         album = MockAlbum("prefetch-order", status="Pseudo-Release")

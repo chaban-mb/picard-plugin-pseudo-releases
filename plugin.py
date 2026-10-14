@@ -80,6 +80,14 @@ class PseudoReleasePlugin:
         """Helper to log via debug_if."""
         api.logger.debug_if(DebugOpt.PLUGIN_DEVELOPMENT, message, *args)
 
+    @staticmethod
+    def _album_pending_tasks(album: Album) -> Any:
+        """Return active album tasks across Picard task-registry attribute names."""
+        pending_tasks = getattr(album, '_pending_tasks', None)
+        if pending_tasks is None:
+            pending_tasks = getattr(album, '_tasks', None)
+        return pending_tasks
+
 
 
     @classmethod
@@ -103,7 +111,7 @@ class PseudoReleasePlugin:
         album._pseudo_aborted = False
         album_id = getattr(album, 'id', '')
         if album_id in cls.in_flight_albums:
-            pending_tasks = getattr(album, '_pending_tasks', None)
+            pending_tasks = cls._album_pending_tasks(album)
             if pending_tasks is not None:
                 has_active_enrich_task = any('pseudo_enrich_' in str(tid) for tid in pending_tasks)
                 if has_active_enrich_task:
@@ -149,6 +157,11 @@ class PseudoReleasePlugin:
             preferred_id = getattr(album, '_pseudo_original_release_choice', None)
         elif already_enriched_id:
             preferred_id = already_enriched_id
+        elif (
+            getattr(album, '_pseudo_auto_reselected', False)
+            and getattr(album, '_pseudo_original_id', None)
+        ):
+            preferred_id = album._pseudo_original_id
         else:
             files = list(album.iterfiles())
             disc_ids = getattr(album, '_discids', None) or getattr(album, 'discids', None)
@@ -243,7 +256,7 @@ class PseudoReleasePlugin:
             loading_ids = set()
             album._pseudo_original_details_loading_ids = loading_ids
         else:
-            pending_tasks = getattr(album, '_pending_tasks', None)
+            pending_tasks = cls._album_pending_tasks(album)
             if pending_tasks is not None:
                 active_prefetch_ids = {
                     str(tid).split('pseudo_prefetch_')[-1]
@@ -350,7 +363,7 @@ class PseudoReleasePlugin:
         if not current_id:
             return
 
-        pending_tasks = getattr(album, '_pending_tasks', None)
+        pending_tasks = cls._album_pending_tasks(album)
         if pending_tasks and any('pseudo_enrich_' in str(task_id) for task_id in pending_tasks):
             return
 
