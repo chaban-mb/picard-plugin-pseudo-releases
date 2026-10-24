@@ -2,15 +2,14 @@ uuid = "a08a246e-6b76-46aa-bc36-b575c0ce9edb"
 name = "Pseudo-Releases"
 authors = ["chaban"]
 description = "Supplements pseudo-releases with metadata and cover art from linked original releases."
-version = "1.0.0"
 api = ["3.0"]
 min_python_version = "3.10"
 source_locale = "en"
 categories = ["metadata", "coverart"]
 license = "MIT"
 license_url = "https://opensource.org/licenses/MIT"
-homepage = "https://github.com/chaban/picard-plugin-pseudo-releases"
-report_bugs_to = "https://github.com/chaban/picard-plugin-pseudo-releases/issues"
+homepage = "https://github.com/chaban-mb/picard-plugin-pseudo-releases"
+report_bugs_to = "https://github.com/chaban-mb/picard-plugin-pseudo-releases/issues"
 
 [name_i18n]
 de = "Pseudo-Releases"
