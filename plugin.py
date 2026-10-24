@@ -451,13 +451,7 @@ class PseudoReleasePlugin:
         countries = countries_from_node(candidate) if isinstance(candidate.get('release-events'), list) else []
         country = countries_shortlist(countries) if countries else str(candidate.get('country') or '??')
 
-        sanitized_media = []
-        for medium in media:
-            m = dict(medium)
-            if 'format' in m and m['format'] is not None:
-                m['format'] = str(m['format'])
-            sanitized_media.append(m)
-        formats = media_formats_from_node(sanitized_media)
+        formats = media_formats_from_node(media)
 
         raw_label_infos = candidate.get('label-info')
         label_infos = (

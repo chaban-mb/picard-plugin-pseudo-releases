@@ -11,7 +11,6 @@ from .constants import (
 def find_related_releases(
     release_node: dict[str, Any],
     direction: str | None = None,
-    rel_type: str = RELATIONSHIP_TYPE_TRANSL_TRACKLISTING,
 ) -> list[dict[str, Any]]:
     """Extract linked release objects from a release's relations list.
 
@@ -19,7 +18,6 @@ def find_related_releases(
         release_node: MusicBrainz API release dictionary.
         direction: Optional direction filter: 'forward' (Original -> Pseudo),
                    'backward' (Pseudo -> Original), or None for all directions.
-        rel_type: Relationship UUID or type name (defaults to transl-tracklisting).
 
     Returns:
         list[dict[str, Any]]: List of target release dictionaries.
@@ -34,11 +32,7 @@ def find_related_releases(
 
         r_type = rel.get('type')
         r_type_id = rel.get('type-id')
-        is_default_type_name = (
-            rel_type == RELATIONSHIP_TYPE_TRANSL_TRACKLISTING
-            and r_type == 'transl-tracklisting'
-        )
-        if r_type != rel_type and r_type_id != rel_type and not is_default_type_name:
+        if r_type != 'transl-tracklisting' and r_type_id != RELATIONSHIP_TYPE_TRANSL_TRACKLISTING:
             continue
 
         if direction and rel.get('direction') != direction:
@@ -79,7 +73,6 @@ def _get_tag_from_files_or_metadata(
     return values
 
 
-
 def score_original_candidate(
     candidate: dict[str, Any],
     album_metadata: Any = None,
@@ -88,8 +81,6 @@ def score_original_candidate(
     preferred_countries: Sequence[str] | None = None,
 ) -> float:
     """Score an original release candidate against local files and metadata.
-
-
 
     Discriminates between multi-format editions ($N \\to 1$) where track durations
     cannot distinguish identical audio recordings.

@@ -19,7 +19,6 @@ from .constants import (
 )
 
 
-
 def extract_release_catalog_metadata(release_node: dict[str, Any]) -> dict[str, Any]:
     """Extract physical and manufacturing catalog metadata from a release node.
 
@@ -276,11 +275,11 @@ def supplement_release_relationships_and_genres(
         try:
             add_genres_from_node(orig_release_node, album)
         except Exception as exc:
-                logger = logger_obj if logger_obj is not None else log
-                logger.warning(
-                    "Failed to process genres for pseudo-release: %s",
-                    exc,
-                )
+            logger = logger_obj if logger_obj is not None else log
+            logger.warning(
+                "Failed to process genres for pseudo-release: %s",
+                exc,
+            )
 
         # Update tracks on the album to calculate merged genres / folksonomy tags
         tracks = getattr(album, 'tracks', [])
@@ -296,6 +295,7 @@ def supplement_release_relationships_and_genres(
 __all__ = (
     'extract_release_catalog_metadata',
     'get_enrichment_inc_params',
+    'supplement_pseudo_media',
     'supplement_pseudo_metadata',
     'supplement_release_relationships_and_genres',
 )
