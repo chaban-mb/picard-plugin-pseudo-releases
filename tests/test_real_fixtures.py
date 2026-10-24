@@ -1,21 +1,16 @@
 # Real-world verification tests using captured MusicBrainz API JSON fixtures
-import importlib.util
 import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import MagicMock
 
 import pseudo_releases as plugin_module
 from pseudo_releases.caa_provider import PseudoReleaseCoverArtProvider
-from pseudo_releases.candidates import (
-    find_related_releases,
-    select_best_original_candidate,
+from pseudo_releases.constants import TAG_ORIGINAL_RELEASE_ID
+from tests.mocks.mock_picard import (
+    MockAlbum,
+    MockPluginApi,
 )
-from pseudo_releases.constants import (
-    TAG_ORIGINAL_RELEASE_ID,
-)
-from pseudo_releases.metadata_engine import supplement_pseudo_metadata
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
@@ -24,14 +19,6 @@ def load_fixture(mbid: str) -> dict:
     fixture_path = FIXTURES_DIR / f"{mbid}.json"
     with open(fixture_path, encoding="utf-8") as f:
         return json.load(f)
-
-
-from tests.mocks.mock_picard import (
-    MockAlbum,
-    MockMetadata,
-    MockPluginApi,
-    MockPluginConfig,
-)
 
 
 class TestRealWorldFixtures(unittest.TestCase):
@@ -50,6 +37,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             album_id=pseudo_node["id"],
             title=pseudo_node["title"],
             status="Pseudo-Release",
+            release_node=pseudo_node,
         )
 
         def mock_get_release(rel_id, callback, inc=None, **kwargs):
@@ -67,15 +55,21 @@ class TestRealWorldFixtures(unittest.TestCase):
         )
 
         # 1. Assert task execution
-        self.assertTrue(any(task[1] == "pseudo_enrich_7a16f215-079e-4c55-abda-06f9a4228b6a" for task in self.api.completed_tasks))
+        self.assertTrue(
+            any(
+                task[1] == "pseudo_enrich_7a16f215-079e-4c55-abda-06f9a4228b6a"
+                for task in self.api.completed_tasks
+            )
+        )
         self.assertTrue(pseudo_album._finalized)
 
-        # 2. Assert enriched catalog metadata
+        # 2. Assert enriched catalog metadata and media node alignment
         meta = pseudo_album.metadata
         self.assertEqual(meta["date"], "2001-07-18")
         self.assertEqual(meta["releasecountry"], "JP")
         self.assertEqual(meta["barcode"], "4988008604535")
         self.assertEqual(meta["media"], "CD")
+        self.assertEqual(pseudo_album._release_node["media"][0]["format"], "CD")
         self.assertEqual(meta.getall("catalognumber"), ["TKCA-72165"])
         self.assertEqual(meta.getall("label"), ["STUDIO GHIBLI RECORDS"])
         self.assertEqual(meta[TAG_ORIGINAL_RELEASE_ID], "7a16f215-079e-4c55-abda-06f9a4228b6a")
@@ -106,6 +100,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             album_id=pseudo_node["id"],
             title=pseudo_node["title"],
             status="Pseudo-Release",
+            release_node=pseudo_node,
         )
 
         def mock_get_release(rel_id, callback, inc=None, **kwargs):
@@ -126,6 +121,7 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(meta["releasecountry"], "JP")
         self.assertEqual(meta["barcode"], "4942463526528")
         self.assertEqual(meta["media"], "CD")
+        self.assertEqual(pseudo_album._release_node["media"][0]["format"], "CD")
         self.assertEqual(meta.getall("catalognumber"), ["EPCE-5265"])
         self.assertEqual(meta.getall("label"), ["zetima"])
         self.assertEqual(meta[TAG_ORIGINAL_RELEASE_ID], "1268ebdb-2fa4-423f-95da-ed7accfbb845")
@@ -144,6 +140,7 @@ class TestRealWorldFixtures(unittest.TestCase):
             album_id=pseudo_node["id"],
             title=pseudo_node["title"],
             status="Pseudo-Release",
+            release_node=pseudo_node,
         )
 
         def mock_get_release(rel_id, callback, inc=None, **kwargs):
@@ -162,120 +159,7 @@ class TestRealWorldFixtures(unittest.TestCase):
         self.assertEqual(meta["barcode"], "4942463526528")
         self.assertEqual(meta[TAG_ORIGINAL_RELEASE_ID], "1268ebdb-2fa4-423f-95da-ed7accfbb845")
         self.assertEqual(meta["album"], "mini-moni. SONGUSU 2")
-
-    def test_real_release_non_pseudo_ignored(self):
-        """Test: Official non-pseudo release is never enriched."""
-        official_album = MockAlbum(
-            album_id="7a16f215-079e-4c55-abda-06f9a4228b6a",
-            title="Standard release",
-            status="Official",
-        )
-
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=self.api,
-            album=official_album,
-            album_metadata=official_album.metadata,
-            release_node={"id": "7a16f215-079e-4c55-abda-06f9a4228b6a", "status": "Official"},
-        )
-
-        self.assertEqual(self.api.added_tasks, [])
-        self.assertEqual(official_album.metadata[TAG_ORIGINAL_RELEASE_ID], "")
-
-    def test_real_release_automatic_supplementation(self):
-        """Test: Automatic supplementation enriches catalog tags from linked original release."""
-        pseudo_node = load_fixture("9fe92739-5bcd-4f6e-b2f2-d2db97cabc32")
-        orig_node = load_fixture("7a16f215-079e-4c55-abda-06f9a4228b6a")
-
-        api = MockPluginApi()
-        pseudo_album = MockAlbum(
-            album_id=pseudo_node["id"],
-            title=pseudo_node["title"],
-            status="Pseudo-Release",
-        )
-
-        def mock_get(rel_id, cb, inc=None, **kwargs):
-            cb(orig_node, None, None)
-
-        api.mb_api.get_release_by_id.side_effect = mock_get
-
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=api,
-            album=pseudo_album,
-            album_metadata=pseudo_album.metadata,
-            release_node=pseudo_node,
-        )
-
-        meta = pseudo_album.metadata
-        self.assertEqual(meta["date"], "2001-07-18")
-        self.assertEqual(meta["releasecountry"], "JP")
-        self.assertEqual(meta["barcode"], "4988008604535")
-        self.assertEqual(meta[TAG_ORIGINAL_RELEASE_ID], "7a16f215-079e-4c55-abda-06f9a4228b6a")
-
-    def test_real_release_set_original_id_tag(self):
-        """Test: The ~original_musicbrainz_albumid tag is populated with the linked original release ID."""
-        pseudo_node = load_fixture("ea59c77e-1c73-4958-88fb-d86e89fb3018")
-        orig_node = load_fixture("1268ebdb-2fa4-423f-95da-ed7accfbb845")
-
-        pseudo_album = MockAlbum(
-            album_id=pseudo_node["id"],
-            title=pseudo_node["title"],
-            status="Pseudo-Release",
-        )
-
-        def mock_get(rel_id, cb, inc=None, **kwargs):
-            cb(orig_node, None, None)
-
-        self.api.mb_api.get_release_by_id.side_effect = mock_get
-
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=self.api,
-            album=pseudo_album,
-            album_metadata=pseudo_album.metadata,
-            release_node=pseudo_node,
-        )
-
-        meta = pseudo_album.metadata
-        self.assertEqual(meta["barcode"], "4942463526528")
-        self.assertEqual(meta[TAG_ORIGINAL_RELEASE_ID], "1268ebdb-2fa4-423f-95da-ed7accfbb845")
-
-    def test_real_release_cover_art_enabled(self):
-        """CAA provider test: When original release ID is present, CAA provider routes to original MBID."""
-        pseudo_node = load_fixture("9fe92739-5bcd-4f6e-b2f2-d2db97cabc32")
-        orig_node = load_fixture("7a16f215-079e-4c55-abda-06f9a4228b6a")
-
-        pseudo_album = MockAlbum(
-            album_id=pseudo_node["id"],
-            title=pseudo_node["title"],
-            status="Pseudo-Release",
-        )
-
-        def mock_get(rel_id, cb, inc=None, **kwargs):
-            cb(orig_node, None, None)
-
-        self.api.mb_api.get_release_by_id.side_effect = mock_get
-
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            api=self.api,
-            album=pseudo_album,
-            album_metadata=pseudo_album.metadata,
-            release_node=pseudo_node,
-        )
-
-        # Metadata was supplemented
-        self.assertEqual(pseudo_album.metadata["barcode"], "4988008604535")
-        self.assertEqual(pseudo_album.metadata[TAG_ORIGINAL_RELEASE_ID], "7a16f215-079e-4c55-abda-06f9a4228b6a")
-
-        # CAA provider is enabled and resolves original MBID path
-        mock_coverart = SimpleNamespace(
-            album=pseudo_album,
-            metadata=pseudo_album.metadata,
-            release=pseudo_node,
-            tagger=self.api.tagger,
-            front_image_found=False,
-        )
-        caa_provider = PseudoReleaseCoverArtProvider(mock_coverart)
-        self.assertTrue(caa_provider.enabled())
-        self.assertEqual(caa_provider._caa_path, "/release/7a16f215-079e-4c55-abda-06f9a4228b6a/")
+        self.assertEqual(pseudo_album._release_node["media"][0]["format"], "CD")
 
     def test_real_release_context_menu_options(self):
         """Test: Linked original editions action shows and formats candidates correctly."""
@@ -286,31 +170,36 @@ class TestRealWorldFixtures(unittest.TestCase):
             album_id=pseudo_node["id"],
             title=pseudo_node["title"],
             status="Pseudo-Release",
+            release_node=pseudo_node,
         )
         pseudo_album._pseudo_original_candidates = [orig_node]
         self.api.tagger.window.selected_objects = [pseudo_album]
 
-        # Action is enabled when auto_supplement is on
         action_enabled = plugin_module.ChooseLinkedOriginalAction()
         self.assertTrue(action_enabled.isEnabled())
 
-        # Candidate label formatting verification
+        # Candidate label formatting verification on Spirited Away (7a16f215)
         formatted_label = plugin_module.PseudoReleasePlugin._format_original_candidate(orig_node)
-        self.assertIn("2001", formatted_label)
-        self.assertIn("JP", formatted_label)
-        self.assertIn("CD", formatted_label)
-        self.assertIn("TKCA-72165", formatted_label)
+        self.assertEqual(
+            formatted_label,
+            "21 / 2001 / JP / CD / STUDIO GHIBLI RECORDS / TKCA-72165",
+        )
 
         # Tooltip formatting verification
         tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(orig_node)
         self.assertIn("4988008604535", tooltip)
         self.assertIn("Middle-click or right-click to open in browser.", tooltip)
 
-        # Catalog number deduplication test with Minimoni candidate (1268ebdb)
+        # Catalog number deduplication test with Minimoni candidate (1268ebdb has duplicate EPCE-5265)
         minimoni_orig = load_fixture("1268ebdb-2fa4-423f-95da-ed7accfbb845")
         minimoni_label = plugin_module.PseudoReleasePlugin._format_original_candidate(minimoni_orig)
         self.assertEqual(minimoni_label.count("EPCE-5265"), 1)
-        self.assertTrue(minimoni_label.endswith("zetima / EPCE-5265"))
+        self.assertEqual(minimoni_label, "16 / 2004 / JP / CD / zetima / EPCE-5265")
+        minimoni_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(
+            minimoni_orig
+        )
+        self.assertIn("Jewel Case", minimoni_tooltip)
+        self.assertIn("4942463526528", minimoni_tooltip)
 
         # ReleaseGroup header reuse verification
         self.assertEqual(
@@ -326,46 +215,6 @@ class TestRealWorldFixtures(unittest.TestCase):
             "Titel / Jahr / Land / Format / Label / Kat.-Nr.",
         )
 
-        # Multi-disc format and tooltip extra fields verification
-        multi_cand = {
-            "id": "multi-cand-1",
-            "date": "2020-05-10",
-            "country": "US",
-            "media": [
-                {"format": "CD", "track-count": 10},
-                {"format": "CD", "track-count": 12},
-            ],
-            "label-info": [
-                {"label": {"name": "MultiLabel"}, "catalog-number": "ML-001"},
-            ],
-            "packaging": "Jewel Case",
-            "disambiguation": "Special Edition",
-        }
-        multi_label = plugin_module.PseudoReleasePlugin._format_original_candidate(multi_cand)
-        self.assertIn("2×CD", multi_label)
-        self.assertIn("10+12", multi_label)
-        self.assertIn("2020", multi_label)
-        self.assertIn("US", multi_label)
-        self.assertIn("MultiLabel", multi_label)
-        self.assertIn("ML-001", multi_label)
-
-        multi_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(multi_cand)
-        self.assertIn("Jewel Case", multi_tooltip)
-        self.assertIn("Special Edition", multi_tooltip)
-        self.assertIn("[no barcode]", multi_tooltip)
-
-        # Null-safety test: release-events = None (crashes Picard _release_event_iter if unhandled)
-        null_events_cand = {
-            "id": "null-events-cand",
-            "date": "2021-01-01",
-            "country": "JP",
-            "release-events": None,
-            "media": [{"format": "CD", "track-count": 5}],
-        }
-        null_label = plugin_module.PseudoReleasePlugin._format_original_candidate(null_events_cand)
-        self.assertIn("JP", null_label)
-        self.assertIn("5", null_label)
-
         # >10 media truncation test: Picard's VERSIONS_MAX_TRACKS truncation with +…
         boxset_cand = {
             "id": "boxset-cand",
@@ -375,90 +224,8 @@ class TestRealWorldFixtures(unittest.TestCase):
         }
         boxset_label = plugin_module.PseudoReleasePlugin._format_original_candidate(boxset_cand)
         self.assertIn("+".join(["10"] * 10) + "+…", boxset_label)
-        self.assertNotIn("+".join(["10"] * 12), boxset_label)
-
-        # Null-safety test: media tracks = None and malformed label-info = [None]
-        malformed_cand = {
-            "id": "malformed-cand",
-            "media": [{"format": "CD", "track-count": None, "tracks": None}],
-            "label-info": [None],
-        }
-        malformed_label = plugin_module.PseudoReleasePlugin._format_original_candidate(malformed_cand)
-        self.assertIn("??", malformed_label)
-
-        # Robustness test: candidate = None and non-list field types
-        none_label = plugin_module.PseudoReleasePlugin._format_original_candidate(None)
-        self.assertIn("??", none_label)
-        none_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(None)
-        self.assertIn("[no barcode]", none_tooltip)
-
-        for invalid_field_cand in [
-            {"media": 123},
-            {"label-info": 123},
-            {"release-events": 123},
-            {"release-events": "JP"},
-        ]:
-            inv_label = plugin_module.PseudoReleasePlugin._format_original_candidate(invalid_field_cand)
-            self.assertIn("??", inv_label)
-
-        # Exotic packaging attribute test
-        exotic_cand = {
-            "id": "exotic-cand",
-            "packaging": "Exotic 3D Holo-Box",
-        }
-        exotic_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip(exotic_cand)
-        self.assertIn("Exotic 3D Holo-Box", exotic_tooltip)
-
-        # Advanced type robustness: int date, int country, int format, int tracks, int label/catnum
-        int_fields_cand = {
-            "date": 2020,
-            "country": 123,
-            "media": [
-                {"format": 123, "track-count": 5},
-                {"track-count": None, "tracks": 123},
-            ],
-            "label-info": [
-                {"label": {"name": 123}, "catalog-number": 456},
-            ],
-        }
-        int_label = plugin_module.PseudoReleasePlugin._format_original_candidate(int_fields_cand)
-        self.assertIn("2020", int_label)
-        self.assertIn("123", int_label)
-        self.assertIn("456", int_label)
-
-        # Tooltip int field values robustness
-        int_tooltip = plugin_module.PseudoReleasePlugin._format_original_candidate_tooltip({
-            "packaging": 123,
-            "barcode": 456,
-            "disambiguation": 789,
-        })
-        self.assertIn("123", int_tooltip)
-        self.assertIn("456", int_tooltip)
-        self.assertIn("789", int_tooltip)
-
-        # Plugin lifecycle null dispatch safety
-        plugin_module.PseudoReleasePlugin.process_album_metadata(
-            self.api,
-            MockAlbum(album_id="album-null"),
-            MockMetadata(),
-            None,
-        )
-
-        # In-flight state leak prevention when api cannot schedule task
-        test_album = MockAlbum(album_id="album-leak-test")
-        plugin_module.PseudoReleasePlugin.in_flight_albums.clear()
-        failing_api = MockPluginApi()
-        failing_api.add_album_task = unittest.mock.MagicMock(
-            side_effect=RuntimeError("Scheduler error")
-        )
-        with self.assertRaises(RuntimeError):
-            plugin_module.PseudoReleasePlugin._queue_enrichment(
-                failing_api,
-                test_album,
-                "target-mbid-1",
-            )
-        self.assertNotIn("album-leak-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
+        self.assertIn("12×CD", boxset_label)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

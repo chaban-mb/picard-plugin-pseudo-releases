@@ -1,178 +1,19 @@
-"""Mock Picard classes for isolated unit testing when Picard core is unavailable."""
+"""Lightweight Picard test doubles wrapping real Picard runtime types."""
 
 from types import SimpleNamespace
 from typing import Any
-import unittest.mock
 from unittest.mock import MagicMock
-import webbrowser
 
-try:
-    from PyQt6 import QtCore, QtGui, QtWidgets
-
-    _BaseWidget = QtWidgets.QWidget
-    _BaseAction = QtGui.QAction
-except ImportError:
-    from tests.mocks.mock_qt import (
-        MockQtCore,
-        MockQtGui,
-        _DummyWidget,
-    )
-
-    _BaseWidget = _DummyWidget
-    _BaseAction = MockQtGui.QAction
-from tests.mocks.mock_qt import (
-    _DummySignal,
-    _DummyWidget,
-)
+from picard.metadata import Metadata
+from picard.options import StandardizeArtistNames
 
 
-class DebugOpt:
-    PLUGIN_DEVELOPMENT = "plugin-development"
-
-
-def t_(key: str, text: str | None = None, plural: str | None = None) -> str | tuple[str, str, str]:
-    if plural is not None:
-        return (key, str(text or ""), plural)
-    return key
-
-
-class BaseAction(_BaseAction):
-    NAME = "Action"
-    TITLE = "Action"
-    api: Any = None
-
-    def __init__(self, parent: Any = None) -> None:
-        super().__init__(parent)
-
-    def callback(self, objs: list[Any]) -> None:
-        pass
-
-
-class OptionsPage(_BaseWidget):
-    NAME = "options"
-    TITLE = "Options"
-    PARENT = None
-    api: Any = None
-
-    def __init__(self, parent: Any = None) -> None:
-        super().__init__(parent)
-
-    def load(self) -> None:
-        pass
-
-    def save(self) -> None:
-        pass
-
-    def restore_defaults(self) -> None:
-        pass
-
-
-class PageOptionConfigs:
-    def __init__(self, *configs: Any) -> None:
-        self.configs = configs
-
-
-import re
-
-_non_alnum_re = re.compile(r"\W+", re.UNICODE)
-
-
-def strip_non_alnum(text: str) -> str:
-    return _non_alnum_re.sub("", text)
-
-
-from enum import Enum
-
-
-class QueueState(Enum):
-    _STARTED = 0
-    FINISHED = 1
-    WAIT = 2
-
-
-class MockMetadata(dict):
-    """Mock Picard Metadata object matching internal Picard behavior."""
-
-    def __init__(self, initial: dict[str, Any] | None = None) -> None:
-        super().__init__()
-        self._data: dict[str, list[str]] = {}
-        if initial:
-            for k, v in initial.items():
-                self[k] = v
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        if isinstance(value, list):
-            vals = [str(x) for x in value]
-        else:
-            vals = [str(value)]
-        self._data[key] = vals
-        super().__setitem__(key, "; ".join(vals))
-
-    def __getitem__(self, key: str) -> str:
-        if key in self._data and self._data[key]:
-            return "; ".join(self._data[key])
-        return ""
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._data
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self) -> int:
-        return len(self._data)
-
-    def __delitem__(self, key: str) -> None:
-        self._data.pop(key, None)
-        if super().__contains__(key):
-            super().__delitem__(key)
-
-    def keys(self):
-        return self._data.keys()
-
-    def values(self):
-        return [self[k] for k in self._data.keys()]
-
-    def items(self):
-        return [(k, self[k]) for k in self._data.keys()]
-
-    def get(self, key: str, default: Any = "") -> Any:
-        val = self[key]
-        return val if val else default
-
-    def getall(self, key: str) -> list[str]:
-        return list(self._data.get(key, []))
-
-    def rawitems(self):
-        return ((key, list(values)) for key, values in self._data.items())
-
-    def add_unique(self, key: str, value: Any) -> None:
-        value_str = str(value)
-        if value_str not in self._data.get(key, []):
-            self._data.setdefault(key, []).append(value_str)
-            super().__setitem__(key, "; ".join(self._data[key]))
-
-    def copy(self, other: Any = None) -> Any:
-        if other is not None:
-            self._data = {k: list(v) for k, v in other._data.items()}
-            self.clear()
-            for k, v in self._data.items():
-                super().__setitem__(k, "; ".join(v))
-            return self
-        cp = MockMetadata()
-        cp.copy(self)
-        return cp
-
-
-Metadata = MockMetadata
+MockMetadata = Metadata
 
 
 class MockTrack:
     def __init__(self, title: str = "Test Track", recording_id: str = "rec-123") -> None:
-        self.metadata = MockMetadata({"title": title, "musicbrainz_recordingid": recording_id})
-
-
-Track = MockTrack
+        self.metadata = Metadata({"title": title, "musicbrainz_recordingid": recording_id})
 
 
 class MockAlbum:
@@ -182,9 +23,10 @@ class MockAlbum:
         title: str = "",
         artist: str = "",
         status: str = "Official",
+        release_node: dict[str, Any] | None = None,
     ) -> None:
         self.id = album_id
-        self.metadata = MockMetadata(
+        self.metadata = Metadata(
             {
                 "album": title,
                 "albumartist": artist,
@@ -192,6 +34,7 @@ class MockAlbum:
                 "musicbrainz_albumid": album_id,
             }
         )
+        self._new_metadata: Metadata | None = None
         self.tracks: list[Any] = []
         self._finalized = False
         self.loaded = False
@@ -201,9 +44,9 @@ class MockAlbum:
         self._critical_tasks: set[str] = set()
         self._folksonomy_tags: dict[str, int] = {}
         self._genres: dict[str, int] = {}
-        self.per_medium_metadata: dict[int, MockMetadata] = {}
+        self.per_medium_metadata: dict[int, Metadata] = {}
         self.tagger = MagicMock()
-        self._release_node: dict[str, Any] | None = None
+        self._release_node: dict[str, Any] | None = release_node
 
     def _finalize_loading(self, error: Any = None) -> None:
         if self.has_critical_tasks():
@@ -222,6 +65,9 @@ class MockAlbum:
 
     def add_task(self, task_id: str, *args: Any, **kwargs: Any) -> None:
         self._pending_tasks[task_id] = kwargs
+        request_factory = kwargs.get("request_factory")
+        if request_factory:
+            request_factory()
 
     def complete_task(self, task_id: str) -> None:
         self._pending_tasks.pop(task_id, None)
@@ -233,9 +79,6 @@ class MockAlbum:
         self._genres[name] = self._genres.get(name, 0) + count
 
 
-Album = MockAlbum
-
-
 class MockCoverArt:
     def __init__(
         self,
@@ -245,21 +88,32 @@ class MockCoverArt:
         front_image_found: bool = False,
     ) -> None:
         self.album = album
-        self.metadata = metadata if metadata is not None else MockMetadata({
-            "musicbrainz_albumid": "pseudo-release-uuid-9fe",
-            "releasestatus": "pseudo-release",
-        })
-        self.release = release if release is not None else {
-            "id": "pseudo-release-uuid-9fe",
-            "cover-art-archive": {"artwork": True},
-        }
+        self.metadata = (
+            metadata
+            if metadata is not None
+            else Metadata(
+                {
+                    "musicbrainz_albumid": "pseudo-release-uuid-9fe",
+                    "releasestatus": "pseudo-release",
+                }
+            )
+        )
+        self.release = (
+            release
+            if release is not None
+            else {
+                "id": "pseudo-release-uuid-9fe",
+                "cover-art-archive": {"artwork": True},
+            }
+        )
         self.front_image_found = front_image_found
 
 
 class MockFile:
     def __init__(self, metadata: dict[str, Any] | None = None) -> None:
-        self.metadata = MockMetadata(metadata or {})
-        self.orig_metadata = self.metadata.copy()
+        self.metadata = Metadata(metadata or {})
+        self.orig_metadata = Metadata()
+        self.orig_metadata.copy(self.metadata)
 
 
 class MockPluginConfig(dict):
@@ -276,10 +130,17 @@ class MockPluginApi:
         self.plugin_config = MockPluginConfig(defaults)
         self.global_config = SimpleNamespace(
             setting={
-                'preferred_release_countries': [],
-                'release_ars': False,
-                'use_genres': False,
-                'only_my_genres': False,
+                "preferred_release_countries": [],
+                "release_ars": False,
+                "use_genres": False,
+                "only_my_genres": False,
+                "standardize_artist_names": StandardizeArtistNames.NONE,
+                "translate_artist_names": False,
+                "translate_artist_names_script_exception": False,
+                "always_standardize_multivalue_artist": False,
+                "standardize_instruments": True,
+                "standardize_vocals": True,
+                "translation_locales": ["en"],
             }
         )
         self.tagger = SimpleNamespace(
@@ -321,7 +182,9 @@ class MockPluginApi:
         page_cls.api = self
         self.options_pages.append(page_cls)
 
-    def register_script_variable(self, name: str, documentation: str = "", title: str = "", **kwargs: Any) -> None:
+    def register_script_variable(
+        self, name: str, documentation: str = "", title: str = "", **kwargs: Any
+    ) -> None:
         self.script_variables.append((name, documentation, title))
 
     def add_album_task(
@@ -334,166 +197,16 @@ class MockPluginApi:
         blocking: bool = False,
     ) -> None:
         self.added_tasks.append((album, task_id, blocking))
-        if hasattr(album, '_pending_tasks'):
+        if hasattr(album, "_pending_tasks"):
             album._pending_tasks[task_id] = description
-        if blocking and hasattr(album, '_critical_tasks'):
+        if blocking and hasattr(album, "_critical_tasks"):
             album._critical_tasks.add(task_id)
         if request_factory:
             request_factory()
 
     def complete_album_task(self, album: Any, task_id: str) -> None:
         self.completed_tasks.append((album, task_id))
-        if hasattr(album, '_pending_tasks'):
+        if hasattr(album, "_pending_tasks"):
             album._pending_tasks.pop(task_id, None)
-        if hasattr(album, '_critical_tasks'):
+        if hasattr(album, "_critical_tasks"):
             album._critical_tasks.discard(task_id)
-
-
-PluginApi = MockPluginApi
-
-
-class CoverArtProviderCaa:
-    NAME = "Cover Art Archive"
-    TITLE = "Cover Art Archive: Release"
-    OPTIONS = None
-    QueueState = QueueState
-
-    def __init__(self, coverart: Any = None) -> None:
-        self.coverart = coverart
-        self.metadata: dict[str, Any] = getattr(coverart, "metadata", {}) if coverart else {}
-        self.release: dict[str, Any] = getattr(coverart, "release", {}) if coverart else {}
-        self.album = getattr(coverart, "album", None) if coverart else None
-
-    def enabled(self) -> bool:
-        return not (self.coverart and getattr(self.coverart, "front_image_found", False))
-
-    def queue_images(self) -> Any:
-        album = getattr(self, "album", None)
-        album_id = self.metadata.get("musicbrainz_albumid", "")
-        task_id = f"caa_json_{album_id}"
-        if album and hasattr(album, "add_task"):
-            album.add_task(task_id, description=f"CAA JSON metadata for {album_id}")
-        return self.QueueState.WAIT
-
-    @property
-    def _caa_path(self) -> str:
-        return f"/release/{self.metadata.get('musicbrainz_albumid', '')}/"
-
-    @property
-    def _has_suitable_artwork(self) -> bool:
-        caa = self.release.get("cover-art-archive", {})
-        return bool(caa.get("artwork"))
-
-    @classmethod
-    def display_title(cls) -> str:
-        title = getattr(cls, "TITLE", getattr(cls, "NAME", None)) or cls.__name__
-        api = getattr(cls, "api", None)
-        if api and hasattr(api, "tr"):
-            if isinstance(title, tuple) and hasattr(api, "trn"):
-                return api.trn(*title, n=1)
-            return api.tr(title)
-        return title[1] if isinstance(title, tuple) else title
-
-
-def add_genres_from_node(node: dict[str, Any], obj: Any) -> None:
-    if obj is None or not isinstance(node, dict):
-        return
-    tags = node.get("tags")
-    if isinstance(tags, list):
-        for tag in tags:
-            if hasattr(obj, "add_folksonomy_tag") and isinstance(tag, dict):
-                obj.add_folksonomy_tag(tag.get("name"), tag.get("count", 1))
-    genres = node.get("genres")
-    if isinstance(genres, list):
-        for genre in genres:
-            if hasattr(obj, "add_genre") and isinstance(genre, dict):
-                obj.add_genre(genre.get("name"), genre.get("count", 1))
-
-
-# Fallbacks for Picard utilities
-def countries_from_node(node: dict[str, Any]) -> list[str]:
-    countries: list[str] = []
-    events = node.get("release-events") if isinstance(node, dict) else None
-    for event in events if isinstance(events, list) else []:
-        try:
-            code = event["area"]["iso-3166-1-codes"][0]
-            if code:
-                countries.append(code)
-        except (KeyError, IndexError, TypeError):
-            pass
-    return sorted(countries)
-
-
-def countries_shortlist(countries: list[str]) -> str:
-    if not countries or not isinstance(countries, list):
-        return ""
-    str_countries = [str(c) for c in countries if c]
-    if not str_countries:
-        return ""
-    if len(str_countries) <= 6:
-        return "+".join(str_countries)
-    return f"{'+'.join(str_countries[:3])}+…+{'+'.join(str_countries[-3:])}"
-
-
-def label_info_from_node(node: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
-    labels: list[str] = []
-    catalog_numbers: list[str] = []
-    if not isinstance(node, list):
-        return (labels, catalog_numbers)
-    for label_info in node:
-        if isinstance(label_info, dict):
-            label_obj = label_info.get("label")
-            label_name = label_obj.get("name") if isinstance(label_obj, dict) else None
-            catalog_number = label_info.get("catalog-number")
-            if label_name:
-                lbl_str = str(label_name)
-                if lbl_str not in labels:
-                    labels.append(lbl_str)
-            if catalog_number:
-                cat_str = str(catalog_number)
-                if cat_str not in catalog_numbers:
-                    catalog_numbers.append(cat_str)
-    return (labels, catalog_numbers)
-
-
-def media_formats_from_node(node: list[dict[str, Any]]) -> str:
-    if not isinstance(node, list):
-        return ""
-    formats_count: dict[str, int] = {}
-    formats_order: list[str] = []
-    for medium in node:
-        if not isinstance(medium, dict):
-            continue
-        fmt = medium.get("format")
-        text = str(fmt) if fmt else "(unknown)"
-        if text in formats_count:
-            formats_count[text] += 1
-        else:
-            formats_count[text] = 1
-            formats_order.append(text)
-    formats: list[str] = []
-    for medium_format in formats_order:
-        count = formats_count[medium_format]
-        if count > 1:
-            formats.append(f"{count}×{medium_format}")
-        else:
-            formats.append(medium_format)
-    return " + ".join(formats)
-
-
-def pgettext_attributes(context: str, message: str) -> str:
-    return message
-
-
-def _(text: str) -> str:
-    return text
-
-
-VERSIONS_MAX_TRACKS = 10
-VERSIONS_EXTRA_HEADINGS = {
-    "packaging": "Packaging",
-    "barcode": "Barcode",
-    "disambiguation": "Disambiguation",
-}
-
-webbrowser2 = webbrowser

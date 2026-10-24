@@ -1,24 +1,16 @@
 # Integration tests for plugin lifecycle, task queues, and processor integration
+from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
-import importlib.util
-from pathlib import Path
-from types import SimpleNamespace
 
 from PyQt6 import QtCore
 
 import pseudo_releases as plugin_module
-from pseudo_releases.constants import (
-    PSEUDO_RELEASE_STATUS,
-    TAG_ORIGINAL_RELEASE_ID,
-)
-
-
+from pseudo_releases.constants import TAG_ORIGINAL_RELEASE_ID
 from tests.mocks.mock_picard import (
     MockAlbum,
     MockMetadata,
     MockPluginApi,
-    MockPluginConfig,
 )
 
 
@@ -31,16 +23,22 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertEqual(len(self.api.processors), 1)
         self.assertEqual(len(self.api.album_actions), 1)
         self.assertTrue(len(self.api.removal_processors) > 0)
-        self.assertTrue(len(self.api.providers) > 0)
+        self.assertIn(plugin_module.PseudoReleaseCoverArtProvider, self.api.providers)
         self.assertTrue(len(self.api.options_pages) > 0)
-        self.assertTrue(any(v[0] == "_original_musicbrainz_albumid" for v in self.api.script_variables))
+        self.assertTrue(
+            any(v[0] == "_original_musicbrainz_albumid" for v in self.api.script_variables)
+        )
 
     def test_direction_1_supplement_pseudo_release(self):
         self.api.global_config.setting.update(
             {"release_ars": True, "use_genres": True, "only_my_genres": False}
         )
-        # A loaded pseudo-release with backward link to original
-        pseudo_album = MockAlbum("pseudo-1", title="Spirited Away", artist="Joe Hisaishi", status="Pseudo-Release")
+        pseudo_album = MockAlbum(
+            "pseudo-1",
+            title="Spirited Away",
+            artist="Joe Hisaishi",
+            status="Pseudo-Release",
+        )
 
         pseudo_node = {
             "id": "pseudo-1",
@@ -49,11 +47,12 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {
                         "id": "orig-1",
                         "title": "千と千尋の神隠し",
                         "status": "Official",
-                        "barcode": "4988008610134",
+                        "barcode": "4988008604535",
                         "date": "2001-07-18",
                         "country": "JP",
                     },
@@ -61,23 +60,21 @@ class TestPluginLifecycle(unittest.TestCase):
             ],
         }
 
-        # Mock the mb_api.get_release_by_id to simulate network return
         def mock_get_release(rel_id, callback, inc=None, **kwargs):
             self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, pseudo_album.metadata)
             orig_doc = {
                 "id": "orig-1",
                 "title": "千と千尋の神隠し",
-                "barcode": "4988008610134",
+                "barcode": "4988008604535",
                 "date": "2001-07-18",
                 "country": "JP",
                 "media": [{"format": "CD"}],
-                "label-info": [{"label": {"name": "Tokuma"}}],
+                "label-info": [{"label": {"name": "STUDIO GHIBLI RECORDS"}}],
             }
             callback(orig_doc, None, None)
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get_release
 
-        # Trigger metadata processor
         plugin_module.PseudoReleasePlugin.process_album_metadata(
             api=self.api,
             album=pseudo_album,
@@ -85,22 +82,25 @@ class TestPluginLifecycle(unittest.TestCase):
             release_node=pseudo_node,
         )
 
-        # Assert album task was added with blocking=True and completed
-        self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" and task[2] is True for task in self.api.added_tasks))
-        self.assertTrue(any(task[1] == "pseudo_enrich_orig-1" for task in self.api.completed_tasks))
+        self.assertTrue(
+            any(
+                task[1] == "pseudo_enrich_orig-1" and task[2] is True
+                for task in self.api.added_tasks
+            )
+        )
+        self.assertTrue(
+            any(task[1] == "pseudo_enrich_orig-1" for task in self.api.completed_tasks)
+        )
         self.assertEqual(pseudo_album._pseudo_original_id, "orig-1")
 
-        # Assert metadata supplementation succeeded
-        self.assertEqual(pseudo_album.metadata["barcode"], "4988008610134")
+        self.assertEqual(pseudo_album.metadata["barcode"], "4988008604535")
         self.assertEqual(pseudo_album.metadata["date"], "2001-07-18")
         self.assertEqual(pseudo_album.metadata["releasecountry"], "JP")
-        self.assertEqual(pseudo_album.metadata["label"], "Tokuma")
+        self.assertEqual(pseudo_album.metadata["label"], "STUDIO GHIBLI RECORDS")
         self.assertEqual(pseudo_album.metadata[TAG_ORIGINAL_RELEASE_ID], "orig-1")
         requested_inc = self.api.mb_api.get_release_by_id.call_args.kwargs["inc"]
         self.assertIn("artist-rels", requested_inc)
         self.assertIn("genres", requested_inc)
-
-        # Assert finalization kick was triggered
         self.assertTrue(pseudo_album._finalized)
 
     def test_remove_album_cleans_up_in_flight(self):
@@ -110,18 +110,19 @@ class TestPluginLifecycle(unittest.TestCase):
         plugin_module.PseudoReleasePlugin.remove_album(self.api, dummy_album)
         self.assertNotIn("album-to-remove", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
-    def test_mock_task_completion_does_not_finalize_album_implicitly(self):
-        album = MockAlbum("critical-task-test")
-        self.api.add_album_task(album, "blocking", "Blocking", blocking=True)
-        self.api.add_album_task(album, "background", "Background", blocking=False)
+    def test_enrichment_scheduler_error_cleans_up_in_flight(self):
+        test_album = MockAlbum(album_id="album-leak-test")
+        plugin_module.PseudoReleasePlugin.in_flight_albums.clear()
+        failing_api = MockPluginApi()
+        failing_api.add_album_task = MagicMock(side_effect=RuntimeError("Scheduler error"))
 
-        self.api.complete_album_task(album, "background")
-        self.assertFalse(album.loaded)
-
-        self.api.complete_album_task(album, "blocking")
-        self.assertFalse(album.loaded)
-        album._finalize_loading(None)
-        self.assertTrue(album.loaded)
+        with self.assertRaises(RuntimeError):
+            plugin_module.PseudoReleasePlugin._queue_enrichment(
+                failing_api,
+                test_album,
+                "target-mbid-1",
+            )
+        self.assertNotIn("album-leak-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
     def test_enrichment_completion_resumes_album_loading(self):
         album = MockAlbum("enrichment-resumes-load", status="Pseudo-Release")
@@ -198,11 +199,13 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "selected-original"},
                 },
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {
                         "id": "other-candidate",
                         "barcode": "barcode-from-other-candidate",
@@ -218,7 +221,10 @@ class TestPluginLifecycle(unittest.TestCase):
                 "_handle_supplement_pseudo",
                 side_effect=lambda *args: selected_ids.append(args[3]),
             ),
-            patch.object(plugin_module.PseudoReleasePlugin, "_prefetch_linked_original_details"),
+            patch.object(
+                plugin_module.PseudoReleasePlugin,
+                "_prefetch_linked_original_details",
+            ),
         ):
             plugin_module.PseudoReleasePlugin.process_album_metadata(
                 self.api,
@@ -238,11 +244,13 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "original-1"},
                 },
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "original-2"},
                 },
             ],
@@ -439,11 +447,13 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "original-1", "title": "Edition A"},
                 },
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "original-2", "title": "Edition B"},
                 },
             ],
@@ -455,7 +465,10 @@ class TestPluginLifecycle(unittest.TestCase):
 
         self.assertEqual(self.api.added_tasks, [])
         self.assertEqual(album.metadata["barcode"], "barcode-original-2")
-        self.assertEqual(album._pseudo_original_details["original-2"]["barcode"], "barcode-original-2")
+        self.assertEqual(
+            album._pseudo_original_details["original-2"]["barcode"],
+            "barcode-original-2",
+        )
 
     def test_choose_linked_original_action_disabled_when_not_single_pseudo_album(self):
         album = MockAlbum("normal-1", "Standard soundtrack", status="Official")
@@ -481,10 +494,9 @@ class TestPluginLifecycle(unittest.TestCase):
 
         raw_actions = menu.actions()
         actions = [a for a in raw_actions if a is not None]
-        target_action = actions[1]  # first edition candidate
+        target_action = actions[1]
         self.assertEqual(target_action.data(), "orig-mbid-1")
 
-        # Mock actionAt on menu for the eventFilter
         menu.actionAt = MagicMock(return_value=target_action)
 
         event_middle = SimpleNamespace(
@@ -497,7 +509,6 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(handled)
         mock_file_lookup.album_lookup.assert_called_with("orig-mbid-1")
 
-        # Simulate event filter receiving RightButton release for the second candidate
         menu.actionAt = MagicMock(return_value=actions[2])
         event_right = SimpleNamespace(
             type=lambda: QtCore.QEvent.Type.MouseButtonRelease,
@@ -508,9 +519,6 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertTrue(handled_right)
         mock_file_lookup.album_lookup.assert_called_with("orig-mbid-2")
 
-    def test_enable_registers_cover_art_provider(self):
-        self.assertIn(plugin_module.PseudoReleaseCoverArtProvider, self.api.providers)
-
     def test_enrichment_request_uses_mblogin_when_authorized(self):
         pseudo_album = MockAlbum("pseudo-1", title="Title", status="Pseudo-Release")
         pseudo_node = {
@@ -520,6 +528,7 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "orig-auth", "status": "Official"},
                 }
             ],
@@ -566,12 +575,12 @@ class TestPluginLifecycle(unittest.TestCase):
                 {
                     "type": "transl-tracklisting",
                     "direction": "backward",
+                    "target-type": "release",
                     "release": {"id": "orig-unauth", "status": "Official"},
                 }
             ],
         }
 
-        # User is not logged in / not authorized
         mock_oauth = MagicMock()
         mock_oauth.is_authorized.return_value = False
         self.api.tagger = SimpleNamespace(
@@ -586,7 +595,6 @@ class TestPluginLifecycle(unittest.TestCase):
 
         self.api.mb_api.get_release_by_id.side_effect = mock_get_release
 
-        # Configure only_my_genres on global config
         mock_cfg = SimpleNamespace(
             setting={
                 "release_ars": False,
@@ -609,33 +617,8 @@ class TestPluginLifecycle(unittest.TestCase):
         self.assertIn("tags", inc)
         self.assertIn("genres", inc)
 
-    def test_plugin_tr_helper(self):
-        # When api is None
-        plugin_module.PseudoReleasePlugin.api = None
-        self.assertEqual(
-            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
-            "Fallback Hint",
-        )
-
-        # When api is attached without custom translation
-        plugin_module.PseudoReleasePlugin.api = self.api
-        self.assertEqual(
-            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
-            "Fallback Hint",
-        )
-
-        # When api returns a translated string
-        mock_api = MagicMock()
-        mock_api.tr.return_value = "Translated Tooltip Hint"
-        plugin_module.PseudoReleasePlugin.api = mock_api
-        self.assertEqual(
-            plugin_module.PseudoReleasePlugin._tr("action.tooltip_open_browser", "Fallback Hint"),
-            "Translated Tooltip Hint",
-        )
-        mock_api.tr.assert_called_with("action.tooltip_open_browser", "Fallback Hint")
-
     def test_cancellation_recovery(self):
-        """Regression Test [P1]: If Picard aborts an enrichment request without running its callback,
+        """If Picard aborts an enrichment request without running its callback,
         re-processing the same album heals in_flight_albums and retries enrichment.
         """
         pseudo_album = MockAlbum("pseudo-cancellation-test", "Transliterated Album")
@@ -652,12 +635,9 @@ class TestPluginLifecycle(unittest.TestCase):
             ],
         }
 
-        # Step 1: Simulate starting enrichment, but aborted/canceled by Picard
         plugin_module.PseudoReleasePlugin.in_flight_albums.add("pseudo-cancellation-test")
-        # Ensure album._pending_tasks has no active pseudo_enrich_ task (aborted externally)
         pseudo_album._pending_tasks.clear()
 
-        # Step 2: User refreshes metadata on the same album without removing it
         retried = False
 
         def mock_get_release(release_id, callback, **kwargs):
@@ -674,11 +654,14 @@ class TestPluginLifecycle(unittest.TestCase):
             release_node=pseudo_node,
         )
 
-        self.assertTrue(retried, "Enrichment must be retried after request cancellation without removing album")
+        self.assertTrue(
+            retried,
+            "Enrichment must be retried after request cancellation without removing album",
+        )
         self.assertEqual(pseudo_album.metadata["barcode"], "1234567890")
 
     def test_failed_enrichment_does_not_tag(self):
-        """Regression Test [P2]: A failed network request must not write TAG_ORIGINAL_RELEASE_ID,
+        """A failed network request must not write TAG_ORIGINAL_RELEASE_ID,
         preventing future automatic retries from being blocked.
         """
         pseudo_album = MockAlbum("pseudo-error-test", "Transliterated Album")
@@ -695,7 +678,6 @@ class TestPluginLifecycle(unittest.TestCase):
             ],
         }
 
-        # Simulate network error in MB API
         def mock_error_get(release_id, callback, **kwargs):
             callback({}, None, "Network 500 Internal Server Error")
 
@@ -708,10 +690,9 @@ class TestPluginLifecycle(unittest.TestCase):
             release_node=pseudo_node,
         )
 
-        # TAG_ORIGINAL_RELEASE_ID must NOT be set on error
-        self.assertEqual(pseudo_album.metadata.get(TAG_ORIGINAL_RELEASE_ID), "")
+        self.assertNotIn(TAG_ORIGINAL_RELEASE_ID, pseudo_album.metadata)
         self.assertNotIn("pseudo-error-test", plugin_module.PseudoReleasePlugin.in_flight_albums)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,11 +1,6 @@
-"""Test mocks package for isolated headless testing."""
+"""Test mocks package for Picard Pseudo-Releases plugin."""
 
-from tests.mocks import (
-    mock_picard,
-    mock_qt,
-)
+from tests.mocks import mock_picard
 
-__all__ = [
-    "mock_picard",
-    "mock_qt",
-]
+
+__all__ = ["mock_picard"]
